@@ -1,0 +1,230 @@
+/* Home.css */
+
+/* Main container styling */
+.home-container {
+    display: flex;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+}
+
+/* Left Section (Login/Register) */
+.left-section {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #ffffff;
+}
+
+.auth-box {
+    width: 100%;
+    max-width: 350px;
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.auth-toggle {
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: 1.5rem;
+}
+
+.auth-toggle button {
+    width: 50%;
+    padding: 0.8rem;
+    border: none;
+    background-color: #e4e6eb;
+    cursor: pointer;
+    border-radius: 8px 8px 0 0;
+    font-weight: bold;
+    color: #4a4a4a;
+}
+
+.auth-toggle button.active {
+    background-color: #1a1a2e;
+    color: #ffffff;
+}
+
+.form-container {
+    width: 100%;
+    max-width: 450px;
+    margin: auto;
+    padding: 2rem;
+    background-color: white;
+    border-radius: 12px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+}
+
+.form-container h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #333;
+    text-align: center;
+    margin-bottom: 1.5rem;
+}
+
+.tab-buttons {
+    display: flex;
+    margin-bottom: 2rem;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid #e5e7eb;
+}
+
+.tab-buttons button {
+    flex: 1;
+    padding: 0.75rem 0;
+    border: none;
+    background: #f9fafb;
+    cursor: pointer;
+    font-weight: 600;
+    color: #6b7280;
+    transition: all 0.3s ease;
+}
+
+.tab-buttons button.active {
+    background-color: #3b82f6;
+    color: white;
+}
+
+/* Form styling */
+form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+form h2 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: #374151;
+}
+
+form label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: #4b5563;
+}
+
+form input,
+form select {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 1rem;
+    transition: border-color 0.3s ease;
+}
+
+form input:focus,
+form select:focus {
+    border-color: #3b82f6;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+form button {
+    margin-top: 0.5rem;
+    padding: 0.75rem;
+    background-color: #3b82f6;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+form button:hover {
+    background-color: #2563eb;
+}
+
+/* Right Section (University Info) */
+.right-section {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #1a1a2e;
+    color: #ffffff;
+    text-align: center;
+}
+
+.info-box {
+    max-width: 400px;
+}
+
+.info-box h1 {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+}
+
+.info-box p {
+    font-size: 1rem;
+    color: #dcdcdc;
+}
+
+.info-section {
+    display: none;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .home-container {
+        flex-direction: column;
+    }
+
+    .left-section,
+    .right-section {
+        flex: none;
+        width: 100%;
+    }
+}
+
+@media (min-width: 768px) {
+    .home-container {
+        justify-content: center;
+        align-items: center;
+    }
+
+    .form-container {
+        width: 90%;
+        max-width: 400px;
+    }
+}
+
+@media (min-width: 1024px) {
+    .home-container {
+        justify-content: space-between;
+    }
+
+    .form-container {
+        margin: 0;
+        margin-left: 8%;
+    }
+
+    .info-section {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        width: 50%;
+        padding: 3rem;
+        background-color: #1e40af;
+        color: white;
+    }
+
+    .info-section h2 {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 1rem;
+    }
+
+    .info-section p {
+        font-size: 1.125rem;
+        line-height: 1.7;
+        opacity: 0.9;
+    }
+}
