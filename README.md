@@ -4,6 +4,11 @@ A full-stack, production-grade carpooling / ride-sharing platform built for a un
 
 > Sign-up is restricted to `@paruluniversity.ac.in` email accounts (configurable in code).
 
+This repository contains the two application services:
+
+- **`backend/`** — Node.js + Express REST API, Socket.io real-time layer, MongoDB, Redis, and an AI/RAG agent.
+- **`frontend/`** — React 19 + Vite single-page app (Tailwind CSS), installable as a PWA.
+
 ---
 
 ## Tech Stack
@@ -12,33 +17,27 @@ A full-stack, production-grade carpooling / ride-sharing platform built for a un
 
 **Frontend** — React 19, Vite, Tailwind CSS, React Router 7, Axios, Socket.io-client, Google Maps (`@react-google-maps/api`), `@react-oauth/google`, React Toastify, QRCode. Ships as an installable PWA (service worker, offline page, push).
 
-**Infrastructure** — Docker + Docker Compose (Mongo, Redis, backend, nginx-served frontend), single-origin reverse proxy, horizontally scalable (Redis-backed presence/rate-limit/socket adapter + nginx load balancer).
-
-**Testing** — Vitest (unit) on backend & frontend, Playwright (97 end-to-end tests) against the live Docker stack.
+**Testing** — Vitest (unit tests) on both backend and frontend.
 
 ---
 
 ## Architecture
 
 ```
-                         ┌──────────────────────────────┐
-  Browser / PWA  ───────▶│  frontend (nginx)            │
-  (one origin)           │  • serves React build        │
-                         │  • proxies /api  → backend   │
-                         │  • proxies /socket.io → backend
-                         └───────────────┬──────────────┘
-                                         │
-                                ┌────────▼─────────┐      ┌──────────┐
-                                │  backend (Express)│◀────▶│  Redis   │
-                                │  REST + Socket.io │      │ cache /  │
-                                └────────┬─────────┘      │ presence │
-                                         │                └──────────┘
-                                   ┌─────▼─────┐
-                                   │  MongoDB  │
-                                   └───────────┘
+   Browser / PWA
+        │   (REST + WebSocket, single origin)
+        ▼
+ ┌──────────────────┐        ┌──────────┐
+ │ backend (Express)│◀──────▶│  Redis   │   cache / presence / socket adapter
+ │ REST + Socket.io │        └──────────┘
+ └────────┬─────────┘
+          │
+    ┌─────▼─────┐
+    │  MongoDB  │   users, rides, payments, escrow, chat, reviews, ...
+    └───────────┘
 ```
 
-The frontend nginx serves the static build **and** reverse-proxies `/api` and `/socket.io` to the backend, so the whole app runs from a single origin — which is what the httpOnly auth cookies need.
+In production the React build is served by a static web server that also reverse-proxies `/api` and `/socket.io` to the backend, so the whole app runs from a single origin — which is what the httpOnly auth cookies need.
 
 ---
 
@@ -90,20 +89,24 @@ The frontend nginx serves the static build **and** reverse-proxies `/api` and `/
 
 ```
 .
-├── backend/            Express API, Socket.io, models, controllers, AI agent, jobs
-│   ├── ai/             RAG agent: providers, vector store, retriever, tools
-│   ├── config/         db, redis, jwt, razorpay
-│   ├── controllers/    route handlers (auth, rides, payments, admin, safety, ...)
-│   ├── middleware/      auth, admin, rate limiting
-│   ├── models/         Mongoose schemas
-│   ├── routes/         Express routers
-│   └── server.js       app entry (HTTP + Socket.io)
-├── frontend/           React 19 + Vite SPA (Tailwind), served by nginx in prod
-├── e2e/                Playwright end-to-end suite (97 tests)
-├── deploy/             nginx load-balancer config
-├── docker-compose.yml              local stack (mongo, redis, backend, frontend)
-├── docker-compose.scale.yml        2-backend + nginx LB topology
-└── docker-compose.dokploy.yml      Traefik/Let's Encrypt deploy target
+├── backend/                Express API + Socket.io + AI agent
+│   ├── ai/                 RAG agent: providers, vector store, retriever, tools
+│   ├── config/             db, redis, jwt, razorpay
+│   ├── controllers/        route handlers (auth, rides, payments, admin, safety, ...)
+│   ├── middleware/         auth, admin, rate limiting
+│   ├── models/             Mongoose schemas
+│   ├── routes/             Express routers
+│   ├── jobs/               background jobs (escrow auto-release, personal rides)
+│   ├── utils/              helpers (notify, escrow, fares, route match, ...)
+│   └── server.js           app entry (HTTP + Socket.io)
+└── frontend/               React 19 + Vite SPA (Tailwind)
+    ├── public/             PWA manifest, service worker, icons, offline page
+    └── src/
+        ├── components/     UI (rides, chat, tracking, admin, safety, ...)
+        ├── pages/          top-level routes
+        ├── context/        React context (sockets, auth, maps)
+        ├── services/       API clients
+        └── utils/          helpers (axios config, auth token, maps, pwa)
 ```
 
 ---
@@ -111,42 +114,74 @@ The frontend nginx serves the static build **and** reverse-proxies `/api` and `/
 ## Getting Started
 
 ### Prerequisites
-- Docker + Docker Compose (recommended), **or** Node.js 20+ and a local MongoDB + Redis.
+- Node.js 20+
+- A MongoDB instance (local or hosted)
+- A Redis instance (optional — the app degrades gracefully to in-memory if absent)
 
-### 1. Environment variables
-Copy the templates and fill in your own values (these files are gitignored and **never** committed):
-
-```bash
-# backend
-cp backend/.env.example backend/.env        # if present; otherwise create backend/.env
-
-# frontend
-cp frontend/.env.example frontend/.env
-```
-
-Key backend variables: `MONGO_URI`, `REDIS_URL`, `JWT_SECRET`, `REFRESH_TOKEN_SECRET`, `FRONTEND_URL`, `EMAIL_USER`, `EMAIL_PASS`, `GOOGLE_CLIENT_ID`, `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, and (optional) `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` for web push.
-
-Key frontend variables: `VITE_API_URL`, `VITE_GOOGLE_CLIENT_ID`, `VITE_GOOGLE_MAPS_API_KEY`, `VITE_CLOUDINARY_CLOUD_NAME`, `VITE_CLOUDINARY_UPLOAD_PRESET`, `VITE_RAZORPAY_KEY_ID`, `VITE_VAPID_PUBLIC_KEY`.
-
-> Generate a VAPID keypair with: `node -e "console.log(require('web-push').generateVAPIDKeys())"`
-
-### 2. Run with Docker (recommended)
+### 1. Backend
 
 ```bash
-docker compose up -d --build
+cd backend
+npm install
 ```
 
-The app is served at **http://localhost:3000** (frontend nginx, which proxies the API and sockets to the backend).
+Create a `backend/.env` file with at least:
 
-### 3. Run locally without Docker
+```env
+MONGO_URI=mongodb://127.0.0.1:27017/RIDESHARE
+REDIS_URL=redis://127.0.0.1:6379         # optional
+PORT=5000
+NODE_ENV=development
+JWT_SECRET=<random-32+-char-secret>
+REFRESH_TOKEN_SECRET=<different-random-secret>
+FRONTEND_URL=http://localhost:5173
+EMAIL_USER=<gmail-address>
+EMAIL_PASS=<gmail-app-password>
+GOOGLE_CLIENT_ID=<google-oauth-web-client-id>
+RAZORPAY_KEY_ID=<razorpay-key-id>
+RAZORPAY_KEY_SECRET=<razorpay-key-secret>
+# Optional web push:
+# VAPID_PUBLIC_KEY=...
+# VAPID_PRIVATE_KEY=...
+# VAPID_SUBJECT=mailto:you@example.com
+```
+
+> Generate auth secrets: `node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"`
+> Generate a VAPID keypair: `node -e "console.log(require('web-push').generateVAPIDKeys())"`
+
+Run it:
 
 ```bash
-# backend
-cd backend && npm install && npm run dev      # http://localhost:5000
-
-# frontend (in another terminal)
-cd frontend && npm install && npm run dev      # http://localhost:5173
+npm run dev      # nodemon, http://localhost:5000
+# or: npm start
 ```
+
+### 2. Frontend
+
+```bash
+cd frontend
+npm install
+```
+
+Create a `frontend/.env` file:
+
+```env
+VITE_API_URL=http://localhost:5000/api
+VITE_GOOGLE_CLIENT_ID=<same-as-backend-GOOGLE_CLIENT_ID>
+VITE_GOOGLE_MAPS_API_KEY=<google-maps-js-api-key>
+VITE_CLOUDINARY_CLOUD_NAME=<cloudinary-cloud-name>
+VITE_CLOUDINARY_UPLOAD_PRESET=<unsigned-upload-preset>
+VITE_RAZORPAY_KEY_ID=<same-as-backend-RAZORPAY_KEY_ID>
+# VITE_VAPID_PUBLIC_KEY=<same-public-key-as-backend>
+```
+
+Run it:
+
+```bash
+npm run dev      # Vite, http://localhost:5173
+```
+
+The frontend talks to the backend at `VITE_API_URL`.
 
 ---
 
@@ -158,25 +193,22 @@ cd backend && npm test
 
 # frontend unit tests
 cd frontend && npm test
-
-# end-to-end (Playwright) — against the running stack
-cd e2e && npm install && npx playwright test
 ```
 
 ---
 
-## Deployment
+## Environment Variables Reference
 
-The repo includes `docker-compose.dokploy.yml`, a production target for Dokploy/Coolify (Traefik + Let's Encrypt for automatic HTTPS, no host ports, single origin). Point your domain's DNS at the host, attach it to the `frontend` service (port 80), and provide the production environment variables. See `DEPLOYMENT_READINESS.md` for the full readiness audit and checklist.
+**Backend** (`backend/.env`): `MONGO_URI`, `REDIS_URL`, `PORT`, `NODE_ENV`, `JWT_SECRET`, `REFRESH_TOKEN_SECRET`, `ACCESS_TOKEN_TTL`, `REFRESH_TOKEN_TTL_DAYS`, `FRONTEND_URL`, `TRUST_PROXY`, `ADMIN_EMAILS`, `EMAIL_USER`, `EMAIL_PASS`, `GOOGLE_CLIENT_ID`, `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `PLATFORM_COMMISSION_PERCENT`, `ESCROW_AUTO_RELEASE_HOURS`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`.
 
-For horizontal scaling, `docker-compose.scale.yml` runs two backend instances behind an nginx load balancer with Redis-backed presence, rate limiting, and the Socket.io adapter.
+**Frontend** (`frontend/.env`): `VITE_API_URL`, `VITE_GOOGLE_CLIENT_ID`, `VITE_GOOGLE_MAPS_API_KEY`, `VITE_CLOUDINARY_CLOUD_NAME`, `VITE_CLOUDINARY_UPLOAD_PRESET`, `VITE_RAZORPAY_KEY_ID`, `VITE_VAPID_PUBLIC_KEY`.
 
 ---
 
 ## Security Notes
 - Auth tokens are stored in **httpOnly cookies** (secure in production), never in localStorage in prod.
 - Helmet, global + per-route rate limiting, URL sanitization, JWT algorithm allow-list, and production error-detail stripping are enabled.
-- All `.env*` files (including examples/templates) are gitignored — configure secrets locally and via your deploy platform's environment settings.
+- All `.env*` files are gitignored — configure secrets locally and via your deploy platform's environment settings. Never commit real secrets.
 
 ---
 
