@@ -1,0 +1,64 @@
+/* =======================================================
+   Smart Recommendations — premium dark cards
+   ======================================================= */
+.rc-wrap { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; }
+
+.rc-card {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1rem;
+  background: radial-gradient(120% 130% at 100% 0%, #161618 0%, #111113 60%, #0d0d0f 100%);
+  padding: 1.1rem;
+  display: flex; flex-direction: column; gap: 0.7rem;
+}
+.rc-rise { animation: rc-rise 0.3s ease-out both; }
+@keyframes rc-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+.rc-head { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; }
+.rc-title { font-size: 0.98rem; font-weight: 800; margin: 0; }
+.rc-sub { font-size: 0.72rem; color: #9ca3af; }
+
+.rc-list { display: flex; flex-direction: column; gap: 0.5rem; }
+.rc-ride {
+  display: flex; align-items: center; justify-content: space-between; gap: 0.7rem;
+  width: 100%; text-align: left; cursor: pointer;
+  padding: 0.7rem 0.8rem; border-radius: 0.7rem;
+  background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.07);
+  transition: background 0.15s ease, border-color 0.15s ease; font-family: inherit; color: #f4f4f5;
+}
+.rc-ride:hover { background: rgba(255, 255, 255, 0.06); border-color: rgba(255, 255, 255, 0.18); }
+.rc-ride-main { min-width: 0; display: flex; flex-direction: column; gap: 0.15rem; }
+.rc-ride-route { font-weight: 700; font-size: 0.86rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rc-ride-meta { font-size: 0.74rem; color: #9ca3af; }
+.rc-ride-reason { font-size: 0.72rem; color: #6ee7b7; margin-top: 0.1rem; }
+.rc-score { flex-shrink: 0; font-size: 0.72rem; font-weight: 800; padding: 0.2rem 0.5rem; border-radius: 999px; }
+.rc-score.high { background: rgba(5,150,105,0.18); color: #6ee7b7; }
+.rc-score.mid { background: rgba(217,119,6,0.18); color: #fcd34d; }
+.rc-score.low { background: rgba(255,255,255,0.08); color: #9ca3af; }
+
+.rc-chips { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.2rem; }
+.rc-chip { font-size: 0.72rem; font-weight: 600; color: #b6b6bd; padding: 0.2rem 0.6rem; border-radius: 999px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); }
+
+.rc-insight { display: flex; flex-direction: column; gap: 0.35rem; padding-top: 0.4rem; }
+.rc-insight-lead { font-size: 0.8rem; font-weight: 700; color: #e4e4e7; }
+.rc-demand-row { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; font-size: 0.8rem; color: #d4d4d8; padding: 0.25rem 0; }
+.rc-demand-count { font-size: 0.72rem; font-weight: 700; color: #9ca3af; white-space: nowrap; }
+.rc-demand-count.warn { color: #fcd34d; }
+
+.rc-trend { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.rc-trend-chip {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  font-size: 0.8rem; font-weight: 600; color: #e4e4e7; cursor: pointer; font-family: inherit;
+  padding: 0.4rem 0.7rem; border-radius: 999px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+}
+.rc-trend-chip:hover { background: rgba(255,255,255,0.1); }
+.rc-trend-rank { font-size: 0.66rem; font-weight: 800; width: 16px; height: 16px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; background: #f4f4f5; color: #0a0a0b; }
+
+.rc-btn { align-self: flex-start; margin-top: 0.4rem; padding: 0.5rem 0.9rem; border-radius: 0.6rem; font-size: 0.8rem; font-weight: 800; background: #f4f4f5; color: #0a0a0b; border: none; cursor: pointer; font-family: inherit; }
+.rc-btn:hover { opacity: 0.9; }
+
+.rc-empty { font-size: 0.82rem; color: #9ca3af; display: flex; flex-direction: column; gap: 0.6rem; }
+.rc-empty p { margin: 0; line-height: 1.5; }
+
+.rc-skel-rows { display: flex; flex-direction: column; gap: 0.5rem; }
+.rc-skel-rows span { height: 40px; border-radius: 0.6rem; background: linear-gradient(90deg, rgba(255,255,255,0.04), rgba(255,255,255,0.08), rgba(255,255,255,0.04)); background-size: 200% 100%; animation: rc-shim 1.3s infinite; }
+@keyframes rc-shim { to { background-position: -200% 0; } }

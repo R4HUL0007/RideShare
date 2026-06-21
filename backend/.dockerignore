@@ -1,0 +1,12 @@
+node_modules
+npm-debug.log
+.env
+.git
+.gitignore
+*.test.js
+test
+coverage
+Dockerfile
+.dockerignore
+# Generated AI vector store — regenerated on boot (ingest-if-empty).
+ai/data

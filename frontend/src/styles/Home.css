@@ -1,0 +1,1016 @@
+/* Home.css */
+
+/* Main container styling */
+.home-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    min-height: 100dvh;
+    background: radial-gradient(125% 125% at 100% 0%, #161618 0%, #0e0e10 45%, #0a0a0b 100%);
+    position: relative;
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding: clamp(0.5rem, 1.5vw, 1rem);
+}
+
+/* Animated background elements — kept very subtle (no heavy glow). */
+.home-container::before {
+    content: '';
+    position: absolute;
+    width: 360px;
+    height: 360px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 50%;
+    top: -180px;
+    right: -160px;
+    animation: float 26s ease-in-out infinite;
+    pointer-events: none;
+}
+
+.home-container::after {
+    content: '';
+    position: absolute;
+    width: 300px;
+    height: 300px;
+    background: rgba(255, 255, 255, 0.025);
+    border-radius: 50%;
+    bottom: -160px;
+    left: -150px;
+    animation: float 20s ease-in-out infinite reverse;
+    pointer-events: none;
+}
+
+@keyframes float {
+    0%, 100% {
+        transform: translate(0, 0) rotate(0deg);
+    }
+    33% {
+        transform: translate(30px, -30px) rotate(120deg);
+    }
+    66% {
+        transform: translate(-20px, 20px) rotate(240deg);
+    }
+}
+
+/* Left Section (Login/Register) */
+.left-section {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #ffffff;
+}
+
+.auth-box {
+    width: 100%;
+    max-width: 330px;
+    padding: clamp(1rem, 2.5vw, 1.4rem);
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.auth-toggle {
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: clamp(1rem, 2vh, 1.25rem);
+}
+
+.auth-toggle button {
+    width: 50%;
+    padding: clamp(0.5rem, 1.2vh, 0.65rem);
+    border: none;
+    background-color: #e4e6eb;
+    cursor: pointer;
+    border-radius: 8px 8px 0 0;
+    font-weight: bold;
+    color: #4a4a4a;
+    font-size: 0.9rem;
+}
+
+.auth-toggle button.active {
+    background-color: #1a1a2e;
+    color: #ffffff;
+}
+
+.form-container {
+    width: 100%;
+    max-width: min(100%, 24rem);
+    margin: auto;
+    padding: clamp(0.85rem, 2vw, 1.25rem);
+    background-color: #ffffff;
+    border-radius: 1.25rem;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28);
+    position: relative;
+    z-index: 10;
+    animation: slideIn 0.6s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.logo-section {
+    text-align: center;
+    margin-bottom: clamp(0.4rem, 1.2vh, 0.75rem);
+}
+
+.logo-icon {
+    width: auto;
+    height: clamp(4.5rem, 12vw, 6rem);
+    margin: 0 auto 0.5rem;
+    background: transparent;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    animation: pulse 2s ease-in-out infinite;
+}
+.logo-icon .brand-logo-img { height: 100%; width: auto; max-width: 100%; object-fit: contain; display: block; }
+
+/* Brand wordmark + motto (real text under the icon on the auth page). */
+.brand-name { margin-bottom: 0.15rem !important; }
+.brand-motto {
+    font-size: clamp(0.58rem, 1.5vw, 0.7rem);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: #9ca3af;
+    font-weight: 600;
+    margin: 0 0 0.5rem;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+}
+
+.logo-icon svg {
+    width: clamp(1rem, 2.8vw, 1.5rem);
+    height: clamp(1rem, 2.8vw, 1.5rem);
+}
+
+.form-container h1 {
+    font-size: clamp(1.15rem, 3vw, 1.5rem);
+    font-weight: 800;
+    color: #0a0a0a;
+    letter-spacing: -0.02em;
+    margin-bottom: 0.25rem;
+}
+
+.tagline {
+    color: #6b7280;
+    font-size: clamp(0.7rem, 1.6vw, 0.8rem);
+    margin-top: 0.15rem;
+}
+
+.tab-buttons {
+    display: flex;
+    margin-bottom: clamp(0.6rem, 1.5vh, 1rem);
+    border-radius: 12px;
+    overflow: hidden;
+    border: 2px solid #e5e7eb;
+    background: #f9fafb;
+    gap: 4px;
+    padding: 4px;
+}
+
+.tab-buttons button {
+    flex: 1;
+    padding: clamp(0.45rem, 1vw, 0.6rem) 0.6rem;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-weight: 600;
+    color: #6b7280;
+    transition: all 0.3s ease;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    font-size: 0.85rem;
+}
+
+.tab-buttons button:hover {
+    color: #000000;
+    background: rgba(0, 0, 0, 0.06);
+}
+
+.tab-buttons button.active {
+    background: linear-gradient(135deg, #000000 0%, #333333 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+}
+
+/* Form styling */
+form {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(0.3rem, 0.7vh, 0.5rem);
+}
+
+form h2 {
+    font-size: clamp(0.95rem, 2.3vw, 1.1rem);
+    font-weight: 600;
+    margin-bottom: 0.35rem;
+    color: #374151;
+}
+
+form label {
+    display: block;
+    margin-bottom: 0.2rem;
+    font-weight: 500;
+    color: #4b5563;
+    font-size: 0.8rem;
+}
+
+form input,
+form select {
+    width: 100%;
+    padding: clamp(0.4rem, 0.9vw, 0.55rem) 0.6rem;
+    border: 2px solid #e5e7eb;
+    border-radius: 10px;
+    font-size: clamp(0.8rem, 1.8vw, 0.9rem);
+    transition: all 0.3s ease;
+    background: #fafafa;
+}
+
+form input:focus,
+form select:focus {
+    border-color: #000000;
+    outline: none;
+    box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.08);
+    background: white;
+}
+
+form input:hover,
+form select:hover {
+    border-color: #9ca3af;
+    background: white;
+}
+
+form button {
+    margin-top: 0.15rem;
+    padding: clamp(0.5rem, 1.2vw, 0.65rem);
+    background: linear-gradient(135deg, #000000 0%, #333333 100%);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.35);
+    font-size: 0.9rem;
+}
+
+.auth-link-button {
+    background: none !important;
+    border: none !important;
+    color: #111111 !important;
+    cursor: pointer;
+    text-decoration: underline;
+    font-size: 0.75rem;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    font-weight: 500;
+}
+
+.auth-secondary-button {
+    margin-top: 0.35rem;
+    border: 1px solid #d1d5db;
+    background: #fff;
+    color: #4b5563;
+    border-radius: 0.5rem;
+    padding: clamp(0.4rem, 0.9vw, 0.5rem) clamp(0.55rem, 1vw, 0.65rem);
+    font-size: 0.8rem;
+}
+
+form button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+}
+
+form button:active {
+    transform: translateY(0);
+}
+
+form button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Right Section (University Info) */
+.right-section {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #000000;
+    color: #ffffff;
+    text-align: center;
+}
+
+.info-box {
+    max-width: 400px;
+}
+
+.info-box h1 {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+}
+
+.info-box p {
+    font-size: 1rem;
+    color: #dcdcdc;
+}
+
+.info-section {
+    display: none;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .home-container {
+        flex-direction: column;
+        /* Let the page scroll naturally and give the card breathing room
+           top/bottom instead of vertically centering a tall form. */
+        align-items: stretch;
+        justify-content: flex-start;
+        padding: 0;
+        overflow-x: hidden;
+    }
+
+    /* Hide the decorative floating circles on mobile — they bled in as dark
+       wedges behind the full-bleed card. */
+    .home-container::before,
+    .home-container::after {
+        display: none;
+    }
+
+    .form-container {
+        margin: 0;
+        width: 100%;
+        max-width: 100%;
+        min-height: 100dvh;
+        /* Full-bleed white form on phones: no rounded corners / floating-card
+           look, so there's no leftover dark background wedge. */
+        border-radius: 0;
+        border: none;
+        box-shadow: none;
+        padding: 1.25rem 1.1rem calc(1.25rem + env(safe-area-inset-bottom));
+        padding-top: calc(1.25rem + env(safe-area-inset-top));
+        /* No rigid max-height — a tall form (Register) must not be clipped;
+           the whole page scrolls instead. */
+        max-height: none;
+    }
+
+    .info-section {
+        padding: 3rem 2rem;
+        text-align: center;
+    }
+
+    .info-content {
+        max-width: 100%;
+    }
+
+    .features-list {
+        gap: 1rem;
+    }
+
+    .feature-item {
+        padding: 0.75rem;
+    }
+}
+
+/* =======================================================
+   MOBILE — dark glassmorphism auth (≤768px)
+   Overrides the light card with the app's signature dark
+   glass look. Covers both register (.rsr-) and login (.rsl-)
+   scoped inputs. Desktop is unaffected.
+   ======================================================= */
+@media (max-width: 768px) {
+    /* Deep gradient page backdrop — identical to desktop for a consistent look. */
+    .home-container {
+        background: radial-gradient(125% 125% at 100% 0%, #161618 0%, #0e0e10 45%, #0a0a0b 100%);
+    }
+
+    /* The form becomes a translucent dark glass panel, full-bleed. */
+    .form-container {
+        background: rgba(18, 18, 20, 0.72) !important;
+        backdrop-filter: blur(18px) saturate(140%);
+        -webkit-backdrop-filter: blur(18px) saturate(140%);
+        border: none !important;
+        color: #f4f4f5;
+    }
+
+    /* Headings / taglines on dark. */
+    .form-container h1 { color: #f4f4f5; }
+    .tagline { color: #9ca3af; }
+
+    /* Tab switcher (Login/Register) glass treatment. */
+    .tab-buttons {
+        background: rgba(255, 255, 255, 0.04);
+        border-color: rgba(255, 255, 255, 0.1);
+    }
+    .tab-buttons button { color: #9ca3af; }
+    .tab-buttons button:hover { color: #f4f4f5; background: rgba(255, 255, 255, 0.06); }
+    .tab-buttons button.active {
+        background: linear-gradient(135deg, #f4f4f5 0%, #d4d4d8 100%);
+        color: #0a0a0b;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Field labels. */
+    .rsr-label, .rsl-label, form label { color: #c9c9cf; }
+
+    /* Inputs → translucent dark glass with light text. Higher-specificity
+       scoped selectors so they beat the base light input rules. */
+    .rsr-root .rsr-input,
+    .rsl-root .rsl-input,
+    form input,
+    form select {
+        background: rgba(255, 255, 255, 0.05) !important;
+        border: 1.5px solid rgba(255, 255, 255, 0.12) !important;
+        color: #f4f4f5 !important;
+    }
+    .rsr-root .rsr-input::placeholder,
+    .rsl-root .rsl-input::placeholder,
+    form input::placeholder { color: #6b7280 !important; }
+
+    .rsr-root .rsr-input:hover,
+    .rsl-root .rsl-input:hover,
+    form input:hover, form select:hover {
+        border-color: rgba(255, 255, 255, 0.25) !important;
+        background: rgba(255, 255, 255, 0.07) !important;
+    }
+    .rsr-root .rsr-input:focus,
+    .rsl-root .rsl-input:focus,
+    form input:focus, form select:focus {
+        border-color: rgba(255, 255, 255, 0.4) !important;
+        background: rgba(255, 255, 255, 0.09) !important;
+        box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.08) !important;
+    }
+
+    /* Field icons + password toggle on dark. */
+    .rsr-input-icon, .rsl-input-icon { color: #6b7280; }
+    .rsr-input-wrap:focus-within .rsr-input-icon,
+    .rsl-input-wrap:focus-within .rsl-input-icon { color: #f4f4f5; }
+    .rsr-pw-toggle, .rsl-pw-toggle { color: #6b7280; }
+    .rsr-pw-toggle:hover, .rsl-pw-toggle:hover { color: #f4f4f5; background: rgba(255, 255, 255, 0.08); }
+
+    /* Submit buttons → light pill on dark (inverted). */
+    .rsr-root .rsr-submit,
+    .rsl-root .rsl-submit,
+    form button {
+        background: linear-gradient(135deg, #f4f4f5 0%, #d4d4d8 100%);
+        color: #0a0a0b;
+        box-shadow: 0 8px 22px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Themed dropdown trigger (Role/Gender) matches the glass inputs. */
+    .rsr-root .rsr-select-trigger { color: #f4f4f5; }
+    .rsr-select-value { color: #f4f4f5; }
+    .rsr-root .rsr-select-trigger.rsr-select-placeholder .rsr-select-value { color: #6b7280; }
+    .rsr-select-chevron { color: #9ca3af; }
+
+    /* Terms / footnotes / dividers on dark. */
+    .rsr-terms-label, form .auth-link-button { color: #c9c9cf; }
+    .rsr-terms-label a { color: #f4f4f5; }
+    .rsr-footnote { color: #9ca3af; }
+    .rsr-footnote svg { color: #f4f4f5; }
+    .rsr-divider, .rsl-divider { color: #6b7280; }
+    .rsr-divider::before, .rsr-divider::after,
+    .rsl-divider::before, .rsl-divider::after { background: rgba(255, 255, 255, 0.12); }
+
+    /* Google PU-email note on dark. */
+    .rsr-google-note { color: #9ca3af; }
+    .rsr-google-note strong { color: #f4f4f5; }
+
+    /* Checkbox on dark. */
+    .rsr-root .rsr-checkbox {
+        background: rgba(255, 255, 255, 0.06);
+        border-color: rgba(255, 255, 255, 0.25);
+    }
+    .rsr-root .rsr-checkbox:checked {
+        background: #f4f4f5;
+        border-color: #f4f4f5;
+    }
+    .rsr-root .rsr-checkbox:checked::after { border-color: #0a0a0b; }
+
+    /* OTP inputs on dark. */
+    .otp-input, .rsr-root .rsr-otp-input {
+        background: rgba(255, 255, 255, 0.05);
+        border-color: rgba(255, 255, 255, 0.15);
+        color: #f4f4f5;
+    }
+
+    /* OTP verification card → dark glass panel. */
+    .otp-verification {
+        background: rgba(18, 18, 20, 0.72);
+        backdrop-filter: blur(18px) saturate(140%);
+        -webkit-backdrop-filter: blur(18px) saturate(140%);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 18px 44px rgba(0, 0, 0, 0.55);
+    }
+    .otp-verification h2 { color: #f4f4f5; }
+    .otp-verification p { color: #9ca3af; }
+    .otp-verification p strong { color: #f4f4f5; }
+    .otp-input:hover { border-color: rgba(255, 255, 255, 0.25); background: rgba(255, 255, 255, 0.07); }
+    .otp-input:focus {
+        border-color: rgba(255, 255, 255, 0.4);
+        background: rgba(255, 255, 255, 0.09);
+        box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.08);
+    }
+    .otp-input.filled { border-color: rgba(255,255,255,0.5); background: rgba(255,255,255,0.08); }
+    .otp-verification .btn-link { color: #f4f4f5; }
+    .otp-resend p { color: #6b7280; }
+    /* Verify/submit button → light pill on dark. */
+    .otp-verification button[type="submit"],
+    .otp-verification .btn-primary {
+        background: linear-gradient(135deg, #f4f4f5 0%, #d4d4d8 100%);
+        color: #0a0a0b;
+    }
+}
+
+@media (min-width: 768px) {
+    .home-container {
+        justify-content: center;
+        align-items: center;
+    }
+
+    .form-container {
+        width: min(96%, 26rem);
+    }
+}
+
+@media (min-width: 1024px) {
+    .home-container {
+        justify-content: space-between;
+    }
+
+    .form-container {
+        margin: 0;
+        margin-left: 5%;
+        max-height: calc(100dvh - 2rem);
+        overflow-y: auto;
+    }
+
+    /* =======================================================
+       Premium road hero (right side, desktop ≥1024px)
+       Linear/Vercel-inspired: dark, minimal, GPU-friendly CSS
+       road + animated car. No heavy images or neon.
+       ======================================================= */
+    .info-section {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        width: 52%;
+        padding: clamp(2rem, 4vw, 4rem) clamp(2rem, 4vw, 4rem) clamp(2rem, 4vw, 4rem) clamp(1.5rem, 3vw, 3rem);
+        color: #f4f4f5;
+        position: relative;
+        z-index: 10;
+        gap: clamp(1.5rem, 3vh, 2.5rem);
+    }
+}
+
+/* ---- Hero scene (base; only rendered on desktop via .info-section) ---- */
+.rs-hero { display: flex; flex-direction: column; gap: clamp(1.5rem, 3vh, 2.4rem); animation: fadeInRight 0.7s ease-out; }
+@keyframes fadeInRight { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: translateX(0); } }
+
+/* Road */
+.rs-road {
+    position: relative;
+    height: clamp(220px, 34vh, 320px);
+    border-radius: 1.5rem;
+    overflow: hidden;
+    background:
+        radial-gradient(120% 90% at 80% 10%, rgba(255,255,255,0.06), transparent 60%),
+        linear-gradient(180deg, #141416 0%, #0c0c0e 100%);
+    border: 1px solid rgba(255,255,255,0.06);
+}
+/* Perspective road surface (trapezoid via clip-path). */
+.rs-road-surface {
+    position: absolute;
+    left: 50%; top: 0; bottom: 0;
+    width: 78%;
+    transform: translateX(-50%);
+    background: linear-gradient(180deg, #1d1d20 0%, #18181b 100%);
+    clip-path: polygon(38% 0%, 62% 0%, 100% 100%, 0% 100%);
+    opacity: 0.9;
+}
+/* Animated center lane dashes — moving toward the viewer implies motion. */
+.rs-lane {
+    position: absolute;
+    left: 50%; top: -20%;
+    width: 6px; height: 140%;
+    transform: translateX(-50%);
+    background: repeating-linear-gradient(
+        180deg,
+        rgba(255,255,255,0.85) 0 7%,
+        transparent 7% 16%
+    );
+    -webkit-mask: linear-gradient(180deg, transparent, #000 18%, #000 82%, transparent);
+            mask: linear-gradient(180deg, transparent, #000 18%, #000 82%, transparent);
+    animation: rs-lane-move 1.6s linear infinite;
+    will-change: transform;
+}
+@keyframes rs-lane-move { to { transform: translate(-50%, 16%); } }
+
+/* Location markers */
+.rs-marker {
+    position: absolute;
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    padding: 0.4rem 0.8rem;
+    font-size: 0.66rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase;
+    color: #f4f4f5;
+    background: rgba(20,20,22,0.85);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 999px;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.4);
+    z-index: 3;
+}
+.rs-marker svg { color: #f4f4f5; }
+.rs-marker-top { top: 1rem; left: 1.2rem; }
+.rs-marker-bottom { bottom: 1rem; right: 1.2rem; }
+
+/* Car — real PNG asset, centered on the road with a subtle slow float. */
+.rs-car {
+    position: absolute;
+    left: 50%; top: 50%;
+    width: clamp(190px, 30vw, 340px);
+    transform: translate(-50%, -50%);
+    z-index: 2;
+    animation: rs-car-bob 7s ease-in-out infinite;
+    will-change: transform;
+}
+.rs-car-img {
+    width: 100%;
+    height: auto;
+    display: block;
+    filter: drop-shadow(0 18px 26px rgba(0, 0, 0, 0.6));
+}
+@keyframes rs-car-bob {
+    0%   { transform: translate(-50%, -50%); }
+    50%  { transform: translate(calc(-50% + 10px), calc(-50% - 12px)); }
+    100% { transform: translate(-50%, -50%); }
+}
+
+/* Headline + copy */
+.rs-hero-copy { max-width: 30rem; }
+.rs-hero-headline {
+    font-size: clamp(1.8rem, 3.4vw, 2.6rem);
+    font-weight: 800;
+    line-height: 1.12;
+    letter-spacing: -0.02em;
+    margin: 0 0 1rem;
+    color: #fafafa;
+}
+.rs-hero-headline em {
+    font-style: italic;
+    font-family: Georgia, "Times New Roman", serif;
+    font-weight: 600;
+    color: #d4d4d8;
+}
+.rs-hero-sub {
+    font-size: clamp(0.9rem, 1.2vw, 1rem);
+    line-height: 1.6;
+    color: #9ca3af;
+    margin: 0 0 1.6rem;
+}
+
+/* Stats strip */
+.rs-stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.7rem;
+}
+.rs-stat {
+    display: flex; align-items: center; gap: 0.7rem;
+    padding: 0.8rem 0.9rem;
+    border-radius: 0.9rem;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.07);
+}
+.rs-stat-icon {
+    font-size: 1.05rem; width: 34px; height: 34px; flex-shrink: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+    border-radius: 0.6rem; background: rgba(255,255,255,0.06); font-weight: 800;
+}
+.rs-stat-v { font-size: 1.05rem; font-weight: 800; line-height: 1; color: #f4f4f5; }
+.rs-stat-l { font-size: 0.7rem; color: #9ca3af; margin-top: 0.2rem; }
+
+@media (min-width: 1280px) {
+    .rs-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+/* Respect reduced-motion preferences. */
+@media (prefers-reduced-motion: reduce) {
+    .rs-lane, .rs-car, .home-container::before, .home-container::after { animation: none !important; }
+}
+
+/* OTP Verification Styles */
+.otp-verification {
+    width: 100%;
+    max-width: min(100%, 26rem);
+    margin: auto;
+    padding: clamp(1.25rem, 3vw, 1.75rem);
+    background-color: #ffffff;
+    border-radius: 1rem;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    box-shadow: 0 18px 44px rgba(0, 0, 0, 0.16);
+    position: relative;
+    animation: slideIn 0.5s ease-out;
+}
+
+/* Mail icon badge above the heading */
+.otp-verification::before {
+    content: '';
+    display: block;
+    width: 52px;
+    height: 52px;
+    margin: 0 auto 0.9rem;
+    border-radius: 50%;
+    background:
+        linear-gradient(135deg, #000000 0%, #2b2b2b 100%)
+        center / 26px 26px no-repeat;
+    -webkit-mask: none;
+    /* envelope glyph via inline SVG background on a dark disc */
+    background-image:
+        url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='26' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='2' y='4' width='20' height='16' rx='2'/%3E%3Cpath d='m22 7-10 6L2 7'/%3E%3C/svg%3E"),
+        linear-gradient(135deg, #000000 0%, #2b2b2b 100%);
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 26px 26px, cover;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+}
+
+.otp-verification h2 {
+    font-size: clamp(1.2rem, 2.8vw, 1.45rem);
+    font-weight: 800;
+    color: #0a0a0a;
+    text-align: center;
+    margin-bottom: 0.4rem;
+    letter-spacing: -0.01em;
+}
+
+.otp-verification p {
+    text-align: center;
+    color: #6b7280;
+    margin-bottom: 1.25rem;
+    font-size: 0.85rem;
+    line-height: 1.45;
+}
+
+.otp-verification p strong {
+    color: #111111;
+    font-weight: 700;
+}
+
+.otp-input-container {
+    display: flex;
+    justify-content: center;
+    gap: clamp(0.4rem, 1.6vw, 0.65rem);
+    margin-bottom: 1.25rem;
+}
+
+.otp-input {
+    width: clamp(2.4rem, 12vw, 3rem);
+    height: clamp(2.9rem, 14vw, 3.5rem);
+    text-align: center;
+    font-size: clamp(1.2rem, 4vw, 1.5rem);
+    font-weight: 800;
+    color: #0a0a0a;
+    background: #f9fafb;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 0.7rem;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, transform 0.12s ease;
+    caret-color: #000000;
+}
+
+.otp-input:hover {
+    border-color: #9ca3af;
+    background: #fff;
+}
+
+.otp-input:focus {
+    border-color: #000000;
+    outline: none;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.1);
+    transform: translateY(-1px);
+}
+
+/* A filled digit reads as "done" */
+.otp-input.filled {
+    border-color: #111111;
+    background: #fff;
+}
+
+.otp-input:disabled {
+    background-color: #f3f4f6;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.otp-resend {
+    text-align: center;
+    margin-top: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.15rem;
+}
+
+.otp-resend p {
+    margin-bottom: 0.15rem;
+    color: #9ca3af;
+    font-size: 0.78rem;
+}
+
+.btn-link {
+    background: none;
+    border: none;
+    color: #111111;
+    cursor: pointer;
+    text-decoration: underline;
+    font-weight: 700;
+    font-size: 0.82rem;
+}
+
+.btn-link:hover {
+    color: #000000;
+}
+
+.btn-link:disabled {
+    color: #9ca3af;
+    cursor: not-allowed;
+    text-decoration: none;
+}
+
+/* =======================================================
+   DARK AUTH CARD — all screen sizes
+   -------------------------------------------------------
+   Makes the Login/Register card a premium black glass panel
+   (instead of white) on desktop AND mobile, keeping the
+   black-and-white language. Only appearance — no markup,
+   routing, validation or auth-flow changes. Placed last so
+   it cleanly overrides the base light-card rules.
+   ======================================================= */
+
+/* The card → same elevated dark material as the hero panels, so the card,
+   page and hero all read as one cohesive surface. Keeps desktop radius/shadow;
+   mobile full-bleed rules (earlier media query) still apply on phones. */
+.form-container {
+    background: radial-gradient(120% 130% at 100% 0%, #1a1a1d 0%, #121214 60%, #0d0d0f 100%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    color: #f4f4f5;
+}
+
+/* Logo tile + headings + tagline on dark. */
+.form-container h1 { color: #f4f4f5; }
+.tagline { color: #9ca3af; }
+
+/* Login/Register tab switcher → glass; active = light pill. */
+.tab-buttons {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+.tab-buttons button { color: #9ca3af; }
+.tab-buttons button:hover { color: #f4f4f5; background: rgba(255, 255, 255, 0.06); }
+.tab-buttons button.active {
+    background: linear-gradient(135deg, #f4f4f5 0%, #d4d4d8 100%);
+    color: #0a0a0b;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+}
+
+/* Field labels. */
+.rsr-label, .rsl-label, form label { color: #c9c9cf; }
+
+/* Inputs → translucent dark glass with light text. */
+.rsr-root .rsr-input,
+.rsl-root .rsl-input,
+form input,
+form select {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border: 1.5px solid rgba(255, 255, 255, 0.12) !important;
+    color: #f4f4f5 !important;
+}
+.rsr-root .rsr-input::placeholder,
+.rsl-root .rsl-input::placeholder,
+form input::placeholder { color: #6b7280 !important; }
+.rsr-root .rsr-input:hover,
+.rsl-root .rsl-input:hover,
+form input:hover, form select:hover {
+    border-color: rgba(255, 255, 255, 0.25) !important;
+    background: rgba(255, 255, 255, 0.07) !important;
+}
+.rsr-root .rsr-input:focus,
+.rsl-root .rsl-input:focus,
+form input:focus, form select:focus {
+    border-color: rgba(255, 255, 255, 0.4) !important;
+    background: rgba(255, 255, 255, 0.09) !important;
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Field icons + password toggle. */
+.rsr-input-icon, .rsl-input-icon { color: #6b7280; }
+.rsr-input-wrap:focus-within .rsr-input-icon,
+.rsl-input-wrap:focus-within .rsl-input-icon { color: #f4f4f5; }
+.rsr-pw-toggle, .rsl-pw-toggle { color: #6b7280; }
+.rsr-pw-toggle:hover, .rsl-pw-toggle:hover { color: #f4f4f5; background: rgba(255, 255, 255, 0.08); }
+
+/* Primary submit → light pill (visible on the black card). */
+.rsr-root .rsr-submit,
+.rsl-root .rsl-submit,
+form button {
+    background: linear-gradient(135deg, #f4f4f5 0%, #d4d4d8 100%);
+    color: #0a0a0b;
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.5);
+}
+
+/* Themed Role/Gender dropdown trigger. */
+.rsr-root .rsr-select-trigger { color: #f4f4f5; }
+.rsr-select-value { color: #f4f4f5; }
+.rsr-root .rsr-select-trigger.rsr-select-placeholder .rsr-select-value { color: #6b7280; }
+.rsr-select-chevron { color: #9ca3af; }
+
+/* Dividers / terms / footnotes / Google note on dark. */
+.rsr-terms-label, form .auth-link-button { color: #c9c9cf; }
+.rsr-terms-label a { color: #f4f4f5; }
+.rsr-footnote { color: #9ca3af; }
+.rsr-footnote svg { color: #f4f4f5; }
+.rsr-divider, .rsl-divider { color: #6b7280; }
+.rsr-divider::before, .rsr-divider::after,
+.rsl-divider::before, .rsl-divider::after { background: rgba(255, 255, 255, 0.12); }
+.rsr-google-note { color: #9ca3af; }
+.rsr-google-note strong { color: #f4f4f5; }
+
+/* Checkbox on dark. !important beats the base light-card rule in register.css
+   (equal specificity) so the checked box is a visible light tile with a dark
+   tick instead of black-on-black on the dark auth card. */
+.rsr-root .rsr-checkbox {
+    background: rgba(255, 255, 255, 0.08) !important;
+    border-color: rgba(255, 255, 255, 0.4) !important;
+}
+.rsr-root .rsr-checkbox:hover { border-color: rgba(255, 255, 255, 0.6) !important; }
+.rsr-root .rsr-checkbox:checked { background: #f4f4f5 !important; border-color: #f4f4f5 !important; }
+.rsr-root .rsr-checkbox:checked::after { border-color: #0a0a0b !important; }
+
+/* Logo tile → transparent so the brand SVG shows on the dark card. */
+.logo-icon {
+    background: transparent !important;
+    border: none;
+    color: #f4f4f5;
+}
+
+/* Forgot-password link on dark. */
+.rsl-root .rsl-forgot { color: #c9c9cf; }
+.rsl-root .rsl-forgot:hover { color: #ffffff; }
+
+/* Login "Welcome back" banner already dark — keep its text crisp. */
+.rsl-hero { border: 1px solid rgba(255, 255, 255, 0.08); }
+
+/* =======================================================
+   Mobile cleanup (≤768px) — keep the dark card full-bleed.
+   Placed last so it wins over the global dark-card border/radius.
+   ======================================================= */
+@media (max-width: 768px) {
+    .form-container {
+        border: none !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+        min-height: 100dvh;
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+    }
+    /* Hero stays hidden on mobile — form is the sole focus, no h-scroll. */
+    .info-section { display: none !important; }
+}
+
+/* =======================================================
+   Mobile-only logo fix (≤768px). On small renders the faint
+   raster noise baked into the brand SVG shows up as a dim
+   box behind the logo. Blend the dark pixels into the black
+   page so only the logo art remains. Desktop is untouched.
+   ======================================================= */
+@media (max-width: 768px) {
+    .logo-icon {
+        background: transparent !important;
+    }
+}

@@ -1,0 +1,756 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Global styles */
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  body {
+    @apply font-sans text-gray-800 bg-gray-50 antialiased;
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow-x: hidden;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold;
+  }
+
+  html, body, #root {
+    max-width: 100%;
+    overflow-x: hidden;
+    width: 100%;
+  }
+}
+
+@layer components {
+  /* Container for centered content */
+  .container-center {
+    @apply w-full max-w-6xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8;
+  }
+
+  /* Button styles */
+  .btn {
+    @apply inline-flex items-center justify-center px-4 py-2 rounded-button font-medium transition-all duration-200 
+           disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 text-sm;
+  }
+
+  .btn-primary {
+    @apply bg-primary-600 hover:bg-primary-700 text-white focus:ring-primary-500;
+  }
+
+  .btn-secondary {
+    @apply bg-secondary-600 hover:bg-secondary-700 text-white focus:ring-secondary-500;
+  }
+
+  .btn-success {
+    @apply bg-accent-600 hover:bg-accent-700 text-white focus:ring-accent-500;
+  }
+
+  .btn-danger {
+    @apply bg-danger-600 hover:bg-danger-700 text-white focus:ring-danger-500;
+  }
+
+  .btn-outline {
+    @apply bg-transparent border border-primary-600 text-primary-600 hover:bg-primary-50 focus:ring-primary-500;
+  }
+
+  .btn-sm {
+    @apply text-xs px-2.5 py-1.5;
+  }
+
+  /* Form styles */
+  .form-control {
+    @apply mb-3;
+  }
+
+  .form-label {
+    @apply block text-xs sm:text-sm font-medium text-gray-700 mb-1.5;
+  }
+
+  .form-input {
+    @apply w-full px-3 py-2 sm:py-2.5 rounded-md border border-gray-300 bg-white shadow-sm text-sm
+           focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500
+           placeholder-gray-400 transition-colors;
+  }
+
+  .form-error {
+    @apply text-xs text-danger-600 mt-1;
+  }
+
+  /* Card styles */
+  .card {
+    @apply bg-white rounded-card shadow-card border border-gray-100 overflow-hidden transition-shadow duration-200 hover:shadow-card-hover;
+  }
+
+  .card-header {
+    @apply px-4 sm:px-5 py-3 sm:py-4 bg-white border-b border-gray-100;
+  }
+
+  .card-body {
+    @apply p-4 sm:p-5;
+  }
+
+  .card-footer {
+    @apply px-4 sm:px-5 py-3 sm:py-4 bg-gray-50 border-t border-gray-100;
+  }
+
+  /* Badge styles */
+  .badge {
+    @apply inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium;
+  }
+
+  .badge-success {
+    @apply bg-accent-100 text-accent-800;
+  }
+  
+  .badge-pending {
+    @apply bg-warning-100 text-warning-800;
+  }
+  
+  .badge-error {
+    @apply bg-danger-100 text-danger-800;
+  }
+  
+  .badge-info {
+    @apply bg-primary-100 text-primary-800;
+  }
+
+  /* Dashboard layout */
+  .dashboard-layout {
+    @apply flex min-h-screen w-full bg-gray-50;
+    min-height: 100dvh;
+  }
+
+  /* Sidebar */
+  .sidebar {
+    @apply fixed z-30 left-0 top-0 h-screen bg-primary-900 text-white transition-all duration-300 ease-in-out overflow-y-auto;
+    width: 260px;
+    transform: translateX(-100%);
+    min-height: 100dvh;
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+  }
+
+  .sidebar-header {
+    @apply flex items-center justify-between p-4 border-b border-primary-800;
+  }
+
+  .sidebar-logo {
+    @apply text-base font-bold text-white;
+  }
+
+  .sidebar-close {
+    @apply p-1 rounded-full text-white bg-primary-800 hover:bg-primary-700 lg:hidden;
+  }
+
+  .sidebar-profile {
+    @apply flex items-center gap-3 p-3.5 border-b border-primary-800;
+  }
+
+  .sidebar-username {
+    @apply font-medium text-white text-sm;
+  }
+
+  .sidebar-avatar {
+    @apply w-9 h-9 rounded-full;
+  }
+
+  .sidebar-nav {
+    @apply py-3;
+  }
+
+  .nav-section {
+    @apply mb-5;
+  }
+
+  .nav-section-title {
+    @apply text-xs uppercase font-bold text-primary-300 tracking-wide px-4 mb-2;
+  }
+
+  .nav-item {
+    @apply flex items-center gap-3 px-4 py-2.5 text-xs sm:text-sm text-primary-100 hover:bg-primary-800 hover:text-white cursor-pointer transition-colors;
+  }
+
+  .nav-item.active {
+    @apply bg-primary-800 text-white;
+  }
+
+  .nav-icon {
+    @apply flex items-center justify-center w-5 h-5;
+  }
+
+  /* Main content */
+  .main-content {
+    @apply flex-1 flex flex-col pt-0 pb-10 min-h-screen bg-gray-50 transition-all duration-300 ease-in-out;
+    margin-left: 0;
+    min-height: 100dvh;
+  }
+
+  /* Mobile navigation */
+  .sidebar-toggle {
+    @apply fixed z-30 top-4 left-4 p-2 rounded-md bg-white shadow-md text-primary-900 lg:hidden;
+  }
+
+  .sidebar-overlay {
+    @apply fixed inset-0 z-10 bg-black bg-opacity-20 backdrop-blur-sm lg:hidden;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+  }
+
+  .sidebar-overlay.show {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* Dashboard header with mobile menu */
+  .dashboard-header {
+    @apply flex items-center justify-between px-3 sm:px-4 py-2.5 bg-white border-b border-gray-200 sticky top-0 z-10;
+    height: auto;
+    min-height: 50px;
+  }
+
+  .mobile-menu-toggle {
+    @apply flex items-center justify-center;
+  }
+
+  .user-greeting {
+    @apply text-xs sm:text-sm font-medium text-gray-700;
+  }
+
+  /* Content header styling */
+  .content-header {
+    @apply mt-5 sm:mt-6 px-3 sm:px-0;
+  }
+
+  /* Dashboard content container */
+  .dashboard-content {
+    @apply pb-8;
+  }
+
+  /* Card styling for dashboard */
+  .dashboard-card {
+    @apply mx-0 mb-5 sm:mb-6 rounded-lg overflow-hidden shadow-md border border-gray-200;
+  }
+
+  /* Ride grid for better responsive layout */
+  .ride-grid {
+    @apply grid grid-cols-1 sm:grid-cols-1 lg:grid-cols-2 xl:grid-cols-2 gap-3 sm:gap-4 lg:gap-5;
+  }
+
+  .ride-card {
+    @apply bg-white rounded-lg shadow-card border border-gray-100 overflow-hidden transition-all duration-200 hover:shadow-lg hover:-translate-y-1;
+  }
+
+  /* Empty state styling */
+  .empty-state {
+    @apply text-center py-10 sm:py-12 bg-white rounded-lg border border-gray-200 shadow-sm;
+  }
+
+  /* Responsive adjustments */
+  @media (max-width: 1024px) {
+    .sidebar {
+      transform: translateX(-100%);
+    }
+    
+    .sidebar.open {
+      transform: translateX(0);
+    }
+    
+    .main-content {
+      margin-left: 0;
+    }
+  }
+
+  /* Responsive improvements for desktop */
+  @media (min-width: 1024px) {
+    .sidebar {
+      transform: translateX(0);
+    }
+    
+    .main-content {
+      margin-left: 260px;
+    }
+    
+    .dashboard-header {
+      @apply hidden;
+    }
+  }
+
+  /* Form improvements for mobile */
+  .form-input, .form-select, .btn {
+    min-height: 40px;
+  }
+
+  /* Media query for smaller screens */
+  @media (max-width: 640px) {
+    .container-center {
+      @apply px-3;
+    }
+    
+    .card-body {
+      @apply p-3;
+    }
+    
+    .card-header {
+      @apply px-3 py-2.5;
+    }
+
+    .ride-card-content {
+      padding: 0.8rem;
+    }
+  }
+
+  /* Animation keyframes */
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-in-out;
+  }
+
+  .animate-spin {
+    animation: spin 1s linear infinite;
+  }
+
+  /* Loader */
+  .loader {
+    @apply flex items-center justify-center p-3;
+  }
+
+  .loader-spinner {
+    @apply animate-spin h-6 w-6 text-primary-500;
+  }
+
+  /* Override card overflow so autocomplete dropdowns are not clipped */
+  .card {
+    overflow: visible !important;
+  }
+  .dashboard-card {
+    overflow: visible !important;
+  }
+}
+
+/* =======================================================
+   GOOGLE PLACES AUTOCOMPLETE DROPDOWN
+   These styles affect the .pac-container injected by the
+   Google Maps JS SDK into document.body.
+   ======================================================= */
+.pac-container {
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-size: 0.875rem;
+  overflow: hidden;
+  z-index: 9999 !important;
+  margin-top: 4px;
+  /* Ensure it never goes off-screen on mobile */
+  max-width: calc(100vw - 2rem);
+}
+
+/* Remove the Google branding bar at the bottom */
+.pac-container:after {
+  display: none !important;
+  height: 0 !important;
+  background-image: none !important;
+}
+
+.pac-item {
+  padding: 0.6rem 1rem;
+  cursor: pointer;
+  border-top: 1px solid #f3f4f6;
+  line-height: 1.4;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  transition: background-color 0.15s ease;
+  color: #374151;
+}
+
+.pac-item:first-child {
+  border-top: none;
+}
+
+.pac-item:hover {
+  background-color: #eff6ff;
+}
+
+.pac-item-selected,
+.pac-item-selected:hover {
+  background-color: #dbeafe;
+}
+
+.pac-item-query {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #111827;
+  padding-right: 0.25rem;
+}
+
+.pac-matched {
+  font-weight: 700;
+  color: #1d4ed8;
+}
+
+.pac-icon {
+  /* Replace the default pin icon with a smaller, cleaner look */
+  width: 16px;
+  height: 20px;
+  margin-top: 1px;
+  flex-shrink: 0;
+  opacity: 0.5;
+}
+
+/* =======================================================
+   LocationSearchBox + CurrentLocationButton — self-contained
+   styling (these components use Tailwind utility classes which
+   aren't generated in this build, so we hand-style them here to
+   match the dark dashboard theme). Used on Create Ride & Find Rides.
+   ======================================================= */
+.lsb-root {
+  position: relative;
+  width: 100%;
+}
+
+.lsb-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #e4e4e7;
+  margin-bottom: 0.45rem;
+}
+
+.lsb-label svg { flex-shrink: 0; width: 16px; height: 16px; color: #9ca3af; }
+
+.lsb-field {
+  position: relative;
+  width: 100%;
+  overflow: visible;
+}
+
+.lsb-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.7rem 2.4rem 0.7rem 0.85rem;
+  font-size: 0.88rem;
+  font-family: inherit;
+  color: #f4f4f5;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1.5px solid rgba(255, 255, 255, 0.12);
+  border-radius: 0.6rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.lsb-input::placeholder { color: #6b7280; }
+
+.lsb-input:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.35);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.06);
+}
+
+.lsb-input:disabled {
+  background: rgba(255, 255, 255, 0.02);
+  color: #6b7280;
+  cursor: not-allowed;
+}
+
+.lsb-input-icons {
+  position: absolute;
+  right: 0.65rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.lsb-input-icons button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: #9ca3af;
+  cursor: pointer;
+  padding: 0.15rem;
+}
+
+.lsb-input-icons button:hover { color: #f4f4f5; }
+
+.lsb-cloc-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #93c5fd;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.15s ease;
+}
+
+.lsb-cloc-btn:hover:not(:disabled) { color: #bfdbfe; }
+.lsb-cloc-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.lsb-cloc-btn svg { flex-shrink: 0; width: 16px; height: 16px; }
+
+/* LocationSearchBox dropdown styling - dark theme (used only on the
+   dark Create Ride page; portaled to <body> so it cannot be scoped via
+   an ancestor selector). */
+.location-suggestions-dropdown {
+  background-color: #1d1d20;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.6rem;
+  box-shadow: 0 18px 40px -8px rgba(0, 0, 0, 0.6), 0 8px 16px -8px rgba(0, 0, 0, 0.5);
+  max-height: 18rem;
+  overflow-y: auto;
+  z-index: 9999;
+}
+
+.location-suggestion-item {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border-left: none;
+  border-right: none;
+  border-top: none;
+  appearance: none;
+}
+
+.location-suggestion-item:hover {
+  background-color: rgba(255, 255, 255, 0.07);
+}
+
+.location-suggestion-item:last-child {
+  border-bottom: none;
+}
+
+.location-suggestion-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.location-suggestion-main {
+  font-weight: 600;
+  color: #f4f4f5;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.location-suggestion-secondary {
+  color: #9ca3af;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 0.125rem;
+}
+
+/* "No locations found" empty state text inside the dark dropdown */
+.location-suggestions-dropdown .text-gray-500 { color: #9ca3af; }
+
+/* Prevent horizontal scroll globally */
+html, body {
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
+/* =======================================================
+   ThemedSelect — DARK variant (theme="dark")
+   Self-contained so it works inside dark hosts (dashboard,
+   profile, vehicle) that are NOT wrapped in `.rsr-root`.
+   ======================================================= */
+
+/* Base select structure (needed globally, not just under .rsr-root) */
+.rsr-select {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.rsr-select-value {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.rsr-select-chevron {
+  position: absolute;
+  right: 0.65rem;
+  width: 14px;
+  height: 14px;
+  color: #9ca3af;
+  pointer-events: none;
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.rsr-select.open .rsr-select-chevron {
+  transform: rotate(180deg);
+}
+
+/* Base popup list structure (needed globally, not just under .rsr-root) */
+.rsr-select-list {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 50;
+  margin: 0;
+  padding: 0.25rem;
+  list-style: none;
+  border-radius: 0.6rem;
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.5);
+  max-height: 12rem;
+  overflow-y: auto;
+  animation: rsr-fade-up 0.14s ease-out both;
+}
+
+.rsr-select-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem 0.6rem;
+  font-size: 0.85rem;
+  border-radius: 0.4rem;
+  cursor: pointer;
+  list-style: none;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.rsr-select-option[aria-selected='true'] {
+  font-weight: 600;
+}
+
+.rsr-select-check {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+}
+
+@keyframes rsr-fade-up {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.rsr-select--dark .rsr-select-trigger {
+  width: 100%;
+  text-align: left;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.6rem 2rem 0.6rem 0.7rem;
+  font-size: 0.88rem;
+  color: #f4f4f5;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1.5px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0.6rem;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+/* Leave room for an optional leading icon. */
+.rsr-select--dark .rsr-input-icon ~ .rsr-select-trigger,
+.rsr-select--dark .rsr-select-trigger:not(:first-child) {
+  padding-left: 2rem;
+}
+
+.rsr-select--dark .rsr-select-trigger:hover {
+  border-color: rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.rsr-select--dark .rsr-select-trigger:focus-visible {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.45);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.08);
+}
+
+/* The selected value text — light on dark (this was the invisible bit). */
+.rsr-select--dark .rsr-select-value { color: #f4f4f5; }
+.rsr-select--dark .rsr-select-trigger.rsr-select-placeholder .rsr-select-value { color: #6b7280; }
+
+/* Leading field icon colour inside a dark select. */
+.rsr-select--dark .rsr-input-icon { color: #9ca3af; }
+
+/* Chevron. */
+.rsr-select--dark .rsr-select-chevron { color: #9ca3af; }
+.rsr-select--dark.open .rsr-select-chevron { color: #f4f4f5; }
+
+/* Invalid state. */
+.rsr-select--dark .rsr-select-trigger.rsr-input-invalid {
+  border-color: #b91c1c;
+}
+
+/* Popup list — dark surface. */
+.rsr-select--dark .rsr-select-list {
+  background: #161618;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+}
+
+.rsr-select--dark .rsr-select-option { color: #e5e7eb; }
+.rsr-select--dark .rsr-select-option.active { background: #ffffff; color: #0a0a0b; }
+.rsr-select--dark .rsr-select-option[aria-selected='true']:not(.active) {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+
+/* =======================================================
+   GLOBAL DISPLAY DENSITY
+   The app sizes typography and spacing in rem / Tailwind units,
+   which key off the root font-size. Trimming the root size on
+   larger screens uniformly scales the whole UI down for a tighter,
+   premium SaaS feel — applied to every page at once, no component
+   changes. Mobile keeps full size for comfortable touch targets.
+   ======================================================= */
+@media (min-width: 1024px) {
+  html { font-size: 80%; }
+}
+@media (min-width: 1600px) {
+  html { font-size: 78%; }
+}

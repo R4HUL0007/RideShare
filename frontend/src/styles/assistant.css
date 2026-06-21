@@ -1,0 +1,186 @@
+/* =======================================================
+   RidexShare AI Assistant — premium dark, scoped under `.ai-`
+   Floating launcher + chat window, globally available.
+   ======================================================= */
+
+/* ---------------- Floating launcher ---------------- */
+.ai-fab {
+  position: fixed;
+  right: clamp(0.9rem, 2vw, 1.4rem);
+  bottom: clamp(0.9rem, 2vw, 1.4rem);
+  z-index: 3000;
+  width: 56px; height: 56px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: radial-gradient(120% 120% at 30% 20%, #2a2a2e 0%, #161618 60%, #0a0a0b 100%);
+  color: #f4f4f5;
+  display: inline-flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.55);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+.ai-fab:hover { transform: translateY(-2px) scale(1.04); box-shadow: 0 16px 36px rgba(0,0,0,0.6); }
+.ai-fab:active { transform: scale(0.96); }
+.ai-fab svg { width: 26px; height: 26px; }
+/* subtle pulse ring */
+.ai-fab::after {
+  content: ''; position: absolute; inset: -4px; border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.12); animation: ai-pulse 2.6s ease-out infinite;
+}
+@keyframes ai-pulse { 0% { transform: scale(1); opacity: 0.6; } 70% { transform: scale(1.35); opacity: 0; } 100% { opacity: 0; } }
+
+/* ---------------- Chat window ---------------- */
+.ai-window {
+  position: fixed;
+  right: clamp(0.9rem, 2vw, 1.4rem);
+  bottom: clamp(4.5rem, 8vh, 5.5rem);
+  z-index: 3001;
+  width: min(390px, calc(100vw - 1.8rem));
+  height: min(620px, calc(100dvh - 7rem));
+  display: flex; flex-direction: column;
+  background: radial-gradient(120% 90% at 100% 0%, #1a1a1d 0%, #111113 45%, #0c0c0e 100%);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 1.1rem;
+  box-shadow: 0 30px 70px rgba(0,0,0,0.65);
+  overflow: hidden;
+  color-scheme: dark;
+  font-family: 'Inter', system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  animation: ai-pop 0.2s cubic-bezier(0.16,1,0.3,1);
+}
+@keyframes ai-pop { from { transform: translateY(14px) scale(0.97); opacity: 0; } to { transform: none; opacity: 1; } }
+
+.ai-head {
+  display: flex; align-items: center; gap: 0.6rem;
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.02);
+}
+.ai-head-avatar {
+  width: 36px; height: 36px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, #f4f4f5, #c7c7cc); color: #0a0a0b; flex-shrink: 0;
+}
+.ai-head-info { min-width: 0; flex: 1; }
+.ai-head-title { font-size: 0.92rem; font-weight: 800; color: #f4f4f5; line-height: 1.1; }
+.ai-head-sub { font-size: 0.68rem; color: #8b8b93; display: flex; align-items: center; gap: 0.3rem; }
+.ai-dot-online { width: 7px; height: 7px; border-radius: 50%; background: #34d399; display: inline-block; }
+.ai-head-btn {
+  width: 30px; height: 30px; border-radius: 0.5rem; flex-shrink: 0;
+  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+  color: #c9c9cf; display: inline-flex; align-items: center; justify-content: center; cursor: pointer;
+}
+.ai-head-btn:hover { background: rgba(255,255,255,0.12); color: #fff; }
+
+/* ---------------- Message list ---------------- */
+.ai-body { flex: 1; min-height: 0; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: 0.7rem; }
+.ai-body::-webkit-scrollbar { width: 6px; }
+.ai-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 999px; }
+
+/* Welcome screen */
+.ai-welcome { display: flex; flex-direction: column; gap: 0.85rem; padding: 0.2rem 0.1rem; }
+.ai-welcome-emoji { font-size: 1.6rem; }
+.ai-welcome-title { font-size: 1.05rem; font-weight: 800; color: #f4f4f5; }
+.ai-welcome-sub { font-size: 0.82rem; color: #9ca3af; line-height: 1.5; }
+.ai-cap-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.2rem; }
+.ai-cap { display: flex; align-items: center; gap: 0.45rem; padding: 0.55rem 0.6rem; border-radius: 0.6rem; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07); font-size: 0.76rem; color: #d4d4d8; }
+
+/* Bubbles */
+.ai-row { display: flex; }
+.ai-row.user { justify-content: flex-end; }
+.ai-row.bot { justify-content: flex-start; }
+.ai-bubble {
+  max-width: 85%; padding: 0.6rem 0.8rem; border-radius: 0.9rem; font-size: 0.84rem; line-height: 1.45;
+  white-space: pre-wrap; word-break: break-word;
+}
+.ai-bubble.user { background: #f4f4f5; color: #0a0a0b; border-bottom-right-radius: 0.3rem; font-weight: 500; }
+.ai-bubble.bot { background: rgba(255,255,255,0.06); color: #e9e9ec; border: 1px solid rgba(255,255,255,0.08); border-bottom-left-radius: 0.3rem; }
+
+/* Action buttons under a bot message */
+.ai-actions { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.5rem; }
+.ai-action {
+  padding: 0.42rem 0.75rem; border-radius: 999px; font-size: 0.76rem; font-weight: 700; cursor: pointer;
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.14); color: #e4e4e7;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+.ai-action:hover { background: rgba(255,255,255,0.14); }
+.ai-action.primary { background: #f4f4f5; color: #0a0a0b; border-color: #f4f4f5; }
+.ai-action.primary:hover { transform: translateY(-1px); }
+
+/* Suggestion chips */
+.ai-suggestions { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.5rem; }
+.ai-chip {
+  padding: 0.4rem 0.7rem; border-radius: 999px; font-size: 0.74rem; cursor: pointer;
+  background: transparent; border: 1px dashed rgba(255,255,255,0.2); color: #c9c9cf;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.ai-chip:hover { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.35); color: #f4f4f5; }
+
+/* Ride result card */
+.ai-ridecard { margin-top: 0.5rem; border: 1px solid rgba(255,255,255,0.1); border-radius: 0.75rem; padding: 0.7rem 0.8rem; background: rgba(255,255,255,0.03); }
+.ai-ridecard + .ai-ridecard { margin-top: 0.45rem; }
+.ai-ridecard-route { font-size: 0.82rem; font-weight: 700; color: #f4f4f5; display: flex; align-items: center; gap: 0.35rem; }
+.ai-ridecard-meta { display: flex; flex-wrap: wrap; gap: 0.3rem 0.8rem; margin-top: 0.35rem; font-size: 0.72rem; color: #9ca3af; }
+.ai-ridecard-price { color: #6ee7b7; font-weight: 700; }
+
+/* Typing indicator */
+.ai-typing { display: inline-flex; gap: 4px; padding: 0.6rem 0.8rem; }
+.ai-typing span { width: 6px; height: 6px; border-radius: 50%; background: #9ca3af; animation: ai-blink 1.2s infinite both; }
+.ai-typing span:nth-child(2) { animation-delay: 0.2s; }
+.ai-typing span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes ai-blink { 0%, 80%, 100% { opacity: 0.25; transform: translateY(0); } 40% { opacity: 1; transform: translateY(-2px); } }
+
+/* ---------------- Quick actions strip ---------------- */
+.ai-quick { display: flex; gap: 0.4rem; overflow-x: auto; padding: 0.55rem 0.8rem; border-top: 1px solid rgba(255,255,255,0.06); }
+.ai-quick::-webkit-scrollbar { height: 0; }
+.ai-quick-btn { white-space: nowrap; padding: 0.4rem 0.7rem; border-radius: 999px; font-size: 0.74rem; font-weight: 600; cursor: pointer; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #d4d4d8; flex-shrink: 0; }
+.ai-quick-btn:hover { background: rgba(255,255,255,0.12); color: #fff; }
+
+/* ---------------- Composer ---------------- */
+.ai-composer { display: flex; align-items: center; gap: 0.5rem; padding: 0.7rem 0.8rem; border-top: 1px solid rgba(255,255,255,0.08); }
+.ai-input {
+  flex: 1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 999px; padding: 0.6rem 0.9rem; color: #f4f4f5; font-size: 0.9rem; font-family: inherit;
+  color-scheme: dark; -webkit-appearance: none; appearance: none;
+}
+.ai-input::placeholder { color: #6b7280; }
+.ai-input:focus {
+  outline: none;
+  border-color: rgba(255,255,255,0.3);
+  /* Pin the dark background + text on focus — some mobile browsers force a
+     white field on focus otherwise. */
+  background: rgba(40,40,44,0.96);
+  color: #f4f4f5;
+  -webkit-text-fill-color: #f4f4f5;
+  caret-color: #f4f4f5;
+}
+/* Neutralise autofill's forced white background / dark text. */
+.ai-input:-webkit-autofill,
+.ai-input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #f4f4f5;
+  caret-color: #f4f4f5;
+  -webkit-box-shadow: 0 0 0 1000px #1b1b1f inset;
+  box-shadow: 0 0 0 1000px #1b1b1f inset;
+  transition: background-color 9999s ease-in-out 0s;
+}
+.ai-send {
+  width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0;
+  background: #f4f4f5; border: none; color: #0a0a0b; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; transition: transform 0.15s ease, opacity 0.15s ease;
+}
+.ai-send:hover:not(:disabled) { transform: scale(1.06); }
+.ai-send:disabled { opacity: 0.5; cursor: default; }
+
+/* ---------------- Mobile ---------------- */
+@media (max-width: 520px) {
+  .ai-window {
+    right: 0; left: 0; bottom: 0;
+    width: 100vw; height: 100dvh; max-height: 100dvh;
+    border-radius: 0; border: none;
+  }
+  .ai-fab { width: 52px; height: 52px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ai-fab::after, .ai-window, .ai-typing span { animation: none !important; }
+  .ai-fab:hover { transform: none; }
+}

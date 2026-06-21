@@ -1,0 +1,87 @@
+/* =======================================================
+   RidexShare — Notification bell + panel (premium dark)
+   Scoped under `.nb-`. Used in the Sidebar / navbar.
+   ======================================================= */
+
+.nb-wrap { position: relative; }
+
+.nb-bell {
+  position: relative; display: inline-flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px; border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: #f4f4f5;
+  cursor: pointer; transition: background 0.18s ease, transform 0.18s ease;
+}
+.nb-bell:hover { background: rgba(255,255,255,0.12); transform: translateY(-1px); }
+
+/* Compact bell when sitting inside the sidebar profile row. */
+.sidebar-profile .nb-bell { width: 34px; height: 34px; }
+.sidebar-profile .nb-wrap { flex-shrink: 0; }
+.nb-badge {
+  position: absolute; top: -3px; right: -3px;
+  min-width: 18px; height: 18px; padding: 0 0.3rem;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 0.64rem; font-weight: 800; line-height: 1;
+  background: #ef4444; color: #fff; border-radius: 999px; border: 2px solid #0c0c0e;
+}
+
+/* panel — positioned via inline fixed coords from the bell's rect (so it
+   never gets clipped by the sidebar's overflow). */
+.nb-panel {
+  z-index: 1000;
+  background: #161618; border: 1px solid rgba(255,255,255,0.1); border-radius: 0.9rem;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.6); overflow: hidden;
+  animation: nb-pop 0.16s ease-out;
+  display: flex; flex-direction: column; max-height: min(70vh, 540px);
+}
+@keyframes nb-pop { from { transform: translateY(-6px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+.nb-head { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; padding: 0.85rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.08); }
+.nb-title { font-size: 0.95rem; font-weight: 800; color: #f4f4f5; }
+.nb-head-actions { display: flex; gap: 0.7rem; }
+.nb-link { background: none; border: none; color: #93c5fd; font-size: 0.74rem; font-weight: 700; cursor: pointer; }
+.nb-link:hover { text-decoration: underline; }
+.nb-link.danger { color: #fca5a5; }
+
+.nb-list { overflow-y: auto; flex: 1; min-height: 0; }
+
+.nb-group-label { position: sticky; top: 0; z-index: 1; padding: 0.5rem 1rem 0.3rem; font-size: 0.66rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #9ca3af; background: #161618; }
+
+.nb-item {
+  position: relative; display: flex; align-items: flex-start; gap: 0.65rem; width: 100%; text-align: left;
+  padding: 0.7rem 1rem 0.7rem 0.9rem; border: none; background: transparent; cursor: pointer;
+  border-bottom: 1px solid rgba(255,255,255,0.05); transition: background 0.15s ease;
+}
+.nb-item:hover { background: rgba(255,255,255,0.05); }
+.nb-item.unread { background: rgba(59,130,246,0.08); }
+.nb-item.unread:hover { background: rgba(59,130,246,0.14); }
+
+.nb-icon { flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 0.6rem; background: rgba(255,255,255,0.07); color: #d4d4d8; margin-top: 0.1rem; }
+.nb-icon.booking { background: rgba(5,150,105,0.16); color: #6ee7b7; }
+.nb-icon.ride { background: rgba(37,99,235,0.16); color: #93c5fd; }
+.nb-icon.tracking { background: rgba(217,119,6,0.16); color: #fcd34d; }
+.nb-icon.chat { background: rgba(139,92,246,0.16); color: #c4b5fd; }
+.nb-icon.system { background: rgba(255,255,255,0.08); color: #d4d4d8; }
+
+.nb-item-body { display: flex; flex-direction: column; gap: 0.1rem; min-width: 0; flex: 1; }
+.nb-item-title { font-size: 0.84rem; font-weight: 700; color: #f4f4f5; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nb-item-msg { font-size: 0.78rem; color: #c9c9cf; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.nb-item-time { font-size: 0.68rem; color: #9ca3af; margin-top: 0.15rem; }
+
+.nb-dot { position: absolute; top: 0.85rem; right: 0.7rem; width: 8px; height: 8px; border-radius: 50%; background: #3B82F6; }
+.nb-del { position: absolute; bottom: 0.55rem; right: 0.6rem; display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 0.4rem; color: #6b7280; opacity: 0; transition: opacity 0.15s ease, color 0.15s ease, background 0.15s ease; }
+.nb-item:hover .nb-del { opacity: 1; }
+.nb-del:hover { color: #fca5a5; background: rgba(244,63,94,0.14); }
+
+.nb-loading, .nb-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.5rem; padding: 2.2rem 1rem; color: #9ca3af; text-align: center; }
+.nb-empty-title { font-size: 0.9rem; font-weight: 800; color: #f4f4f5; margin-top: 0.2rem; }
+.nb-empty-sub { font-size: 0.76rem; color: #9ca3af; max-width: 16rem; }
+
+.nb-spin { width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; display: inline-block; animation: nb-spin 0.7s linear infinite; }
+@keyframes nb-spin { to { transform: rotate(360deg); } }
+
+/* On a left sidebar the panel is positioned via JS from the bell's rect. */
+
+@media (prefers-reduced-motion: reduce) {
+  .nb-panel, .nb-spin { animation: none !important; }
+  .nb-bell:hover { transform: none; }
+}

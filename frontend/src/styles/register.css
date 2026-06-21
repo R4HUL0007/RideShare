@@ -1,0 +1,754 @@
+/* =======================================================
+   RidexShare — Registration UI (scoped, premium redesign)
+   All rules are namespaced under `.rsr-root` so they never
+   leak into the Login tab or the global `form` styles in
+   Home.css. Animations are CSS-only (transform/opacity) for
+   minimal performance impact and respect reduced-motion.
+   ======================================================= */
+
+.rsr-root {
+  width: 100%;
+  /* A subtle entrance for the whole card */
+  animation: rsr-fade-up 0.5s ease-out both;
+}
+
+@keyframes rsr-fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ---------- Transportation-themed route banner ---------- */
+.rsr-hero {
+  position: relative;
+  height: 56px;
+  margin-bottom: 0.85rem;
+  border-radius: 0.85rem;
+  overflow: hidden;
+  background: linear-gradient(135deg, #000000 0%, #2b2b2b 55%, #3d3d3d 100%);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  padding: 0 0.9rem;
+  color: #fff;
+}
+
+.rsr-hero-text {
+  position: relative;
+  z-index: 2;
+  line-height: 1.1;
+}
+
+.rsr-hero-title {
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+}
+
+.rsr-hero-sub {
+  font-size: 0.66rem;
+  opacity: 0.9;
+  font-weight: 500;
+}
+
+/* Animated road at the base of the banner */
+.rsr-road {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 10px;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.35);
+  z-index: 1;
+  overflow: hidden;
+}
+
+.rsr-road::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.95) 0 14px,
+    transparent 14px 28px
+  );
+  background-size: 28px 100%;
+  animation: rsr-dash 0.9s linear infinite;
+}
+
+@keyframes rsr-dash {
+  to { background-position: -28px 0; }
+}
+
+/* A small car gliding along the road */
+.rsr-car {
+  position: absolute;
+  bottom: 7px;
+  z-index: 2;
+  width: 24px;
+  height: 24px;
+  color: #fff;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.25));
+  animation: rsr-drive 6s ease-in-out infinite;
+}
+
+@keyframes rsr-drive {
+  0%   { left: -10%; }
+  50%  { left: 92%; }
+  50.01% { left: 92%; }
+  100% { left: -10%; }
+}
+
+/* Floating glow accents */
+.rsr-hero-glow {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.18);
+  z-index: 0;
+  pointer-events: none;
+}
+.rsr-hero-glow.g1 { width: 70px; height: 70px; top: -28px; right: 16%; animation: rsr-bob 5s ease-in-out infinite; }
+.rsr-hero-glow.g2 { width: 44px; height: 44px; bottom: -24px; right: 4%; animation: rsr-bob 7s ease-in-out infinite reverse; }
+
+@keyframes rsr-bob {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(6px); }
+}
+
+/* ---------- Form grid ---------- */
+.rsr-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.55rem 0.7rem;
+}
+
+.rsr-col-full {
+  grid-column: 1 / -1;
+}
+
+/* Collapse to one column when the card is narrow */
+@media (max-width: 440px) {
+  .rsr-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---------- Fields ---------- */
+.rsr-field {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.rsr-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #4b5563;
+  margin-bottom: 0.22rem;
+  letter-spacing: 0.1px;
+}
+
+.rsr-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.rsr-input-icon {
+  position: absolute;
+  left: 0.6rem;
+  width: 16px;
+  height: 16px;
+  color: #9ca3af;
+  pointer-events: none;
+  transition: color 0.2s ease;
+}
+
+/* Scoped, higher-specificity input styling that overrides the
+   global `form input/select` rules from Home.css. */
+.rsr-root .rsr-input {
+  width: 100%;
+  padding: 0.5rem 0.6rem 0.5rem 2rem;
+  font-size: 0.85rem;
+  color: #111827;
+  background: #f9fafb;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 0.6rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+/* ---------- Custom themed dropdown (Role / Gender) ----------
+   Replaces native <select> so the open list matches the theme
+   (native option highlight uses the OS accent color and can't
+   be themed with CSS). */
+.rsr-select {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+/* The trigger reuses .rsr-input sizing/border but behaves like a button. */
+.rsr-root .rsr-select-trigger {
+  width: 100%;
+  text-align: left;
+  padding-right: 2rem; /* room for chevron */
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+}
+
+.rsr-root .rsr-select-trigger.rsr-select-placeholder .rsr-select-value {
+  color: #9ca3af;
+}
+
+.rsr-select-value {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: #111827;
+}
+
+.rsr-select-chevron {
+  position: absolute;
+  right: 0.65rem;
+  width: 14px;
+  height: 14px;
+  color: #9ca3af;
+  pointer-events: none;
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.rsr-select.open .rsr-select-chevron {
+  transform: rotate(180deg);
+  color: #000000;
+}
+
+/* The popup list — fully theme-controlled */
+.rsr-select-list {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 50;
+  margin: 0;
+  padding: 0.25rem;
+  list-style: none;
+  background: #111111;
+  border: 1px solid #2b2b2b;
+  border-radius: 0.6rem;
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.5);
+  max-height: 12rem;
+  overflow-y: auto;
+  animation: rsr-fade-up 0.14s ease-out both;
+}
+
+.rsr-select-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem 0.6rem;
+  font-size: 0.85rem;
+  color: #e5e7eb;
+  border-radius: 0.4rem;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+/* Hover / keyboard-active highlight — monochrome, no OS accent */
+.rsr-select-option.active {
+  background: #ffffff;
+  color: #000000;
+}
+
+.rsr-select-option[aria-selected='true'] {
+  font-weight: 600;
+}
+
+.rsr-select-option[aria-selected='true']:not(.active) {
+  background: #2b2b2b;
+  color: #ffffff;
+}
+
+.rsr-select-check {
+  flex-shrink: 0;
+}
+
+.rsr-root .rsr-input::placeholder {
+  color: #9ca3af;
+}
+
+.rsr-root .rsr-input:hover {
+  border-color: #9ca3af;
+  background: #fff;
+}
+
+.rsr-root .rsr-input:focus {
+  outline: none;
+  border-color: #000000;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.1);
+}
+
+.rsr-input-wrap:focus-within .rsr-input-icon {
+  color: #000000;
+}
+
+/* Password visibility toggle */
+.rsr-pw-toggle {
+  position: absolute;
+  right: 0.45rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  background: transparent;
+  color: #9ca3af;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: color 0.2s ease, background 0.2s ease;
+  padding: 0;
+}
+
+.rsr-pw-toggle:hover {
+  color: #000000;
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.rsr-pw-toggle:focus-visible {
+  outline: 2px solid #000000;
+  outline-offset: 1px;
+}
+
+/* password input keeps space for the toggle on the right */
+.rsr-root input.rsr-input.rsr-has-toggle {
+  padding-right: 2.2rem;
+}
+
+/* ---------- Submit button ---------- */
+.rsr-root .rsr-submit {
+  grid-column: 1 / -1;
+  margin-top: 0.35rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.62rem 1rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #fff;
+  border: none;
+  border-radius: 0.65rem;
+  cursor: pointer;
+  background: linear-gradient(135deg, #000000 0%, #2b2b2b 50%, #444444 100%);
+  background-size: 160% 160%;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background-position 0.4s ease;
+}
+
+.rsr-root .rsr-submit:hover:not(:disabled) {
+  transform: translateY(-2px);
+  background-position: 100% 50%;
+  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.5);
+}
+
+.rsr-root .rsr-submit:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.rsr-root .rsr-submit:focus-visible {
+  outline: 2px solid #000000;
+  outline-offset: 2px;
+}
+
+.rsr-root .rsr-submit:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* Button spinner */
+.rsr-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.45);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: rsr-spin 0.7s linear infinite;
+}
+
+@keyframes rsr-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Trust footnote under the button */
+.rsr-footnote {
+  grid-column: 1 / -1;
+  margin-top: 0.45rem;
+  text-align: center;
+  font-size: 0.68rem;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+}
+
+.rsr-footnote svg {
+  width: 13px;
+  height: 13px;
+  color: #111111;
+  flex-shrink: 0;
+}
+
+/* ---------- Reduced motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .rsr-root,
+  .rsr-car,
+  .rsr-road::after,
+  .rsr-hero-glow,
+  .rsr-spinner {
+    animation: none !important;
+  }
+  .rsr-root .rsr-submit:hover:not(:disabled) {
+    transform: none;
+  }
+}
+
+/* =======================================================
+   Enhancement layer: validation, strength meter, terms
+   (all scoped under .rsr-root, monochrome theme)
+   ======================================================= */
+
+/* Invalid input state */
+.rsr-root .rsr-input-invalid,
+.rsr-root .rsr-input-invalid:hover {
+  border-color: #b91c1c;
+  background: #fff;
+}
+
+.rsr-root .rsr-input-invalid:focus {
+  border-color: #b91c1c;
+  box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.14);
+}
+
+/* Inline field error message */
+.rsr-error {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-top: 0.25rem;
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: #b91c1c;
+  line-height: 1.2;
+  animation: rsr-err-in 0.18s ease-out both;
+}
+
+.rsr-error svg {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+}
+
+@keyframes rsr-err-in {
+  from { opacity: 0; transform: translateY(-2px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* "Passwords match" confirmation */
+.rsr-match-ok {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-top: 0.25rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #111111;
+  line-height: 1.2;
+  animation: rsr-err-in 0.18s ease-out both;
+}
+
+.rsr-match-ok svg {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+}
+
+/* Password strength meter */
+.rsr-strength {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+}
+
+.rsr-strength-bar {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+}
+
+.rsr-strength-bar span {
+  height: 4px;
+  flex: 1;
+  border-radius: 999px;
+  background: #e5e7eb;
+  transition: background 0.25s ease;
+}
+
+/* Weak: 1 segment, Medium: 2, Strong: 3 — all monochrome grayscale */
+.rsr-strength-bar.lvl-weak span:nth-child(1) { background: #6b7280; }
+.rsr-strength-bar.lvl-medium span:nth-child(1),
+.rsr-strength-bar.lvl-medium span:nth-child(2) { background: #374151; }
+.rsr-strength-bar.lvl-strong span { background: #000000; }
+
+.rsr-strength-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  min-width: 3.4rem;
+  text-align: right;
+  letter-spacing: 0.2px;
+}
+
+.rsr-strength-label.lvl-weak   { color: #6b7280; }
+.rsr-strength-label.lvl-medium { color: #374151; }
+.rsr-strength-label.lvl-strong { color: #000000; }
+
+/* Terms & Privacy row */
+.rsr-terms-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-top: 0.15rem;
+}
+
+.rsr-root .rsr-checkbox {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  margin-top: 1px;
+  flex-shrink: 0;
+  border: 1.5px solid #9ca3af;
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+  position: relative;
+  transition: background 0.18s ease, border-color 0.18s ease;
+}
+
+.rsr-root .rsr-checkbox:hover {
+  border-color: #000000;
+}
+
+.rsr-root .rsr-checkbox:checked {
+  background: #000000;
+  border-color: #000000;
+}
+
+.rsr-root .rsr-checkbox:checked::after {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 1px;
+  width: 4px;
+  height: 8px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.rsr-root .rsr-checkbox:focus-visible {
+  outline: 2px solid #000000;
+  outline-offset: 2px;
+}
+
+.rsr-terms-label {
+  font-size: 0.72rem;
+  color: #4b5563;
+  line-height: 1.35;
+  cursor: pointer;
+}
+
+.rsr-terms-label a {
+  color: #000000;
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+.rsr-terms-label a:hover {
+  color: #2b2b2b;
+}
+
+/* Larger touch targets on small screens for better mobile usability */
+@media (max-width: 640px) {
+  .rsr-root .rsr-input {
+    font-size: 16px; /* prevents iOS zoom-on-focus */
+    padding-top: 0.6rem;
+    padding-bottom: 0.6rem;
+  }
+  .rsr-root .rsr-checkbox {
+    width: 18px;
+    height: 18px;
+  }
+  .rsr-pw-toggle {
+    width: 30px;
+    height: 30px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rsr-error,
+  .rsr-match-ok,
+  .rsr-strength-bar span {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* =======================================================
+   Google sign-up section (monochrome theme)
+   ======================================================= */
+
+.rsr-google {
+  margin-top: 0.85rem;
+}
+
+/* "or" divider */
+.rsr-divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: 0.25rem 0 0.75rem;
+  color: #9ca3af;
+}
+
+.rsr-divider::before,
+.rsr-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #e5e7eb;
+}
+
+.rsr-divider span {
+  padding: 0 0.7rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* Wrapper centers the Google button (standard or personalized pill). We do NOT
+   force the iframe width — Google sizes it via the `width` prop; forcing
+   width:100% in CSS distorts the fixed-width "Continue as …" personalized pill. */
+.rsr-google-btn {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.rsr-google-btn.is-loading {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* Note under the Google button — clarifies the PU-email requirement. */
+.rsr-google-note {
+  margin: 0.55rem 0 0;
+  text-align: center;
+  font-size: 0.68rem;
+  color: #6b7280;
+  line-height: 1.4;
+}
+.rsr-google-note strong {
+  color: #111111;
+  font-weight: 700;
+}
+
+/* Google "complete your profile" step */
+.rsr-google-profile {
+  animation: rsr-fade-up 0.3s ease-out both;
+}
+
+.rsr-google-profile-title {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #0a0a0a;
+  margin: 0 0 0.15rem;
+}
+
+.rsr-google-profile-sub {
+  font-size: 0.74rem;
+  color: #6b7280;
+  margin: 0 0 0.85rem;
+  word-break: break-word;
+}
+
+/* =======================================================
+   Google signup OTP step (monochrome theme)
+   ======================================================= */
+
+/* OTP code input — large, spaced, monospaced-feel digits */
+.rsr-root .rsr-otp-input {
+  padding-left: 0.6rem;
+  letter-spacing: 0.5em;
+  font-weight: 700;
+  font-size: 1.1rem;
+  text-align: center;
+}
+
+.rsr-root .rsr-otp-input::placeholder {
+  letter-spacing: 0.5em;
+  color: #d1d5db;
+}
+
+/* Timer / hint row under the OTP field */
+.rsr-otp-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.rsr-otp-timer {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.rsr-otp-timer svg {
+  width: 13px;
+  height: 13px;
+}
+
+/* Turn the timer red-ish (still grayscale-friendly) in the final 30s */
+.rsr-otp-timer.low {
+  color: #b91c1c;
+}
+
+.rsr-otp-expired {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #b91c1c;
+}
+
+.rsr-otp-hint {
+  font-size: 0.68rem;
+  color: #9ca3af;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rsr-otp-timer svg { animation: none !important; }
+}

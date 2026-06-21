@@ -1,0 +1,159 @@
+/* =======================================================
+   RidexShare — Ratings & Reviews (premium dark)
+   Scoped under `.rv-`.
+   - .rv-overlay / .rv-modal : the review submission modal
+   - .rv-stat* / .rv-list*   : profile rating display + reviews list
+   - .rv-inline*             : compact rating chip for cards
+   ======================================================= */
+
+/* ---------------- modal ---------------- */
+.rv-overlay {
+  position: fixed; inset: 0; z-index: 4000;
+  display: flex; align-items: center; justify-content: center;
+  padding: 1rem;
+}
+.rv-backdrop {
+  position: absolute; inset: 0;
+  background: rgba(0,0,0,0.65); backdrop-filter: blur(4px);
+  animation: rv-fade 0.18s ease-out;
+}
+.rv-modal {
+  position: relative; z-index: 1;
+  width: 100%; max-width: 30rem; max-height: 92vh; overflow-y: auto;
+  background: radial-gradient(110% 120% at 100% 0%, #1a1a1d 0%, #101012 45%, #0a0a0b 100%);
+  border: 1px solid rgba(255,255,255,0.1); border-radius: 1.1rem;
+  box-shadow: 0 30px 70px rgba(0,0,0,0.65);
+  padding: 1.4rem; animation: rv-pop 0.2s cubic-bezier(0.16,1,0.3,1);
+}
+@keyframes rv-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes rv-pop { from { transform: translateY(14px) scale(0.97); opacity: 0; } to { transform: none; opacity: 1; } }
+
+.rv-close {
+  position: absolute; top: 0.9rem; right: 0.9rem;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; border-radius: 50%;
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+  color: #c9c9cf; cursor: pointer; transition: background 0.15s ease, color 0.15s ease;
+}
+.rv-close:hover { background: rgba(255,255,255,0.12); color: #fff; }
+.rv-close:disabled { opacity: 0.5; cursor: default; }
+
+.rv-head { display: flex; align-items: center; gap: 0.85rem; padding-right: 2.2rem; }
+.rv-avatar {
+  flex-shrink: 0; width: 54px; height: 54px; border-radius: 50%;
+  overflow: hidden; display: inline-flex; align-items: center; justify-content: center;
+  background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12);
+  color: #f4f4f5; font-weight: 800; font-size: 1.05rem;
+}
+.rv-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.rv-head-text { min-width: 0; }
+.rv-eyebrow { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; }
+.rv-name { font-size: 1.15rem; font-weight: 800; color: #f4f4f5; margin: 0.1rem 0 0; }
+.rv-route { font-size: 0.76rem; color: #9ca3af; margin-top: 0.15rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.rv-body { margin-top: 1.2rem; display: flex; flex-direction: column; gap: 1.1rem; }
+
+.rv-overall { display: flex; flex-direction: column; align-items: center; gap: 0.4rem; padding: 0.6rem 0; }
+.rv-rating-word { font-size: 0.82rem; font-weight: 700; color: #d4d4d8; min-height: 1.1rem; }
+
+/* interactive stars */
+.rv-stars { display: inline-flex; gap: 0.3rem; }
+.rv-star {
+  background: none; border: none; padding: 0; cursor: pointer; line-height: 0;
+  color: rgba(255,255,255,0.18); transition: color 0.12s ease, transform 0.12s ease;
+}
+.rv-star:hover { transform: scale(1.12); }
+.rv-star.on { color: #facc15; }
+
+.rv-cats { display: flex; flex-direction: column; gap: 0.55rem; padding: 0.9rem; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); border-radius: 0.8rem; }
+.rv-cat-row { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
+.rv-cat-label { font-size: 0.82rem; color: #c9c9cf; font-weight: 600; }
+
+.rv-comment-wrap { position: relative; }
+.rv-comment {
+  width: 100%; resize: vertical; min-height: 4.5rem;
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 0.7rem; padding: 0.7rem 0.8rem 1.4rem; color: #f4f4f5; font-size: 0.85rem;
+  font-family: inherit; line-height: 1.45; transition: border-color 0.15s ease;
+}
+.rv-comment:focus { outline: none; border-color: rgba(255,255,255,0.28); }
+.rv-comment::placeholder { color: #6b7280; }
+.rv-count { position: absolute; bottom: 0.5rem; right: 0.7rem; font-size: 0.66rem; color: #6b7280; }
+
+.rv-actions { margin-top: 1.3rem; display: flex; gap: 0.7rem; }
+.rv-skip, .rv-submit {
+  flex: 1; padding: 0.7rem 1rem; border-radius: 0.7rem; font-size: 0.86rem; font-weight: 700;
+  cursor: pointer; transition: background 0.16s ease, transform 0.16s ease, opacity 0.16s ease;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.rv-skip { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #d4d4d8; }
+.rv-skip:hover:not(:disabled) { background: rgba(255,255,255,0.12); }
+.rv-submit { background: #f4f4f5; border: 1px solid #f4f4f5; color: #0a0a0b; }
+.rv-submit:hover:not(:disabled) { transform: translateY(-1px); }
+.rv-submit:disabled, .rv-skip:disabled { opacity: 0.55; cursor: default; }
+
+.rv-spin { width: 16px; height: 16px; border: 2px solid rgba(10,10,11,0.3); border-top-color: #0a0a0b; border-radius: 50%; display: inline-block; animation: rv-spin 0.7s linear infinite; }
+@keyframes rv-spin { to { transform: rotate(360deg); } }
+
+/* ---------------- profile rating display ---------------- */
+.rv-summary {
+  display: flex; flex-wrap: wrap; gap: 1.2rem; align-items: center;
+  padding: 1.2rem 1.3rem; background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08); border-radius: 1rem;
+}
+.rv-summary-score { display: flex; flex-direction: column; align-items: center; gap: 0.2rem; min-width: 6rem; }
+.rv-score-num { font-size: 2.6rem; font-weight: 800; line-height: 1; color: #f4f4f5; }
+.rv-score-stars { display: inline-flex; gap: 0.12rem; color: #facc15; }
+.rv-score-count { font-size: 0.74rem; color: #9ca3af; margin-top: 0.15rem; }
+.rv-summary-cats { flex: 1; min-width: 14rem; display: flex; flex-direction: column; gap: 0.5rem; }
+.rv-bar-row { display: flex; align-items: center; gap: 0.7rem; }
+.rv-bar-label { width: 9rem; font-size: 0.76rem; color: #c9c9cf; flex-shrink: 0; }
+.rv-bar-track { flex: 1; height: 6px; background: rgba(255,255,255,0.08); border-radius: 999px; overflow: hidden; }
+.rv-bar-fill { height: 100%; background: linear-gradient(90deg, #d4d4d8, #fff); border-radius: 999px; transition: width 0.4s ease; }
+.rv-bar-val { width: 2rem; text-align: right; font-size: 0.74rem; color: #9ca3af; font-variant-numeric: tabular-nums; }
+
+/* role toggle (driver / passenger reviews) */
+.rv-roletabs { display: inline-flex; gap: 0.3rem; padding: 0.25rem; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 0.7rem; }
+.rv-roletab { padding: 0.4rem 0.9rem; border-radius: 0.5rem; font-size: 0.78rem; font-weight: 700; color: #9ca3af; background: none; border: none; cursor: pointer; transition: background 0.15s ease, color 0.15s ease; }
+.rv-roletab.active { background: rgba(255,255,255,0.1); color: #f4f4f5; }
+
+/* ---------------- reviews list ---------------- */
+.rv-list { display: flex; flex-direction: column; gap: 0.8rem; margin-top: 1rem; }
+.rv-review {
+  display: flex; gap: 0.8rem; padding: 0.95rem 1rem;
+  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 0.85rem;
+}
+.rv-rev-avatar { flex-shrink: 0; width: 40px; height: 40px; border-radius: 50%; overflow: hidden; display: inline-flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1); color: #f4f4f5; font-weight: 700; font-size: 0.82rem; }
+.rv-rev-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.rv-rev-body { flex: 1; min-width: 0; }
+.rv-rev-top { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+.rv-rev-name { font-size: 0.86rem; font-weight: 700; color: #f4f4f5; }
+.rv-rev-date { font-size: 0.7rem; color: #9ca3af; flex-shrink: 0; }
+.rv-rev-stars { display: inline-flex; gap: 0.1rem; color: #facc15; margin: 0.25rem 0; }
+.rv-rev-stars .off { color: rgba(255,255,255,0.18); }
+.rv-rev-comment { font-size: 0.82rem; color: #c9c9cf; line-height: 1.45; margin-top: 0.2rem; word-break: break-word; }
+
+/* empty / loading */
+.rv-empty, .rv-loading { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.5rem; padding: 2.4rem 1rem; text-align: center; }
+.rv-empty-icon { color: rgba(255,255,255,0.22); }
+.rv-empty-title { font-size: 0.95rem; font-weight: 800; color: #f4f4f5; }
+.rv-empty-sub { font-size: 0.78rem; color: #9ca3af; max-width: 18rem; }
+
+/* ---------------- inline rating chip (cards) ---------------- */
+.rv-inline { display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.78rem; font-weight: 700; color: #facc15; }
+.rv-inline svg { display: block; }
+.rv-inline .rv-inline-count { color: #9ca3af; font-weight: 600; }
+.rv-inline.new { color: #9ca3af; }
+
+@media (max-width: 520px) {
+  .rv-modal { padding: 1.1rem; }
+  .rv-summary { flex-direction: column; align-items: stretch; }
+  .rv-summary-score { flex-direction: row; justify-content: center; gap: 0.6rem; }
+  .rv-bar-label { width: 7rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rv-backdrop, .rv-modal, .rv-spin, .rv-bar-fill { animation: none !important; transition: none !important; }
+  .rv-star:hover, .rv-submit:hover { transform: none; }
+}

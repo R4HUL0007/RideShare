@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" rx="112" fill="#0a0a0b"/>
+  <rect x="6" y="6" width="500" height="500" rx="108" fill="none" stroke="#1f1f23" stroke-width="2"/>
+  <!-- route dots + path -->
+  <circle cx="150" cy="150" r="20" fill="#ffffff"/>
+  <circle cx="362" cy="362" r="20" fill="#ffffff"/>
+  <path d="M150 150 C 150 280, 362 232, 362 362" fill="none" stroke="#ffffff" stroke-width="12" stroke-linecap="round" stroke-dasharray="2 34"/>
+  <!-- car glyph -->
+  <g transform="translate(256 270)">
+    <path d="M-92 36 L-78 -22 C-74 -40 -58 -52 -40 -52 L40 -52 C58 -52 74 -40 78 -22 L92 36 C94 44 88 52 80 52 L70 52 C66 52 62 49 61 45 L58 34 L-58 34 L-61 45 C-62 49 -66 52 -70 52 L-80 52 C-88 52 -94 44 -92 36 Z" fill="#ffffff"/>
+    <path d="M-62 -16 L-52 -34 C-50 -38 -46 -40 -42 -40 L42 -40 C46 -40 50 -38 52 -34 L62 -16 Z" fill="#0a0a0b"/>
+    <circle cx="-52" cy="34" r="14" fill="#0a0a0b"/>
+    <circle cx="52" cy="34" r="14" fill="#0a0a0b"/>
+  </g>
+</svg>

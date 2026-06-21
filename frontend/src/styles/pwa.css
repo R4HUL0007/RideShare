@@ -1,0 +1,92 @@
+/* =======================================================
+   PWA — install banner, update toast, status (dark theme)
+   ======================================================= */
+
+/* Install banner — fixed bottom, respects safe areas. */
+.pwa-install {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 1rem);
+  z-index: 6000;
+  width: min(94vw, 30rem);
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.9rem 1rem;
+  border-radius: 1rem;
+  background: radial-gradient(120% 130% at 100% 0%, #1a1a1d 0%, #121214 60%, #0d0d0f 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.55);
+  color: #f4f4f5;
+  animation: pwa-rise 0.25s ease-out both;
+}
+@keyframes pwa-rise { from { opacity: 0; transform: translate(-50%, 12px); } to { opacity: 1; transform: translate(-50%, 0); } }
+.pwa-install-icon { font-size: 1.6rem; flex-shrink: 0; }
+.pwa-install-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.pwa-install-text strong { font-size: 0.92rem; font-weight: 800; }
+.pwa-install-text span { font-size: 0.76rem; color: #9ca3af; }
+.pwa-install-actions { display: flex; gap: 0.45rem; flex-shrink: 0; }
+.pwa-install-dismiss {
+  padding: 0.55rem 0.7rem; border-radius: 0.6rem; font-size: 0.78rem; font-weight: 700;
+  background: transparent; border: 1px solid rgba(255, 255, 255, 0.14); color: #b6b6bd; cursor: pointer; font-family: inherit;
+}
+.pwa-install-btn {
+  padding: 0.55rem 1rem; border-radius: 0.6rem; font-size: 0.82rem; font-weight: 800;
+  background: #f4f4f5; color: #0a0a0b; border: none; cursor: pointer; font-family: inherit;
+}
+.pwa-install-btn:hover { opacity: 0.9; }
+
+/* Update toast — top center. */
+.pwa-update {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  top: calc(env(safe-area-inset-top, 0px) + 0.8rem);
+  z-index: 6001;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.7rem 1rem;
+  border-radius: 999px;
+  background: #161618;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  color: #f4f4f5;
+  font-size: 0.82rem;
+  animation: pwa-drop 0.25s ease-out both;
+}
+@keyframes pwa-drop { from { opacity: 0; transform: translate(-50%, -10px); } to { opacity: 1; transform: translate(-50%, 0); } }
+.pwa-update button {
+  padding: 0.4rem 0.8rem; border-radius: 999px; font-size: 0.78rem; font-weight: 800;
+  background: #f4f4f5; color: #0a0a0b; border: none; cursor: pointer; font-family: inherit;
+}
+
+/* PWA status card (in Profile / settings). */
+.pwa-status { border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 1rem; background: rgba(255, 255, 255, 0.02); padding: 1.1rem; }
+.pwa-status-title { font-size: 0.95rem; font-weight: 800; margin: 0 0 0.8rem; display: flex; align-items: center; gap: 0.4rem; }
+.pwa-status-row { display: flex; align-items: center; justify-content: space-between; gap: 0.8rem; padding: 0.5rem 0; border-bottom: 1px solid rgba(255, 255, 255, 0.05); font-size: 0.84rem; }
+.pwa-status-row:last-of-type { border-bottom: none; }
+.pwa-status-row .k { color: #9ca3af; }
+.pwa-pill { font-size: 0.7rem; font-weight: 800; padding: 0.15rem 0.55rem; border-radius: 999px; }
+.pwa-pill.on { background: rgba(5, 150, 105, 0.16); color: #6ee7b7; }
+.pwa-pill.off { background: rgba(255, 255, 255, 0.07); color: #9ca3af; }
+.pwa-pill.warn { background: rgba(217, 119, 6, 0.16); color: #fcd34d; }
+.pwa-status-btn {
+  margin-top: 0.9rem; width: 100%; padding: 0.7rem; border-radius: 0.7rem; font-weight: 800; font-size: 0.85rem;
+  background: #f4f4f5; color: #0a0a0b; border: none; cursor: pointer; font-family: inherit;
+}
+.pwa-status-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* =======================================================
+   Mobile optimizations — safe areas + touch
+   ======================================================= */
+@supports (padding: max(0px)) {
+  .rs-global-bell { top: max(env(safe-area-inset-top), 0.7rem); right: max(env(safe-area-inset-right), 0.7rem); }
+}
+/* Smoother momentum scrolling + no tap-highlight on app surfaces. */
+.dashboard-layout, .adm-root, .sf-root, .vf-root, .dv-root {
+  -webkit-overflow-scrolling: touch;
+  -webkit-tap-highlight-color: transparent;
+}
+/* Avoid iOS auto-zoom on focus: inputs must be ≥16px (already mostly true). */

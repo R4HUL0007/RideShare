@@ -1,0 +1,198 @@
+/* =======================================================
+   RidexShare — OTP verification (premium, scoped to .ov-root)
+   A polished dark-glass card with boxed digit inputs. Layered
+   on top of the base .otp-* rules in Home.css.
+   ======================================================= */
+
+.ov-root.otp-verification {
+  width: 100%;
+  max-width: min(100%, 26rem);
+  margin: auto;
+  padding: clamp(1.4rem, 4vw, 2rem) clamp(1.1rem, 3vw, 1.6rem);
+  text-align: center;
+  background: radial-gradient(120% 130% at 100% 0%, #1a1a1d 0%, #121214 45%, #0c0c0e 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 1.1rem;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+  animation: ov-rise 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes ov-rise {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* Brand badge (envelope) */
+.ov-root .ov-badge {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 18px;
+  color: #0a0a0b;
+  background: linear-gradient(135deg, #ffffff 0%, #d4d4d8 100%);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.45);
+  animation: ov-bob 3s ease-in-out infinite;
+}
+
+@keyframes ov-bob {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-4px); }
+}
+
+.ov-root h2 {
+  font-size: clamp(1.15rem, 3vw, 1.4rem);
+  font-weight: 800;
+  color: #f4f4f5;
+  letter-spacing: -0.01em;
+  margin-bottom: 0.4rem;
+}
+
+.ov-root p {
+  color: #9ca3af;
+  font-size: 0.84rem;
+  line-height: 1.5;
+  margin-bottom: 1.3rem;
+}
+
+.ov-root p strong {
+  color: #f4f4f5;
+  font-weight: 700;
+  word-break: break-all;
+}
+
+/* ---------- Boxed digit inputs ---------- */
+.ov-root .otp-input-container {
+  display: flex;
+  justify-content: center;
+  gap: clamp(0.4rem, 2vw, 0.65rem);
+  margin-bottom: 1.4rem;
+}
+
+.ov-root .otp-input {
+  width: clamp(2.6rem, 13vw, 3.1rem);
+  height: clamp(3rem, 15vw, 3.6rem);
+  text-align: center;
+  font-size: clamp(1.25rem, 5vw, 1.6rem);
+  font-weight: 800;
+  color: #f4f4f5;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1.5px solid rgba(255, 255, 255, 0.14);
+  border-radius: 0.8rem;
+  transition: border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease, transform 0.12s ease;
+  caret-color: #f4f4f5;
+}
+
+.ov-root .otp-input.filled {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.45);
+}
+
+.ov-root .otp-input:focus {
+  outline: none;
+  border-color: #ffffff;
+  background: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.12);
+  transform: translateY(-2px);
+}
+
+.ov-root .otp-input:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* ---------- Submit button (light pill on dark) ---------- */
+.ov-root .btn,
+.ov-root button[type="submit"] {
+  width: 100%;
+  padding: 0.7rem 1rem;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #0a0a0b;
+  background: linear-gradient(135deg, #ffffff 0%, #d4d4d8 100%);
+  border: none;
+  border-radius: 0.7rem;
+  cursor: pointer;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.5);
+  transition: transform 0.16s ease, box-shadow 0.16s ease, opacity 0.16s ease;
+}
+
+.ov-root .btn:hover:not(:disabled),
+.ov-root button[type="submit"]:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.55);
+}
+
+.ov-root .btn:disabled,
+.ov-root button[type="submit"]:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Password fields inside reset flow */
+.ov-root label {
+  display: block;
+  text-align: left;
+  margin: 0.6rem 0 0.25rem;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: #c9c9cf;
+}
+
+.ov-root form input[type="password"] {
+  width: 100%;
+  padding: 0.6rem 0.7rem;
+  font-size: 16px;
+  color: #f4f4f5;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1.5px solid rgba(255, 255, 255, 0.14);
+  border-radius: 0.6rem;
+}
+
+.ov-root form input[type="password"]:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.09);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.08);
+}
+
+/* ---------- Resend row ---------- */
+.ov-root .otp-resend {
+  margin-top: 1.4rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ov-root .otp-resend p {
+  margin-bottom: 0.35rem;
+  font-size: 0.8rem;
+  color: #9ca3af;
+}
+
+.ov-root .btn-link {
+  background: none;
+  border: none;
+  color: #f4f4f5;
+  font-weight: 700;
+  font-size: 0.82rem;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.ov-root .btn-link:hover { color: #ffffff; }
+
+.ov-root .btn-link:disabled {
+  color: #6b7280;
+  cursor: not-allowed;
+  text-decoration: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ov-root.otp-verification,
+  .ov-root .ov-badge { animation: none !important; }
+  .ov-root .otp-input:focus,
+  .ov-root .btn:hover { transform: none; }
+}

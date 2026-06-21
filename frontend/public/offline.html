@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0a0a0b" />
+  <title>RidexShare — Offline</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; }
+    body {
+      background: #0a0a0b; color: #f4f4f5;
+      font-family: 'Inter', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      display: flex; align-items: center; justify-content: center;
+      padding: env(safe-area-inset-top) 1.5rem env(safe-area-inset-bottom);
+      text-align: center;
+    }
+    .wrap { max-width: 26rem; }
+    .icon { width: 84px; height: 84px; margin: 0 auto 1.4rem; }
+    h1 { font-size: 1.4rem; font-weight: 800; margin: 0 0 0.6rem; }
+    p { font-size: 0.92rem; color: #9ca3af; line-height: 1.6; margin: 0 0 1.6rem; }
+    button {
+      padding: 0.8rem 1.6rem; border: none; border-radius: 0.7rem;
+      background: #f4f4f5; color: #0a0a0b; font-weight: 800; font-size: 0.95rem;
+      cursor: pointer; font-family: inherit;
+    }
+    button:hover { opacity: 0.9; }
+    .hint { margin-top: 1.2rem; font-size: 0.78rem; color: #6b7280; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <svg class="icon" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+      <rect width="512" height="512" rx="112" fill="#161618"/>
+      <g transform="translate(256 256)">
+        <path d="M-110 44 L-94 -28 C-89 -50 -69 -64 -47 -64 L47 -64 C69 -64 89 -50 94 -28 L110 44 C112 53 105 62 96 62 L84 62 C79 62 74 58 73 53 L70 40 L-70 40 L-73 53 C-74 58 -79 62 -84 62 L-96 62 C-105 62 -112 53 -110 44 Z" fill="#ffffff"/>
+        <path d="M-74 -20 L-62 -42 C-60 -47 -55 -49 -50 -49 L50 -49 C55 -49 60 -47 62 -42 L74 -20 Z" fill="#161618"/>
+        <circle cx="-62" cy="40" r="17" fill="#161618"/>
+        <circle cx="62" cy="40" r="17" fill="#161618"/>
+      </g>
+    </svg>
+    <h1>You're offline</h1>
+    <p>RidexShare needs an internet connection for live rides, tracking and payments. Some cached pages are still available.</p>
+    <button onclick="location.reload()">Try Again</button>
+    <div class="hint">We'll reconnect automatically when you're back online.</div>
+  </div>
+  <script>
+    window.addEventListener("online", () => location.reload());
+  </script>
+</body>
+</html>

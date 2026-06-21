@@ -1,0 +1,138 @@
+/* =======================================================
+   Driver Verification — dark premium theme
+   ======================================================= */
+.vf-root { min-height: 100vh; min-height: 100dvh; background: #0a0a0b; color: #f4f4f5; font-family: 'Inter', system-ui, sans-serif; padding-bottom: 3rem; }
+.vf-topbar { display: flex; align-items: center; gap: 0.8rem; padding: 1.1rem clamp(1rem, 3vw, 1.5rem); border-bottom: 1px solid rgba(255,255,255,0.06); position: sticky; top: 0; z-index: 5; background: rgba(10,10,11,0.9); backdrop-filter: blur(8px); }
+.vf-hamburger { display: none; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); color: #f4f4f5; width: 38px; height: 38px; border-radius: 0.5rem; cursor: pointer; align-items: center; justify-content: center; }
+.vf-title-icon { display: inline-flex; align-items: center; justify-content: center; width: 42px; height: 42px; flex-shrink: 0; border-radius: 0.7rem; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); color: #f4f4f5; }
+.vf-heading { min-width: 0; }
+.vf-title { font-size: 1.2rem; font-weight: 800; margin: 0; }
+.vf-subtitle { font-size: 0.78rem; color: #9ca3af; margin: 0.15rem 0 0; }
+.vf-content { max-width: 1080px; margin: 0 auto; padding: clamp(1rem, 3vw, 1.5rem); display: flex; flex-direction: column; gap: clamp(0.9rem, 2vw, 1.3rem); }
+.vf-loading { display: flex; align-items: center; justify-content: center; min-height: 50vh; }
+.vf-spin { width: 24px; height: 24px; border: 3px solid rgba(255,255,255,0.2); border-top-color: #f4f4f5; border-radius: 50%; animation: vf-spin 0.7s linear infinite; }
+@keyframes vf-spin { to { transform: rotate(360deg); } }
+
+/* Status banner */
+.vf-banner { display: flex; align-items: center; gap: 0.85rem; padding: 1rem 1.2rem; border: 1px solid rgba(255,255,255,0.08); border-radius: 1rem; background: rgba(255,255,255,0.02); }
+.vf-banner-icon { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; flex-shrink: 0; border-radius: 0.6rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); color: #d4d4d8; }
+.vf-banner-text { flex: 1; min-width: 0; }
+.vf-banner-text strong { display: block; font-size: 0.92rem; }
+.vf-banner-text p { font-size: 0.78rem; color: #9ca3af; margin: 0.15rem 0 0; }
+.vf-pill { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.74rem; font-weight: 800; padding: 0.3rem 0.7rem; border-radius: 999px; flex-shrink: 0; }
+.vf-pill.vs-pending { background: rgba(217,119,6,0.16); color: #fcd34d; border: 1px solid rgba(217,119,6,0.3); }
+.vf-pill.vs-approved { background: rgba(5,150,105,0.16); color: #6ee7b7; border: 1px solid rgba(5,150,105,0.3); }
+.vf-pill.vs-rejected { background: rgba(244,63,94,0.16); color: #fca5a5; border: 1px solid rgba(244,63,94,0.3); }
+
+/* Form */
+.vf-form { display: flex; flex-direction: column; gap: clamp(0.9rem, 2vw, 1.3rem); }
+
+/* Driving License card */
+.vf-dl-card { display: grid; grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr); gap: clamp(1rem, 2.5vw, 2rem); padding: clamp(1.1rem, 2.5vw, 1.6rem); border: 1px solid rgba(255,255,255,0.08); border-radius: 1rem; background: rgba(255,255,255,0.02); }
+.vf-dl-head { display: flex; align-items: flex-start; gap: 0.7rem; margin-bottom: 1.1rem; }
+.vf-dl-icon { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; flex-shrink: 0; border-radius: 0.6rem; background: rgba(244,63,94,0.12); color: #fca5a5; border: 1px solid rgba(244,63,94,0.2); }
+.vf-dl-title { font-size: 1rem; font-weight: 800; margin: 0; }
+.vf-dl-desc { font-size: 0.78rem; color: #9ca3af; margin: 0.15rem 0 0; }
+.vf-req-head { font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #9ca3af; margin: 0 0 0.6rem; }
+.vf-req { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; }
+.vf-req li { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; color: #d4d4d8; }
+.vf-req li svg { color: #6ee7b7; flex-shrink: 0; }
+
+.vf-dl-upload { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.9rem; }
+.vf-dropzone { width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.45rem; min-height: 200px; padding: 1.5rem; border: 2px dashed rgba(255,255,255,0.14); border-radius: 0.85rem; cursor: pointer; text-align: center; transition: border-color 0.18s ease, background 0.18s ease; }
+.vf-dropzone:hover, .vf-dropzone.drag { border-color: rgba(255,255,255,0.35); background: rgba(255,255,255,0.03); }
+.vf-dropzone-icon { color: #9ca3af; }
+.vf-dropzone-title { font-size: 0.9rem; font-weight: 700; }
+.vf-dropzone-sub { font-size: 0.76rem; color: #9ca3af; }
+.vf-choose-btn { display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.55rem 1.1rem; border-radius: 0.6rem; border: 1px solid rgba(255,255,255,0.14); background: rgba(255,255,255,0.05); color: #f4f4f5; font-size: 0.82rem; font-weight: 700; cursor: pointer; transition: background 0.15s ease; }
+.vf-choose-btn:hover { background: rgba(255,255,255,0.1); }
+
+/* Vehicle-required notice */
+.vf-notice { display: flex; align-items: center; gap: 0.7rem; flex-wrap: wrap; padding: 0.9rem 1.1rem; border: 1px solid rgba(255,255,255,0.08); border-radius: 0.9rem; background: rgba(255,255,255,0.02); }
+.vf-notice-icon { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; flex-shrink: 0; border-radius: 0.55rem; background: rgba(59,130,246,0.14); color: #93c5fd; }
+.vf-notice-text { flex: 1; min-width: 180px; font-size: 0.83rem; color: #d4d4d8; }
+.vf-notice-btn { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.5rem 0.9rem; border-radius: 0.6rem; border: 1px solid rgba(255,255,255,0.14); background: rgba(255,255,255,0.05); color: #f4f4f5; font-size: 0.82rem; font-weight: 700; cursor: pointer; transition: background 0.15s ease; flex-shrink: 0; }
+.vf-notice-btn:hover { background: rgba(255,255,255,0.1); }
+
+/* Info sections (process + benefits) */
+.vf-info { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: clamp(0.9rem, 2vw, 1.3rem); }
+.vf-info-card { border: 1px solid rgba(255,255,255,0.08); border-radius: 1rem; background: rgba(255,255,255,0.02); padding: clamp(1rem, 2vw, 1.3rem); }
+.vf-info-title { font-size: 0.95rem; font-weight: 800; margin: 0 0 1.1rem; }
+.vf-process { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.6rem; }
+.vf-step { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 0.25rem; }
+.vf-step-icon { display: inline-flex; align-items: center; justify-content: center; width: 52px; height: 52px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.03); color: #9ca3af; margin-bottom: 0.3rem; }
+.vf-step.done .vf-step-icon { color: #c4b5fd; border-color: rgba(124,58,237,0.5); background: rgba(124,58,237,0.14); }
+.vf-step-no { font-size: 0.68rem; color: #6b7280; font-weight: 700; }
+.vf-step-title { font-size: 0.8rem; font-weight: 800; }
+.vf-step-desc { font-size: 0.7rem; color: #9ca3af; line-height: 1.35; }
+
+.vf-benefits { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.85rem; }
+.vf-benefit { display: flex; align-items: flex-start; gap: 0.7rem; }
+.vf-benefit-icon { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; flex-shrink: 0; border-radius: 0.6rem; color: #fff; }
+.vf-benefit-icon.green { background: linear-gradient(135deg, #059669, #047857); }
+.vf-benefit-icon.blue { background: linear-gradient(135deg, #2563eb, #1d4ed8); }
+.vf-benefit-icon.violet { background: linear-gradient(135deg, #7c3aed, #6d28d9); }
+.vf-benefit-icon.amber { background: linear-gradient(135deg, #d97706, #b45309); }
+.vf-benefit-title { display: block; font-size: 0.84rem; font-weight: 800; }
+.vf-benefit-sub { display: block; font-size: 0.74rem; color: #9ca3af; line-height: 1.35; }
+
+/* Submit bar */
+.vf-submit-bar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; width: 100%; padding: 1rem 1.4rem; border: none; border-radius: 1rem; background: #f4f4f5; color: #0a0a0b; cursor: pointer; text-align: center; transition: transform 0.15s ease, opacity 0.2s ease; }
+.vf-submit-bar:hover:not(:disabled) { transform: translateY(-1px); }
+.vf-submit-bar:disabled { opacity: 0.5; cursor: not-allowed; }
+.vf-submit-text { display: flex; flex-direction: column; gap: 0.15rem; flex: 1; text-align: center; }
+.vf-submit-text strong { font-size: 0.95rem; font-weight: 800; }
+.vf-submit-text span { font-size: 0.76rem; color: rgba(10,10,11,0.6); }
+
+/* Status card (legacy, retained) */
+.vf-status-card { margin: 1.2rem clamp(1rem, 3vw, 1.5rem); padding: 1rem 1.2rem; border: 1px solid rgba(255,255,255,0.08); border-radius: 1rem; background: rgba(255,255,255,0.02); display: flex; flex-wrap: wrap; align-items: center; gap: 0.8rem; }
+.vf-badge { font-size: 0.78rem; font-weight: 800; padding: 0.25rem 0.7rem; border-radius: 999px; }
+.vf-badge.vs-not { background: rgba(255,255,255,0.07); color: #9ca3af; }
+.vf-badge.vs-pending { background: rgba(217,119,6,0.16); color: #fcd34d; }
+.vf-badge.vs-approved { background: rgba(5,150,105,0.16); color: #6ee7b7; }
+.vf-badge.vs-rejected { background: rgba(244,63,94,0.16); color: #fca5a5; }
+.vf-meta { font-size: 0.74rem; color: #6b7280; }
+.vf-remarks { font-size: 0.8rem; color: #fca5a5; margin-top: 0.3rem; width: 100%; }
+
+.vf-approved-msg, .vf-pending-msg { display: flex; align-items: flex-start; gap: 0.8rem; padding: 1rem 1.2rem; border-radius: 0.8rem; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.02); }
+.vf-approved-msg span, .vf-pending-msg span { font-size: 1.5rem; flex-shrink: 0; }
+.vf-approved-msg strong, .vf-pending-msg strong { display: block; font-size: 0.9rem; }
+.vf-approved-msg p, .vf-pending-msg p { font-size: 0.8rem; color: #9ca3af; margin: 0.2rem 0 0; }
+
+/* Form */
+.vf-form { display: flex; flex-direction: column; gap: 1.2rem; }
+.vf-section { border: 1px solid rgba(255,255,255,0.08); border-radius: 1rem; background: rgba(255,255,255,0.02); padding: 1.1rem; }
+.vf-section-title { font-size: 0.95rem; font-weight: 700; margin: 0 0 0.7rem; display: flex; align-items: center; gap: 0.4rem; }
+.vf-label { font-size: 0.78rem; font-weight: 600; color: #d4d4d8; margin-bottom: 0.3rem; }
+
+.vf-upload-box { border: 2px dashed rgba(255,255,255,0.12); border-radius: 0.75rem; padding: 1.2rem; text-align: center; transition: border-color 0.2s ease; }
+.vf-upload-box:hover { border-color: rgba(255,255,255,0.25); }
+.vf-upload-label { cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 0.3rem; font-size: 0.8rem; color: #9ca3af; }
+.vf-upload-label.small { padding: 0.6rem; }
+.vf-file-input { display: none; }
+.vf-preview { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; }
+.vf-preview-img { max-width: 100%; max-height: 180px; border-radius: 0.5rem; object-fit: contain; }
+.vf-preview-img.small { max-height: 100px; }
+.vf-file-link { color: #93c5fd; font-size: 0.82rem; text-decoration: underline; }
+.vf-remove-btn { font-size: 0.72rem; color: #fca5a5; background: transparent; border: 1px solid rgba(244,63,94,0.3); border-radius: 0.4rem; padding: 0.2rem 0.5rem; cursor: pointer; }
+.vf-remove-btn:hover { background: rgba(244,63,94,0.1); }
+
+.vf-photos-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 0.6rem; }
+.vf-photo-slot { border: 1px solid rgba(255,255,255,0.08); border-radius: 0.6rem; padding: 0.5rem; text-align: center; }
+.vf-photo-label { font-size: 0.7rem; color: #9ca3af; display: block; margin-bottom: 0.3rem; }
+
+.vf-submit { width: 100%; padding: 0.8rem; font-size: 0.9rem; font-weight: 700; border: none; border-radius: 0.7rem; background: #f4f4f5; color: #0a0a0b; cursor: pointer; transition: opacity 0.2s ease; }
+.vf-submit:hover:not(:disabled) { opacity: 0.88; }
+.vf-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.vf-empty { text-align: center; padding: 1.5rem; color: #6b7280; font-size: 0.85rem; }
+
+@media (max-width: 860px) {
+  .vf-dl-card { grid-template-columns: 1fr; }
+  .vf-info { grid-template-columns: 1fr; }
+}
+@media (max-width: 768px) { .vf-hamburger { display: inline-flex; } }
+@media (max-width: 560px) {
+  .vf-process { grid-template-columns: 1fr 1fr; gap: 1rem 0.6rem; }
+  .vf-submit-bar { flex-direction: column; gap: 0.4rem; }
+}

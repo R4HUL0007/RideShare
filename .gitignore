@@ -1,0 +1,54 @@
+# Env files (contain secrets — NEVER commit). Examples/templates excluded too.
+/.env
+.env
+.env.*
+**/.env
+**/.env.*
+*.env.example
+**/*.env.example
+.env.docker.example
+.env.production.template
+
+# Dependencies & build output
+node_modules/
+dist/
+build/
+coverage/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Test artifacts
+playwright-report/
+test-results/
+
+# AI generated data (local vector store index — regenerated on boot)
+backend/ai/data/
+
+# Local tooling
+tools/ngrok.exe
+
+# IDE / editor config (not part of the shipped project)
+.vscode/
+.kiro/
+user.txt
+
+# Internal working docs / extras — keep the public repo to frontend + backend only
+DEPLOYMENT_READINESS.md
+EXACT_CHANGES.md
+FINAL_CHECKLIST.md
+GOOGLE_MAPS_SETUP.md
+IMPLEMENTATION_SUMMARY.md
+QUICK_REFERENCE.md
+README_GOOGLE_MAPS.md
+TILLNOW.md
+UBER_OLA_LOCATION_EXPERIENCE.md
+/package-lock.json
+/e2e/
+/deploy/
+docker-compose*.yml
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db

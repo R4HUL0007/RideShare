@@ -1,0 +1,387 @@
+/* =======================================================
+   RidexShare — Create Ride (dark, glassmorphism)
+   Scoped under `.cr-root`. Matches Dashboard/Profile/Vehicle.
+   Also re-themes the shared map components (LocationSearchBox,
+   RoutePreview, LiveRideMap) for the dark host WITHOUT editing
+   their source — purely via `.cr-root` descendant overrides.
+   ======================================================= */
+
+.cr-root {
+  --cr-surface: rgba(22, 22, 24, 0.82);
+  --cr-surface-2: #1d1d20;
+  --cr-border: rgba(255, 255, 255, 0.08);
+  --cr-text: #f4f4f5;
+  --cr-muted: #9ca3af;
+  --cr-accent: #3b82f6;
+  min-height: 100vh;
+  min-height: 100dvh;
+  width: 100%;
+  background: radial-gradient(110% 120% at 100% 0%, #1a1a1d 0%, #101012 45%, #0a0a0b 100%);
+  color: var(--cr-text);
+  padding: clamp(0.75rem, 2vw, 1.5rem);
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+.cr-rise { opacity: 0; animation: cr-rise 0.5s ease-out forwards; }
+@keyframes cr-rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ---------------- Top bar ---------------- */
+.cr-topbar { display: flex; align-items: center; gap: 0.7rem; margin-bottom: clamp(1rem, 2vw, 1.4rem); }
+.cr-heading { margin-right: auto; line-height: 1.15; }
+.cr-page-title { font-size: clamp(1.2rem, 3vw, 1.6rem); font-weight: 800; letter-spacing: -0.02em; margin: 0; }
+.cr-subtitle { font-size: 0.82rem; color: var(--cr-muted); margin-top: 0.2rem; }
+.cr-hamburger {
+  display: none; align-items: center; justify-content: center;
+  width: 40px; height: 40px; border-radius: 0.6rem;
+  border: 1px solid var(--cr-border); background: var(--cr-surface-2); color: var(--cr-text); cursor: pointer;
+}
+
+/* ---------------- Layout shell ---------------- */
+.cr-shell { max-width: 72rem; margin: 0 auto; width: 100%; }
+
+/* ---------------- Two-column layout (form | route preview) ----------------
+   Reduces vertical scrolling: the form sits on the left, the live route
+   preview (map + summary) on the right. Collapses to a single column on
+   narrower screens so it stays fully responsive. */
+.cr-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: clamp(0.85rem, 1.8vw, 1.25rem);
+  align-items: start;
+}
+/* Items that should span the full width (errors + verification banner). */
+.cr-span-2 { grid-column: 1 / -1; }
+
+/* Left form column — cards stack inside it. */
+.cr-form-col { min-width: 0; }
+.cr-form-col .cr-card:last-of-type { margin-bottom: clamp(0.85rem, 1.8vw, 1.15rem); }
+
+/* Submit row */
+.cr-actions { margin-top: 0.25rem; }
+
+/* Right preview column — sticks in view while the form scrolls. */
+.cr-preview-col { min-width: 0; position: sticky; top: 1rem; }
+.cr-preview .cr-map-wrap { margin-bottom: 0.9rem; }
+.cr-preview-summary { margin-top: 0.2rem; }
+
+/* Empty preview placeholder (before locations are chosen). */
+.cr-preview-empty {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; gap: 0.6rem;
+  min-height: 220px; padding: 1.4rem;
+  border: 1px dashed var(--cr-border); border-radius: 0.85rem;
+  background: rgba(255, 255, 255, 0.02); color: var(--cr-muted);
+}
+.cr-preview-empty svg { color: rgba(255, 255, 255, 0.3); }
+.cr-preview-empty-text { font-size: 0.82rem; margin: 0; max-width: 240px; }
+
+/* Tip box inside the preview. */
+.cr-tip {
+  display: flex; align-items: flex-start; gap: 0.55rem;
+  margin-top: 0.9rem; padding: 0.7rem 0.85rem;
+  border-radius: 0.65rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--cr-border);
+  color: var(--cr-muted); font-size: 0.78rem; line-height: 1.45;
+}
+.cr-tip-icon { flex-shrink: 0; }
+
+@media (max-width: 980px) {
+  .cr-layout { grid-template-columns: 1fr; }
+  .cr-preview-col { position: static; }
+}
+
+/* ---------------- Cards / sections ---------------- */
+.cr-card {
+  background: var(--cr-surface);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--cr-border);
+  border-radius: 0.9rem;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.35);
+  padding: clamp(0.9rem, 2vw, 1.3rem);
+  margin-bottom: clamp(0.85rem, 1.8vw, 1.15rem);
+}
+
+/* Each card is its own stacking context (backdrop-filter), which would trap an
+   open dropdown's z-index and let the next card paint over the option list.
+   Lift the card that currently has an open themed select above its siblings. */
+.cr-card:has(.rsr-select.open) { position: relative; z-index: 50; }
+
+.cr-section-title {
+  display: flex; align-items: center; gap: 0.5rem;
+  font-size: 0.98rem; font-weight: 700; margin: 0 0 0.95rem; color: var(--cr-text);
+}
+.cr-section-title svg { color: var(--cr-accent); flex-shrink: 0; }
+
+.cr-stack { display: flex; flex-direction: column; gap: 1rem; }
+
+/* ---------------- Form primitives ---------------- */
+.cr-field { display: flex; flex-direction: column; }
+.cr-label {
+  font-size: 0.8rem; font-weight: 600; color: var(--cr-text);
+  margin-bottom: 0.45rem; display: inline-flex; align-items: center; gap: 0.35rem;
+}
+.cr-input-wrap { position: relative; }
+.cr-input-icon {
+  position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%);
+  display: inline-flex; align-items: center; color: var(--cr-muted); pointer-events: none;
+}
+.cr-input, .cr-select {
+  width: 100%; box-sizing: border-box;
+  padding: 0.7rem 0.85rem;
+  font-size: 0.9rem;
+  color: var(--cr-text);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1.5px solid var(--cr-border);
+  border-radius: 0.6rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  appearance: none;
+  font-family: inherit;
+}
+.cr-input::placeholder { color: #6b7280; }
+.cr-input:focus, .cr-select:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.06);
+}
+.cr-input.has-icon { padding-left: 2.4rem; }
+
+/* Native select arrow + dark option list */
+.cr-select {
+  padding-right: 2.2rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%239ca3af' stroke-width='2' viewBox='0 0 24 24'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  cursor: pointer;
+}
+.cr-select.has-icon { padding-left: 2.4rem; }
+.cr-select option { background: var(--cr-surface-2); color: var(--cr-text); }
+
+/* Date/time native pickers: dark UI + lightened indicator on dark bg.
+   `color-scheme: dark` makes the browser render the calendar/clock popup,
+   spinners, and the entered text in dark mode. */
+.cr-input[type="date"],
+.cr-input[type="time"] {
+  color-scheme: dark;
+}
+.cr-input[type="date"]::-webkit-calendar-picker-indicator,
+.cr-input[type="time"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.85);
+  cursor: pointer;
+  opacity: 0.8;
+}
+.cr-input[type="date"]::-webkit-calendar-picker-indicator:hover,
+.cr-input[type="time"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+/* Placeholder-state date/time text (before a value is picked) */
+.cr-input[type="date"]::-webkit-datetime-edit,
+.cr-input[type="time"]::-webkit-datetime-edit { color: var(--cr-text); }
+
+.cr-hint { font-size: 0.72rem; color: var(--cr-muted); margin-top: 0.4rem; }
+
+.cr-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+@media (max-width: 560px) { .cr-grid-2 { grid-template-columns: 1fr; } }
+
+/* Current-location button row */
+.cr-currentloc { margin-top: -0.35rem; }
+.cr-currentloc button { color: #93c5fd !important; }
+.cr-currentloc button:hover { color: #bfdbfe !important; }
+
+/* ---------------- Selected vehicle pill ---------------- */
+.cr-vehicle-pill {
+  margin-top: 0.75rem;
+  display: flex; align-items: center; gap: 0.6rem;
+  padding: 0.7rem 0.85rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--cr-border);
+  border-radius: 0.65rem;
+}
+.cr-vehicle-pill .cr-vp-name { font-weight: 700; font-size: 0.88rem; }
+.cr-vehicle-pill .cr-vp-meta { font-size: 0.74rem; color: var(--cr-muted); margin-top: 0.1rem; }
+
+/* ---------------- Alerts ---------------- */
+.cr-alert {
+  padding: 0.7rem 0.85rem; border-radius: 0.6rem; font-size: 0.84rem; margin-bottom: 0.4rem;
+}
+.cr-alert-error { background: rgba(244, 63, 94, 0.12); border: 1px solid rgba(244, 63, 94, 0.35); color: #fca5a5; }
+.cr-alert-info { background: rgba(59, 130, 246, 0.12); border: 1px solid rgba(59, 130, 246, 0.35); color: #93c5fd; }
+
+/* ---------------- Submit ---------------- */
+.cr-submit {
+  width: 100%;
+  display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+  padding: 0.8rem 1rem;
+  font-size: 0.92rem; font-weight: 700;
+  color: #0a0a0b;
+  background: #f4f4f5;
+  border: none; border-radius: 0.65rem;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+}
+.cr-submit:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45); }
+.cr-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.cr-spin { animation: cr-spin 0.8s linear infinite; }
+@keyframes cr-spin { to { transform: rotate(360deg); } }
+
+/* Map container wrapper */
+.cr-map-wrap { border-radius: 0.85rem; overflow: hidden; border: 1px solid var(--cr-border); box-shadow: 0 8px 22px rgba(0, 0, 0, 0.35); }
+
+/* ---------------- Route summary panel ---------------- */
+.cr-summary-route { display: flex; flex-direction: column; }
+.cr-summary-line { display: flex; align-items: flex-start; gap: 0.65rem; }
+.cr-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; margin-top: 0.2rem; }
+.cr-dot.pickup { background: #10B981; box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.22); }
+.cr-dot.drop { background: #EF4444; box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.22); }
+.cr-summary-connector { width: 2px; height: 16px; margin-left: 5px; background: rgba(255, 255, 255, 0.16); }
+.cr-summary-addr { display: flex; flex-direction: column; min-width: 0; }
+.cr-summary-k { font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--cr-muted); font-weight: 700; }
+.cr-summary-v { font-size: 0.9rem; color: var(--cr-text); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.cr-summary-stats {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.6rem;
+  margin-top: 1rem; padding-top: 0.9rem; border-top: 1px solid var(--cr-border);
+}
+.cr-summary-stat {
+  display: flex; flex-direction: column; gap: 0.2rem;
+  padding: 0.6rem 0.7rem; background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--cr-border); border-radius: 0.6rem;
+}
+.cr-summary-stat-v { font-size: 0.92rem; font-weight: 800; color: var(--cr-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 640px) { .cr-summary-stats { grid-template-columns: 1fr 1fr; } }
+
+/* =======================================================
+   Shared map components — dark overrides (scoped to .cr-root)
+   These re-color the light Tailwind utility classes used in
+   LocationSearchBox / RoutePreview / LiveRideMap without
+   touching their source (so their unit tests stay intact).
+   ======================================================= */
+
+/* --- LocationSearchBox: label + input --- */
+.cr-root .relative > label.text-sm { color: var(--cr-text) !important; }
+.cr-root input[type="text"] {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border-color: var(--cr-border) !important;
+  color: var(--cr-text) !important;
+}
+.cr-root input[type="text"]::placeholder { color: #6b7280 !important; }
+.cr-root input[type="text"]:focus { border-color: rgba(255, 255, 255, 0.35) !important; }
+
+/* --- RoutePreview: pickup/destination + stat boxes --- */
+.cr-root .bg-gray-50,
+.cr-root .bg-gray-100 {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border-color: var(--cr-border) !important;
+}
+.cr-root .bg-gradient-to-br.from-blue-50,
+.cr-root .bg-gradient-to-r.from-blue-50,
+.cr-root .from-blue-50.to-blue-100,
+.cr-root .from-green-50.to-green-100 {
+  background: var(--cr-surface-2) !important;
+  border-color: var(--cr-border) !important;
+}
+/* RoutePreview text recolor */
+.cr-root .text-gray-700,
+.cr-root .text-gray-800,
+.cr-root .text-blue-900,
+.cr-root .text-green-900 { color: var(--cr-text) !important; }
+.cr-root .text-gray-400,
+.cr-root .text-gray-500,
+.cr-root .text-blue-600,
+.cr-root .text-blue-700,
+.cr-root .text-green-600,
+.cr-root .text-green-700 { color: var(--cr-muted) !important; }
+
+/* --- LiveRideMap container + loading/placeholder backgrounds --- */
+.cr-root .border-gray-200 { border-color: var(--cr-border) !important; }
+.cr-root .bg-gray-50.z-10,
+.cr-root .from-gray-50.to-gray-100 {
+  background: var(--cr-surface-2) !important;
+}
+
+/* --- Autocomplete dropdown (portaled to body, so target globally
+       via a body-level class is not possible; this lighter dark
+       styling is applied through the dropdown's own class) --- */
+.location-suggestions-dropdown.cr-dark {
+  background-color: var(--cr-surface-2);
+  border-color: var(--cr-border);
+}
+
+/* ---------------- Responsive ---------------- */
+@media (max-width: 768px) {
+  /* The dashboard sidebar is an overlay on mobile → show our hamburger */
+  .cr-hamburger { display: inline-flex; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cr-rise, .cr-spin { animation: none !important; opacity: 1 !important; }
+  .cr-submit:hover:not(:disabled) { transform: none; }
+}
+
+/* ---------------- Driver verification gate / banner ---------------- */
+.cr-verify-gate {
+  border: 1px solid rgba(252, 211, 77, 0.25);
+  background: rgba(217, 119, 6, 0.08);
+  border-radius: 1rem;
+  padding: 1.4rem 1.2rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+}
+.cr-verify-icon { font-size: 2rem; }
+.cr-verify-title { font-size: 1.05rem; font-weight: 800; margin: 0; color: #fcd34d; }
+.cr-verify-text { font-size: 0.84rem; color: #d4d4d8; margin: 0; max-width: 460px; line-height: 1.5; }
+
+/* Horizontal banner variant (two-column layout) */
+.cr-verify-banner {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  flex-wrap: wrap;
+  border: 1px solid rgba(252, 211, 77, 0.25);
+  background: rgba(217, 119, 6, 0.08);
+  border-radius: 0.9rem;
+  padding: 0.9rem 1.1rem;
+  margin-bottom: clamp(0.85rem, 1.8vw, 1.15rem);
+}
+.cr-verify-banner-main { display: flex; align-items: center; gap: 0.8rem; min-width: 0; }
+.cr-verify-banner .cr-verify-icon { font-size: 1.5rem; flex-shrink: 0; }
+.cr-verify-banner .cr-verify-title { font-size: 0.95rem; }
+.cr-verify-banner .cr-verify-text { font-size: 0.8rem; max-width: none; }
+.cr-verify-btn { width: auto; flex-shrink: 0; padding: 0.6rem 1.1rem; }
+@media (max-width: 560px) {
+  .cr-verify-banner { flex-direction: column; align-items: flex-start; }
+  .cr-verify-btn { width: 100%; }
+}
+
+/* ---------------- Ola/Uber-style departure picker ---------------- */
+.cr-departure { grid-column: 1 / -1; }
+.cr-when-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.cr-chip {
+  padding: 0.5rem 0.9rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1.5px solid rgba(255, 255, 255, 0.12);
+  color: #d4d4d8;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+.cr-chip:hover { border-color: rgba(255, 255, 255, 0.3); background: rgba(255, 255, 255, 0.08); }
+.cr-chip.active { background: #f4f4f5; color: #0a0a0b; border-color: #f4f4f5; }
+.cr-when-date { position: relative; flex: 1; min-width: 150px; }
+.cr-when-summary {
+  margin-top: 0.7rem;
+  padding: 0.55rem 0.8rem;
+  border-radius: 0.6rem;
+  background: rgba(5, 150, 105, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  color: #6ee7b7;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
