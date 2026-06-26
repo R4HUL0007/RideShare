@@ -2,16 +2,18 @@ import { useState } from 'react';
 import { toast } from 'react-toastify';
 import axios from 'axios';
 import { API_BASE_URL } from '../utils/constants';
-import { persistAuthTokens } from '../utils/authToken';import '../styles/otp.css';
+import { persistAuthTokens } from '../utils/authToken';
 import '../styles/otp.css';
 
-const VerifyOTP = ({ email, onVerified, purpose = 'verification' }) => {
+const VerifyOTP = ({ email, onVerified, purpose = 'verification', pendingToken: initialPendingToken = '' }) => {
     const [otp, setOtp] = useState(['', '', '', '', '', '']);
     const [loading, setLoading] = useState(false);
     const [resending, setResending] = useState(false);
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [showPasswordFields, setShowPasswordFields] = useState(false);
+    // Pending-signup token (verification flow). Refreshed when the user resends.
+    const [pendingToken, setPendingToken] = useState(initialPendingToken);
 
     const handleChange = (index, value) => {
         if (value.length > 1) return; // Only allow single digit
@@ -89,7 +91,7 @@ const VerifyOTP = ({ email, onVerified, purpose = 'verification' }) => {
                 : `${API_BASE_URL}/auth/reset-password`;
             
             const payload = purpose === 'verification'
-                ? { email, otp: otpString }
+                ? (pendingToken ? { pendingToken, otp: otpString } : { email, otp: otpString })
                 : { email, otp: otpString, newPassword };
 
             const response = await axios.post(endpoint, payload, {
@@ -123,8 +125,13 @@ const VerifyOTP = ({ email, onVerified, purpose = 'verification' }) => {
             const endpoint = purpose === 'verification'
                 ? `${API_BASE_URL}/auth/resend-otp`
                 : `${API_BASE_URL}/auth/forgot-password`;
-            
-            await axios.post(endpoint, { email });
+
+            const body = purpose === 'verification' && pendingToken
+                ? { pendingToken }
+                : { email };
+            const res = await axios.post(endpoint, body);
+            // The pending-signup token rotates on each resend — keep the latest.
+            if (res?.data?.pendingToken) setPendingToken(res.data.pendingToken);
             toast.success('OTP sent successfully! Please check your email.');
             setOtp(['', '', '', '', '', '']);
             document.getElementById('otp-0').focus();

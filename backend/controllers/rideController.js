@@ -607,9 +607,15 @@ exports.getRideHistory = async (req, res) => {
 
 // ✅ Get Rides Created by User
 exports.getUserRides = async (req, res) => {
-    const userId = req.user.id; // Logged-in user's ID
+    const userId = req.user?.id; // Logged-in user's ID
 
     try {
+        // Defensive: never run an unscoped query. If userId is somehow missing,
+        // an undefined filter value would make Mongoose return EVERY ride.
+        if (!userId) {
+            return res.status(401).json({ message: "Not authorized" });
+        }
+
         const rides = await Ride.find({ user_id: userId })
             .populate('vehicle_id')
             .populate('user_id', 'name email phoneNumber role profilePicture ratings isDriverVerified')

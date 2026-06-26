@@ -16,7 +16,7 @@ router.get("/single", protect, getUserVehicle); // Get single vehicle (backward 
 router.post("/", protect, createVehicle); // Create new vehicle
 router.put("/:vehicleId", protect, updateVehicle); // Update specific vehicle
 router.delete("/:vehicleId", protect, deleteVehicle); // Delete specific vehicle
-router.get("/:vehicleId", getVehicleById); // Get vehicle by ID (public)
+router.get("/:vehicleId", protect, getVehicleById); // Get vehicle by ID (auth required)
 
 module.exports = router;
 

@@ -42,7 +42,7 @@
   50%      { transform: translateY(-4px); }
 }
 
-.ov-root h2 {
+.ov-root.otp-verification h2 {
   font-size: clamp(1.15rem, 3vw, 1.4rem);
   font-weight: 800;
   color: #f4f4f5;
@@ -50,14 +50,14 @@
   margin-bottom: 0.4rem;
 }
 
-.ov-root p {
+.ov-root.otp-verification p {
   color: #9ca3af;
   font-size: 0.84rem;
   line-height: 1.5;
   margin-bottom: 1.3rem;
 }
 
-.ov-root p strong {
+.ov-root.otp-verification p strong {
   color: #f4f4f5;
   font-weight: 700;
   word-break: break-all;

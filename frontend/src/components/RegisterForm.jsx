@@ -150,6 +150,7 @@ const RegisterForm = ({ onSwitchToLogin }) => {
     const [touched, setTouched] = useState({});
     const [showOTPVerification, setShowOTPVerification] = useState(false);
     const [registeredEmail, setRegisteredEmail] = useState('');
+    const [pendingToken, setPendingToken] = useState('');
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
@@ -280,13 +281,14 @@ const RegisterForm = ({ onSwitchToLogin }) => {
                 gender: formData.gender,
             };
 
-            await registerUser(payload);
+            const res = await registerUser(payload);
             toast.success('Registration successful! Please check your email for verification code.');
 
-            // Clear the saved draft once the account is created.
+            // Clear the saved draft once registration starts.
             try { localStorage.removeItem(DRAFT_KEY); } catch { /* ignore */ }
 
             setRegisteredEmail(formData.email);
+            setPendingToken(res?.data?.pendingToken || '');
             setShowOTPVerification(true);
         } catch (error) {
             // Friendly, specific feedback for network / rate-limit / server errors.
@@ -309,8 +311,11 @@ const RegisterForm = ({ onSwitchToLogin }) => {
     };
 
     const handleOTPVerified = () => {
-        toast.success('Email verified successfully! You can now login.');
-        navigate('/');
+        // verifyOTP issues the session (access + refresh cookies; dev also
+        // persists the token), so the user is already logged in — send them
+        // straight to the dashboard instead of back to the login page.
+        toast.success('Email verified! Welcome to RidexShare.');
+        navigate('/dashboard');
     };
 
     // Google auth result. New signups must sign in manually → switch to the
@@ -328,7 +333,7 @@ const RegisterForm = ({ onSwitchToLogin }) => {
     };
 
     if (showOTPVerification) {
-        return <VerifyOTP email={registeredEmail} onVerified={handleOTPVerified} />;
+        return <VerifyOTP email={registeredEmail} pendingToken={pendingToken} onVerified={handleOTPVerified} />;
     }
 
     // Helper to compute aria-describedby for a field with an error.

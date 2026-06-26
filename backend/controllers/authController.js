@@ -74,6 +74,13 @@ exports.registerUser = async (req, res) => {
             return res.status(400).json({ message: "Phone number must be 10 digits" });
         }
 
+        // Enforce the university-domain rule up front. The account is only
+        // created at OTP-verify time, so without this the user wouldn't learn
+        // their email is ineligible until after entering the code.
+        if (!email || !email.toLowerCase().endsWith(`@${REQUIRED_EMAIL_DOMAIN}`)) {
+            return res.status(400).json({ message: `Please use your @${REQUIRED_EMAIL_DOMAIN} email address` });
+        }
+
         // Validate password presence/strength up front. Hashing an undefined
         // password throws and surfaces as a confusing 500; a too-short one would
         // bypass the same rule enforced in changePassword.
@@ -98,28 +105,36 @@ exports.registerUser = async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, 10);
         const otp = generateOTP();
         const otpHash = await bcrypt.hash(otp, 10);
-        const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+        const OTP_TTL_SEC = 600; // 10 minutes
 
-        const user = await User.create({ 
-            name, 
-            username,
-            email, 
-            password: hashedPassword,
-            phoneNumber,
-            role, 
-            gender,
-            otp: otpHash,
-            otpExpiry,
-            otpAttempts: 0,
-        });
+        // Do NOT create the account yet. Carry the registration data + a HASHED
+        // OTP in a short-lived, signed "pending signup" token. The account is
+        // created only after the OTP is confirmed at /verify-otp. This keeps
+        // unverified accounts out of the database (mirrors the Google flow).
+        const pendingToken = jwt.sign(
+            {
+                kind: "local_pending_signup",
+                name,
+                username,
+                email,
+                phoneNumber,
+                role,
+                gender,
+                passwordHash: hashedPassword,
+                otpHash,
+            },
+            process.env.JWT_SECRET,
+            { expiresIn: OTP_TTL_SEC }
+        );
 
-        // Send OTP email (plaintext code — only the hash is stored).
+        // Send OTP email (plaintext code — only the hash is carried in the token).
         await sendOTPEmail(email, otp, "verification");
 
         res.status(201).json({
             message: "Registration successful! Please check your email for verification code.",
-            userId: user.id,
-            email: user.email
+            email,
+            pendingToken,
+            expiresInSec: OTP_TTL_SEC,
         });
     } catch (error) {
         console.error("Error in registerUser:", error);
@@ -139,9 +154,53 @@ exports.registerUser = async (req, res) => {
 
 // Verify OTP
 exports.verifyOTP = async (req, res) => {
-    const { email, otp } = req.body;
+    const { email, otp, pendingToken } = req.body;
 
     try {
+        // ---- New flow: pending-signup token (account not yet in the DB) ----
+        if (pendingToken) {
+            let pending;
+            try {
+                pending = jwt.verify(pendingToken, process.env.JWT_SECRET);
+            } catch (err) {
+                return res.status(400).json({ message: "Your sign-up session expired. Please register again." });
+            }
+            if (pending.kind !== "local_pending_signup") {
+                return res.status(400).json({ message: "Invalid sign-up session" });
+            }
+
+            const otpMatches = await bcrypt.compare(String(otp || ""), pending.otpHash);
+            if (!otpMatches) {
+                return res.status(400).json({ message: "Invalid OTP" });
+            }
+
+            // Race guard: ensure the email/username weren't taken meanwhile.
+            const existing = await User.findOne({
+                $or: [{ email: pending.email }, { username: pending.username }],
+            });
+            if (existing) {
+                if (existing.email === pending.email) {
+                    return res.status(400).json({ message: "Email already registered" });
+                }
+                return res.status(400).json({ message: "Username already taken" });
+            }
+
+            // Create the verified account NOW (password already hashed at register).
+            const user = await User.create({
+                name: pending.name,
+                username: pending.username,
+                email: pending.email,
+                password: pending.passwordHash,
+                phoneNumber: pending.phoneNumber,
+                role: pending.role,
+                gender: pending.gender,
+                isVerified: true,
+            });
+
+            return issueSession(req, res, user, "Email verified successfully!");
+        }
+
+        // ---- Legacy flow: account already exists in the DB (pre-migration) ----
         const user = await User.findOne({ email });
         if (!user) {
             return res.status(404).json({ message: "User not found" });
@@ -190,9 +249,53 @@ exports.verifyOTP = async (req, res) => {
 
 // Resend OTP
 exports.resendOTP = async (req, res) => {
-    const { email } = req.body;
+    const { email, pendingToken } = req.body;
 
     try {
+        // ---- New flow: re-issue a fresh OTP + pending token (no DB account) ----
+        if (pendingToken) {
+            let pending;
+            try {
+                // Allow resending even if the previous token has just expired —
+                // the signature is still validated, only the exp claim is ignored.
+                pending = jwt.verify(pendingToken, process.env.JWT_SECRET, { ignoreExpiration: true });
+            } catch (err) {
+                return res.status(400).json({ message: "Your sign-up session is invalid. Please register again." });
+            }
+            if (pending.kind !== "local_pending_signup") {
+                return res.status(400).json({ message: "Invalid sign-up session" });
+            }
+
+            const otp = generateOTP();
+            const otpHash = await bcrypt.hash(otp, 10);
+            const OTP_TTL_SEC = 600; // 10 minutes
+
+            const freshToken = jwt.sign(
+                {
+                    kind: "local_pending_signup",
+                    name: pending.name,
+                    username: pending.username,
+                    email: pending.email,
+                    phoneNumber: pending.phoneNumber,
+                    role: pending.role,
+                    gender: pending.gender,
+                    passwordHash: pending.passwordHash,
+                    otpHash,
+                },
+                process.env.JWT_SECRET,
+                { expiresIn: OTP_TTL_SEC }
+            );
+
+            await sendOTPEmail(pending.email, otp, "verification");
+
+            return res.json({
+                message: "OTP sent successfully to your email",
+                pendingToken: freshToken,
+                expiresInSec: OTP_TTL_SEC,
+            });
+        }
+
+        // ---- Legacy flow: account already exists in the DB ----
         const user = await User.findOne({ email });
         if (!user) {
             return res.status(404).json({ message: "User not found" });
