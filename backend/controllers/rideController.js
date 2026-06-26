@@ -8,6 +8,7 @@ const { rankRides, CFG } = require("../utils/routeMatch");
 const { haversineKm } = require("../utils/geo");
 const { computeSegmentFare } = require("../utils/partialFare");
 const { findUnpaidCompletedRide } = require("../utils/unpaidGuard");
+const { validateManualCompletion, finalizeCompletion } = require("../utils/rideCompletion");
 
 // Fire-and-forget search logging for recommendations + demand insights.
 function logSearch({ userId, role, destination, source, pSrc, pDst, resultCount }) {
@@ -583,53 +584,26 @@ exports.completeRide = async (req, res) => {
             return res.status(403).json({ message: "Unauthorized: You can only complete your own rides" });
         }
 
-        // Guard invalid transitions — can't complete a cancelled/already-done ride.
-        if (ride.status === "Completed") {
-            return res.status(400).json({ message: "This ride is already completed." });
+        // Backend-enforced completion: the ride must have started and met the
+        // destination/distance/duration validation — a driver can't complete
+        // from anywhere or immediately after OTP. An optional { lat, lng } body
+        // provides a fresh fix; otherwise the last shared location is used.
+        const blat = Number(req.body?.lat), blng = Number(req.body?.lng);
+        const fix = (Number.isFinite(blat) && Number.isFinite(blng)) ? { lat: blat, lng: blng } : null;
+        if (fix) {
+            ride.tracking = ride.tracking || {};
+            ride.tracking.driverLocation = { lat: fix.lat, lng: fix.lng, updatedAt: new Date() };
         }
-        if (ride.status === "Cancelled") {
-            return res.status(400).json({ message: "A cancelled ride can't be completed." });
-        }
-
-        // Update ride status
-        ride.status = "Completed";
-        await ride.save();
-
-        // Legacy pre-paid bookings (old flow): arm their escrow as before.
-        // No-op for the new pay-after-completion flow (no held payment yet).
-        try {
-            const { armEscrowForRide } = require("./paymentController");
-            await armEscrowForRide(ride._id, { io, users });
-        } catch (e) {
-            console.error("armEscrowForRide failed (completeRide):", e.message);
+        const check = validateManualCompletion(ride, fix);
+        if (!check.ok) {
+            return res.status(400).json({ message: check.message, code: check.code });
         }
 
-        // Notify the driver that the ride is complete.
-        await createNotification({
-            io, users, userId: ride.user_id.toString(), type: "ride",
-            title: "Ride completed",
-            message: `Your ride to ${ride.destination} has been completed.`,
-            rideId: ride._id, link: { tab: "myRides" },
+        const { durationMin } = await finalizeCompletion(ride, {
+            method: "DRIVER_MANUAL", endLocation: fix, actorId: userId, io, users,
         });
 
-        // Notify each passenger. Those who owe a fare and haven't paid get a
-        // "Pay now" prompt (pay-after-completion); free/already-paid riders just
-        // get the completion note.
-        await Promise.all((ride.passengers || []).map((p) => {
-            const pid = p && p.user_id ? p.user_id.toString() : null;
-            if (!pid) return Promise.resolve();
-            const owesPayment = (p.fareAmount || 0) > 0 && p.paymentStatus !== "paid";
-            return createNotification({
-                io, users, userId: pid, type: owesPayment ? "booking" : "ride",
-                title: owesPayment ? "Ride done — payment due" : "Ride completed",
-                message: owesPayment
-                    ? `Your ride to ${ride.destination} is complete. Please pay ₹${p.fareAmount} to finish.`
-                    : `Your ride to ${ride.destination} has been completed.`,
-                rideId: ride._id, link: { tab: "myBookings" },
-            });
-        }));
-
-        res.status(200).json({ message: "Ride marked as completed", ride });
+        res.status(200).json({ message: "Ride marked as completed", ride, durationMin });
     } catch (error) {
         console.error("Error in completeRide:", error);
         res.status(500).json({

@@ -14,6 +14,7 @@ const VerificationLogSchema = new mongoose.Schema(
                 "code_generated", "checked_in", "boarding_verified", "verification_failed",
                 "ride_started", "ride_completed", "dropoff_confirmed",
                 "passenger_no_show", "driver_no_show", "issue_reported",
+                "route_deviation",
             ],
             required: true,
             index: true,

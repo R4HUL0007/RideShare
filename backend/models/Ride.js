@@ -151,7 +151,26 @@ const RideSchema = new mongoose.Schema({
             updatedAt: { type: Date, default: null }
         },
         startedAt: { type: Date, default: null },
-        endedAt: { type: Date, default: null }
+        endedAt: { type: Date, default: null },
+        // -------- Production lifecycle (GPS-validated completion) --------
+        // Cumulative GPS distance travelled during the trip (km).
+        distanceKm: { type: Number, default: 0 },
+        // Driver location captured at ride start / completion (admin audit).
+        startLocation: { lat: { type: Number, default: null }, lng: { type: Number, default: null } },
+        endLocation: { lat: { type: Number, default: null }, lng: { type: Number, default: null } },
+        // Destination proximity: set true once the driver enters the dest radius;
+        // arrivedAtDestAt drives the auto-complete dwell timer.
+        atDestination: { type: Boolean, default: false },
+        arrivedAtDestAt: { type: Date, default: null },
+        // Route deviation monitoring.
+        deviationFlagged: { type: Boolean, default: false },
+        lastDeviationAt: { type: Date, default: null },
+        // How the ride was completed (admin log).
+        completionMethod: {
+            type: String,
+            enum: [null, "AUTO_GPS", "DRIVER_MANUAL", "PASSENGER_CONFIRMATION"],
+            default: null
+        }
     },
     // Ride-level boarding-verification throttle. A wrong code can't be tied to a
     // single passenger, so failed driver verify attempts are counted here and the
