@@ -53,3 +53,15 @@ export const clearAuthTokens = () => {
     try { localStorage.removeItem(TOKEN_KEY); } catch { /* ignore */ }
     try { localStorage.removeItem(REFRESH_KEY); } catch { /* ignore */ }
 };
+
+// Defense-in-depth: wipe the service-worker response caches (Cache Storage) on
+// logout so no per-user data can linger for the next user on a shared device.
+// This clears ONLY cached responses — never cookies or the auth session.
+export const clearAppCaches = async () => {
+    try {
+        if (typeof caches !== "undefined" && caches.keys) {
+            const keys = await caches.keys();
+            await Promise.all(keys.map((k) => caches.delete(k)));
+        }
+    } catch { /* ignore */ }
+};

@@ -5,7 +5,7 @@ import { logoutUser } from '../services/authService';
 import axiosInstance from '../utils/axiosConfig';
 import { API_BASE_URL } from '../utils/constants';
 import { getSocket } from '../utils/socket';
-import { clearAuthTokens } from '../utils/authToken';
+import { clearAuthTokens, clearAppCaches } from '../utils/authToken';
 import brandLogo from '../assets/images/RidexShare.svg';
 
 const Sidebar = ({ user, activeTab, setActiveTab, sidebarOpen, setSidebarOpen }) => {
@@ -68,11 +68,13 @@ const Sidebar = ({ user, activeTab, setActiveTab, sidebarOpen, setSidebarOpen })
     try {
       await logoutUser();
       clearAuthTokens();
+      await clearAppCaches();
       navigate("/");
       toast.info("You've been logged out");
     } catch (error) {
       console.error("Logout error:", error);
       clearAuthTokens();
+      await clearAppCaches();
       navigate("/");
       toast.info("You've been logged out");
     }

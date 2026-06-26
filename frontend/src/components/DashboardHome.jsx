@@ -5,7 +5,7 @@ import axiosInstance from "../utils/axiosConfig";
 import { getUserVehicles } from "../services/vehicleService";
 import { getMyImpact } from "../services/sustainabilityService";
 import { logoutUser } from "../services/authService";
-import { clearAuthTokens } from "../utils/authToken";
+import { clearAuthTokens, clearAppCaches } from "../utils/authToken";
 import { API_BASE_URL } from "../utils/constants";
 import carImg from "../assets/images/Car.png";
 import "../styles/dashboardHome.css";
@@ -149,6 +149,7 @@ const DashboardHome = ({ user, onNavigate, onOpenSidebar }) => {
         }
         localStorage.removeItem("dashboardActiveTab");
         clearAuthTokens();
+        await clearAppCaches();
         navigate("/");
         toast.info("You've been logged out");
     };
