@@ -10,7 +10,7 @@
    - Background Sync: future-ready hooks (chat/notification/ride sync).
    ======================================================= */
 
-const VERSION = "v1.0.0";
+const VERSION = "v1.1.0";
 const STATIC_CACHE = `rs-static-${VERSION}`;
 const RUNTIME_CACHE = `rs-runtime-${VERSION}`;
 const IMAGE_CACHE = `rs-images-${VERSION}`;
@@ -59,19 +59,11 @@ const isImage = (url) =>
 
 const isApi = (url) => url.pathname.startsWith("/api/");
 
-// Endpoints that benefit from stale-while-revalidate (read-heavy, non-critical
-// to be perfectly fresh). Note: auth/payment/safety are NEVER cached.
-const SWR_PATHS = [
-    "/api/notifications",
-    "/api/chat/conversations",
-    "/api/rides/my-bookings",
-    "/api/rides/user-rides",
-];
-const neverCache = (url) =>
-    url.pathname.startsWith("/api/auth") ||
-    url.pathname.startsWith("/api/payments") ||
-    url.pathname.startsWith("/api/safety") ||
-    url.pathname.startsWith("/api/admin");
+// SECURITY: API responses are per-user and auth-dependent. The service-worker
+// cache is keyed only by URL, so caching them would serve one user's data to
+// the next user on the same browser (cross-user data leak). We therefore NEVER
+// cache any /api/ response — they always go straight to the network with the
+// caller's own credentials.
 
 // ---- Fetch routing ----
 self.addEventListener("fetch", (event) => {
@@ -102,12 +94,9 @@ self.addEventListener("fetch", (event) => {
         return;
     }
     if (isApi(url)) {
-        if (neverCache(url)) return; // pass through to network (no caching)
-        if (SWR_PATHS.some((p) => url.pathname.startsWith(p))) {
-            event.respondWith(staleWhileRevalidate(request, RUNTIME_CACHE));
-        } else {
-            event.respondWith(networkFirst(request, RUNTIME_CACHE));
-        }
+        // Never cache API responses — pass through to the network so each
+        // request is authenticated as the CURRENT user (prevents cross-user
+        // data being served from a URL-keyed cache).
         return;
     }
 });
