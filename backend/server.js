@@ -13,6 +13,17 @@ const { rateLimit } = require("./middleware/rateLimit");
 const User = require("./models/User");
 dotenv.config();
 
+// Last-resort safety net: a stray unhandled promise rejection (or a throw
+// outside any try/catch) would otherwise terminate the Node process on modern
+// Node versions, taking the whole API down. Log it and keep serving — the
+// container/restart policy is the backstop for truly fatal states.
+process.on("unhandledRejection", (reason) => {
+    console.error("[unhandledRejection]", reason);
+});
+process.on("uncaughtException", (err) => {
+    console.error("[uncaughtException]", err);
+});
+
 // Fail fast if the JWT secret is missing or weak — a forgeable/absent secret is
 // a silent auth bypass, so we refuse to boot rather than run insecurely.
 if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 16) {

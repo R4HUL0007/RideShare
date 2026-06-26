@@ -1,6 +1,7 @@
 const Ride = require("../models/Ride");
 const User = require("../models/User");
 const Vehicle = require("../models/Vehicle");
+const mongoose = require("mongoose");
 const { createNotification, createNotificationsBulk } = require("../utils/notify");
 const { normalizeCoords } = require("../utils/coords");
 const { rankRides, CFG } = require("../utils/routeMatch");
@@ -278,6 +279,9 @@ exports.findRides = async (req, res) => {
 // ✅ Book a Ride
 exports.bookRide = async (req, res) => {
     const { rideId } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(rideId)) {
+        return res.status(400).json({ message: "Invalid ride id" });
+    }
     const userId = req.user.id;
     const io = req.app.get("io");
     const users = req.app.get("users") || {};
@@ -419,6 +423,9 @@ exports.bookRide = async (req, res) => {
 // ✅ Cancel Ride Booking
 exports.cancelRide = async (req, res) => {
     const { rideId } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(rideId)) {
+        return res.status(400).json({ message: "Invalid ride id" });
+    }
     const userId = req.user.id;
     const io = req.app.get("io");
     const users = req.app.get("users") || {};
@@ -518,6 +525,9 @@ exports.cancelRide = async (req, res) => {
 // ✅ Complete a Ride
 exports.completeRide = async (req, res) => {
     const { rideId } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(rideId)) {
+        return res.status(400).json({ message: "Invalid ride id" });
+    }
     const userId = req.user.id; // Logged-in user ID
     const io = req.app.get("io");
     const users = req.app.get("users") || {};
@@ -667,6 +677,9 @@ exports.getMyBookings = async (req, res) => {
 // ✅ Cancel a Ride (driver soft-cancel — retained for records)
 exports.deleteRide = async (req, res) => {
     const { rideId } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(rideId)) {
+        return res.status(400).json({ message: "Invalid ride id" });
+    }
     const userId = req.user.id;
     const io = req.app.get("io");
     const users = req.app.get("users") || {};
@@ -716,6 +729,9 @@ exports.deleteRide = async (req, res) => {
 // ✅ Remove a Passenger from Ride (Captain only)
 exports.removePassenger = async (req, res) => {
     const { rideId, passengerId } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(rideId) || !mongoose.Types.ObjectId.isValid(passengerId)) {
+        return res.status(400).json({ message: "Invalid ride or passenger id" });
+    }
     const userId = req.user.id; // Logged-in user (captain)
     const io = req.app.get("io");
     const users = req.app.get("users") || {};
