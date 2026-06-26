@@ -43,6 +43,16 @@ const userDot = () => {
 
 const hasCoords = (c) => c && typeof c.lat === "number" && typeof c.lng === "number";
 
+// Effective per-seat price for a ride: the distance-based SEGMENT fare when the
+// passenger is dropping partway along the route (server-computed, in `_fare`),
+// otherwise the driver's flat full-route price.
+const effPerSeat = (ride) => {
+    const f = ride && ride._fare;
+    if (f && f.partial && Number.isFinite(Number(f.estimatedFare))) return Number(f.estimatedFare);
+    return Number(ride && ride.pricePerPerson) || 0;
+};
+const isPartialFare = (ride) => Boolean(ride && ride._fare && ride._fare.partial);
+
 // Match-score color tone for the 🎯 badge.
 const matchTone = (score) => (score >= 90 ? "high" : score >= 75 ? "mid" : "low");
 
@@ -273,7 +283,9 @@ function RideCard({ ride, nearbyKm, selected, onSelect, onView }) {
             </div>
 
             <div className="fr-card-foot">
-                {ride.pricePerPerson ? <span className="fr-price">₹{ride.pricePerPerson}/seat</span> : <span className="fr-price free">Free</span>}
+                {isPartialFare(ride)
+                    ? <span className="fr-price" title={`Full route ₹${ride._fare.fullPrice} · you ride ~${ride._fare.segmentKm} km`}>₹{effPerSeat(ride)} <span style={{ fontWeight: 600, fontSize: "0.7rem", opacity: 0.8 }}>for your trip</span></span>
+                    : ride.pricePerPerson ? <span className="fr-price">₹{ride.pricePerPerson}/seat</span> : <span className="fr-price free">Free</span>}
                 <button type="button" className="fr-view-btn" onClick={(e) => { e.stopPropagation(); onView(ride); }}>
                     View Ride
                 </button>
@@ -301,7 +313,8 @@ function RideDetailsPage({ ride, nearbyKm, onClose, onBook, booking }) {
         ? new Date(driver.createdAt).toLocaleDateString(undefined, { month: "short", year: "numeric" })
         : null;
     const vehiclePhoto = Array.isArray(v.photos) && v.photos[0];
-    const perSeat = ride.pricePerPerson ? Number(ride.pricePerPerson) : 0;
+    const partial = isPartialFare(ride);
+    const perSeat = effPerSeat(ride);
     const total = perSeat * seats;
 
     const seatOpts = [];
@@ -408,6 +421,11 @@ function RideDetailsPage({ ride, nearbyKm, onClose, onBook, booking }) {
                         <span className="fr-booking-amount">{perSeat ? `₹${perSeat}` : "Free"}</span>
                         {perSeat ? <span className="fr-booking-unit">/ seat</span> : null}
                     </div>
+                    {partial && (
+                        <p className="fr-confirm-note" style={{ marginTop: "-0.4rem", marginBottom: "0.8rem", textAlign: "center" }}>
+                            Distance-based fare for your stop (~{ride._fare.segmentKm} km of the {ride._fare.fullKm} km route). Full route is ₹{ride._fare.fullPrice}/seat.
+                        </p>
+                    )}
 
                     {ride.seatsAvailable > 0 ? (
                         <>
@@ -627,7 +645,7 @@ const FindRidesInner = ({ onOpenSidebar, onNavigate, user }) => {
     // (positive fare + payments enabled) through the payment summary → Razorpay;
     // free rides book directly.
     const bookRide = async (ride, seats = 1) => {
-        const perSeat = Number(ride.pricePerPerson) || 0;
+        const perSeat = effPerSeat(ride);
         if (perSeat > 0 && payConfig.enabled) {
             setCheckout({
                 ride,
@@ -646,7 +664,10 @@ const FindRidesInner = ({ onOpenSidebar, onNavigate, user }) => {
         const { ride, seats } = checkout;
         setPaying(true);
         try {
-            const result = await payForRide({ rideId: ride._id, seats, user: user || {} });
+            // Pass the passenger's searched destination so the server charges the
+            // distance-based segment fare (partial ride), recomputed authoritatively.
+            const dropCoords = isPartialFare(ride) ? filters.destinationCoords : null;
+            const result = await payForRide({ rideId: ride._id, seats, user: user || {}, dropCoords });
             setCheckout(null);
             setDetailsRide(null);
             setPaySuccess({ payment: result.payment, ride: result.ride || ride });

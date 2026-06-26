@@ -14,6 +14,7 @@ const {
     getAutoReleaseHours,
 } = require("../utils/escrow");
 const { createNotification } = require("../utils/notify");
+const { computeSegmentFare } = require("../utils/partialFare");
 
 const idStr = (v) => (v == null ? null : typeof v === "string" ? v : v._id ? v._id.toString() : v.toString());
 
@@ -26,10 +27,21 @@ const alreadyBooked = (ride, userId) =>
 
 // Compute the fare breakdown for `seats` on a ride. Commission is configurable
 // (defaults to 0). Tax is future-ready and currently 0. All values in rupees.
-const computeBreakdown = (ride, seats) => {
+// `perSeatOverride` lets callers charge a distance-based SEGMENT fare (partial
+// ride) instead of the driver's flat full-route price.
+const computeBreakdown = (ride, seats, perSeatOverride) => {
     const commissionPct = getCommissionPercent();
-    const b = computeBreakdownPure(ride.pricePerPerson, seats, commissionPct, 0);
+    const perSeat = Number.isFinite(perSeatOverride) ? perSeatOverride : ride.pricePerPerson;
+    const b = computeBreakdownPure(perSeat, seats, commissionPct, 0);
     return { ...b, commissionPct };
+};
+
+// Parse + validate an optional drop-off coordinate from the request body.
+const parseDrop = (body) => {
+    const d = body && body.dropCoords;
+    if (!d) return null;
+    const lat = Number(d.lat), lng = Number(d.lng);
+    return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null;
 };
 
 /**
@@ -85,7 +97,13 @@ exports.createOrder = async (req, res) => {
             return res.status(400).json({ message: "You have already booked this ride." });
         }
 
-        const b = computeBreakdown(ride, seats);
+        // Distance-based SEGMENT fare: if the passenger supplies their drop-off
+        // point, charge for the portion of the route they actually ride (derived
+        // from the driver's full-route price). Server-authoritative — recomputed
+        // here, never trusting any client-sent amount. No drop → full price.
+        const drop = parseDrop(req.body);
+        const seg = computeSegmentFare(ride, drop);
+        const b = computeBreakdown(ride, seats, seg.fare);
         if (b.total <= 0) {
             return res.status(400).json({ message: "This ride is free — no payment needed." });
         }

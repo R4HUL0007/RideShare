@@ -6,6 +6,7 @@ const { createNotification, createNotificationsBulk } = require("../utils/notify
 const { normalizeCoords } = require("../utils/coords");
 const { rankRides, CFG } = require("../utils/routeMatch");
 const { haversineKm } = require("../utils/geo");
+const { computeSegmentFare } = require("../utils/partialFare");
 
 // Fire-and-forget search logging for recommendations + demand insights.
 function logSearch({ userId, role, destination, source, pSrc, pDst, resultCount }) {
@@ -247,17 +248,30 @@ exports.findRides = async (req, res) => {
         );
 
         // Annotate each ride with its match metadata for the UI.
-        const results = ranked.map(({ ride, match }) => ({
-            ...ride,
-            _match: {
-                score: match.score,
-                type: match.matchType,
-                reason: match.reason,
-                sourceDistanceKm: match.sourceDistanceKm != null ? Number(match.sourceDistanceKm.toFixed(2)) : null,
-                destToRouteKm: match.destToRouteKm != null ? Number(match.destToRouteKm.toFixed(2)) : null,
-                destToDestKm: match.destToDestKm != null ? Number(match.destToDestKm.toFixed(2)) : null,
-            },
-        }));
+        const results = ranked.map(({ ride, match }) => {
+            // Fair segment fare for the passenger's actual drop point (km-based,
+            // derived from the driver's full-route price). Informational here;
+            // the server recomputes authoritatively at payment/booking time.
+            const seg = computeSegmentFare(ride, pDst);
+            return {
+                ...ride,
+                _match: {
+                    score: match.score,
+                    type: match.matchType,
+                    reason: match.reason,
+                    sourceDistanceKm: match.sourceDistanceKm != null ? Number(match.sourceDistanceKm.toFixed(2)) : null,
+                    destToRouteKm: match.destToRouteKm != null ? Number(match.destToRouteKm.toFixed(2)) : null,
+                    destToDestKm: match.destToDestKm != null ? Number(match.destToDestKm.toFixed(2)) : null,
+                },
+                _fare: {
+                    estimatedFare: seg.fare,
+                    fullPrice: seg.fullPrice,
+                    segmentKm: seg.segmentKm,
+                    fullKm: seg.fullKm,
+                    partial: seg.partial,
+                },
+            };
+        });
 
         // Fire-and-forget analytics (never blocks the response).
         try {

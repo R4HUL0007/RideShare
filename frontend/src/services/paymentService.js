@@ -10,8 +10,10 @@ export const getPaymentConfig = () =>
     axiosInstance.get(`${API_BASE_URL}/payments/config`);
 
 // Create a Razorpay order for booking `seats` on a ride (Pending payment).
-export const createOrder = (rideId, seats = 1) =>
-    axiosInstance.post(`${API_BASE_URL}/payments/order/${rideId}`, { seats });
+// `dropCoords` (optional) lets the server charge a distance-based segment fare
+// for an intermediate drop-off instead of the driver's full-route price.
+export const createOrder = (rideId, seats = 1, dropCoords = null) =>
+    axiosInstance.post(`${API_BASE_URL}/payments/order/${rideId}`, { seats, dropCoords });
 
 // Verify a completed checkout server-side → confirms the booking.
 export const verifyPayment = (payload) =>
@@ -87,9 +89,9 @@ export const loadRazorpay = () => {
  * opts: { rideId, seats, user, onFailure(reason), notes }
  * Returns: { payment, ride } from the verified response.
  */
-export const payForRide = async ({ rideId, seats = 1, user = {} }) => {
+export const payForRide = async ({ rideId, seats = 1, user = {}, dropCoords = null }) => {
     const Razorpay = await loadRazorpay();
-    const { data: order } = await createOrder(rideId, seats);
+    const { data: order } = await createOrder(rideId, seats, dropCoords);
 
     return new Promise((resolve, reject) => {
         const rzp = new Razorpay({
