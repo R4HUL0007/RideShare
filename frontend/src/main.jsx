@@ -22,6 +22,18 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     </React.StrictMode>
 );
 
+// ---- Stale-deploy recovery ----
+// Vite fires this when a dynamically-imported chunk fails to load (the user's
+// tab has old HTML after a redeploy). Reload once to pull the fresh bundle.
+window.addEventListener("vite:preloadError", () => {
+    try {
+        if (!sessionStorage.getItem("rs-chunk-reloaded")) {
+            sessionStorage.setItem("rs-chunk-reloaded", "1");
+            window.location.reload();
+        }
+    } catch { window.location.reload(); }
+});
+
 // ---- PWA bootstrap ----
 // Capture the install prompt early and register the service worker. An SW
 // update dispatches a window event that App listens for to show an update toast.
