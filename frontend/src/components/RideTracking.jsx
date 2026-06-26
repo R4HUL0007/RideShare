@@ -125,6 +125,7 @@ function RideTrackingInner({ rideId, user, onClose }) {
     const [routePath, setRoutePath] = useState(null);
     const [eta, setEta] = useState(null);
     const [distance, setDistance] = useState(null);
+    const [atDestination, setAtDestination] = useState(false);
     const [busy, setBusy] = useState(false);
     const [durationMin, setDurationMin] = useState(null);
     // Boarding verification: count of passengers verified + total roster size.
@@ -160,8 +161,10 @@ function RideTrackingInner({ rideId, user, onClose }) {
             if (idStr(p.rideId) !== idStr(rideId)) return;
             if (hasCoords(p.location)) setDriverLoc(p.location);
             if (p.state) setState(p.state);
-            if (p.eta != null) setEta(p.eta);
-            if (p.distance != null) setDistance(p.distance);
+            if (p.atDestination != null) setAtDestination(Boolean(p.atDestination));
+            // Server-computed live metrics (pay-after lifecycle).
+            if (p.remainingKm != null) setDistance(`${p.remainingKm} km`);
+            if (p.etaMin != null) setEta(`${p.etaMin} min`);
         };
         const onStatus = (p) => {
             if (idStr(p.rideId) !== idStr(rideId)) return;
@@ -228,13 +231,29 @@ function RideTrackingInner({ rideId, user, onClose }) {
     const endRide = async () => {
         setBusy(true);
         try {
-            const res = await axiosInstance.post(`${API_BASE_URL}/rides/${rideId}/tracking/end`, {});
+            // Send a fresh fix so the backend can validate destination proximity.
+            const body = hasCoords(driverLoc) ? { lat: driverLoc.lat, lng: driverLoc.lng } : {};
+            const res = await axiosInstance.post(`${API_BASE_URL}/rides/${rideId}/tracking/end`, body);
             setState("completed");
             setDurationMin(res.data?.durationMin ?? null);
             stopSharing();
             toast.success("Ride completed.");
         } catch (err) {
+            // Backend enforces destination/distance/duration — surface its message.
             toast.error(err.response?.data?.message || "Failed to end ride.");
+        } finally { setBusy(false); }
+    };
+
+    // Passenger GPS-fallback completion: confirm arrival → completes the ride.
+    const confirmArrival = async () => {
+        setBusy(true);
+        try {
+            const res = await axiosInstance.post(`${API_BASE_URL}/rides/${rideId}/tracking/arrived`, {});
+            setState("completed");
+            setDurationMin(res.data?.durationMin ?? null);
+            toast.success("Arrival confirmed — ride completed.");
+        } catch (err) {
+            toast.error(err.response?.data?.message || "Couldn't confirm arrival.");
         } finally { setBusy(false); }
     };
 
@@ -292,6 +311,12 @@ function RideTrackingInner({ rideId, user, onClose }) {
     const driver = snapshot.driver || {};
     const vehicle = snapshot.vehicle || {};
     const completed = state === "completed";
+
+    // Driver completion gate: allow only within ~150 m of the destination (or
+    // when the ride has no destination coords — backend still validates).
+    const hasDest = hasCoords(snapshot.destinationCoords);
+    const destKm = (hasCoords(driverLoc) && hasDest) ? haversineKm(driverLoc, snapshot.destinationCoords) : null;
+    const driverAtDest = !hasDest || (destKm != null && destKm <= 0.15);
 
     return (
         <div className="rt-root">
@@ -400,15 +425,36 @@ function RideTrackingInner({ rideId, user, onClose }) {
                                         {busy ? <span className="rt-spin" /> : "▶"} Start Ride
                                     </button>
                                 ) : (
-                                    <button className="rt-btn danger" onClick={endRide} disabled={busy}>
-                                        {busy ? <span className="rt-spin" /> : "⏹"} End Ride
-                                    </button>
+                                    <>
+                                        <button className="rt-btn danger" onClick={endRide} disabled={busy || !driverAtDest}>
+                                            {busy ? <span className="rt-spin" /> : "⏹"} Complete Ride
+                                        </button>
+                                        {!driverAtDest && (
+                                            <p className="rt-hint" style={{ marginTop: "0.5rem" }}>
+                                                {destKm != null
+                                                    ? `Drive to the destination to complete the ride (${destKm.toFixed(1)} km away).`
+                                                    : "You are too far from the destination to complete this ride."}
+                                            </p>
+                                        )}
+                                    </>
                                 )}
+                            </div>
+                        ) : state === "in_progress" ? (
+                            <div className="rt-actions" style={{ flexDirection: "column", gap: "0.5rem", alignItems: "stretch" }}>
+                                <p className="rt-hint" style={{ margin: 0, fontWeight: 700, color: atDestination ? "#34d399" : undefined }}>
+                                    {atDestination ? "You've reached your destination." : "Your ride is on the way to the destination."}
+                                </p>
+                                <p className="rt-hint" style={{ margin: 0 }}>Have you reached your destination?</p>
+                                <div style={{ display: "flex", gap: "0.6rem" }}>
+                                    <button className="rt-btn success" onClick={confirmArrival} disabled={busy} style={{ flex: 1 }}>
+                                        {busy ? <span className="rt-spin" /> : "✓"} Yes, I've arrived
+                                    </button>
+                                    <SosButton rideId={rideId} compact />
+                                </div>
                             </div>
                         ) : (
                             <p className="rt-hint">
-                                {state === "in_progress" ? "Your ride is on the way to the destination." :
-                                 state === "arrived" ? "Your driver has arrived at the pickup point." :
+                                {state === "arrived" ? "Your driver has arrived at the pickup point." :
                                  state === "arriving" ? "Your driver is arriving shortly." :
                                  state === "enroute" ? "Your driver is on the way." :
                                  "Waiting for the driver to start the ride."}
