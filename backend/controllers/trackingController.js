@@ -202,10 +202,23 @@ exports.endTracking = async (req, res) => {
         const durationMin = startedAt ? Math.max(1, Math.round((Date.now() - startedAt) / 60000)) : null;
         const statusPayload = { rideId: idStr(ride._id), state: "completed", endedAt: ride.tracking.endedAt, durationMin };
         emitToUsers(io, users, pax, "ride:status", statusPayload);
-        for (const pid of pax) {
-            await notify(io, users, pid, `Your ride to ${ride.destination} is complete.`, ride._id, {
-                type: "ride", title: "Ride completed", link: { tab: "rideHistory" },
-            });
+        // Pay-after-completion: prompt passengers who owe a fare to pay now.
+        for (const p of (ride.passengers || [])) {
+            const pid = idStr(p.user_id);
+            if (!pid) continue;
+            const owesPayment = (p.fareAmount || 0) > 0 && p.paymentStatus !== "paid";
+            await notify(
+                io, users, pid,
+                owesPayment
+                    ? `Your ride to ${ride.destination} is complete. Please pay ₹${p.fareAmount} to finish.`
+                    : `Your ride to ${ride.destination} is complete.`,
+                ride._id,
+                {
+                    type: owesPayment ? "booking" : "ride",
+                    title: owesPayment ? "Ride done — payment due" : "Ride completed",
+                    link: { tab: "myBookings" },
+                }
+            );
         }
 
         res.status(200).json({ message: "Ride completed", tracking: ride.tracking, durationMin });

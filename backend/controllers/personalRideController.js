@@ -116,6 +116,18 @@ exports.createRequest = async (req, res) => {
         const existing = await PersonalRideRequest.findOne({ passenger_id: req.user._id, status: { $in: ["SEARCHING", "DRIVER_ASSIGNED", "RIDE_STARTED", "RIDE_COMPLETED"] } });
         if (existing) return res.status(409).json({ message: "You already have an active ride.", request: await populated(existing._id) });
 
+        // Pay-after-completion safeguard: block a new request if the passenger
+        // has a completed ride they haven't paid for yet (shared or personal).
+        const { findUnpaidCompletedRide } = require("../utils/unpaidGuard");
+        const unpaid = await findUnpaidCompletedRide(req.user._id);
+        if (unpaid) {
+            return res.status(402).json({
+                code: "UNPAID_RIDE",
+                message: `Please pay for your completed ride to ${unpaid.destination || "your last trip"} (₹${unpaid.amount}) before requesting another.`,
+                unpaid,
+            });
+        }
+
         const km = (pickup?.lat != null && destination?.lat != null) ? haversineKm(pickup, destination) : 0;
         const fare = computeFare(vehicleType, km);
         const drivers = await eligibleDrivers(req, vehicleType, req.user._id);

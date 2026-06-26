@@ -7,6 +7,7 @@ const { normalizeCoords } = require("../utils/coords");
 const { rankRides, CFG } = require("../utils/routeMatch");
 const { haversineKm } = require("../utils/geo");
 const { computeSegmentFare } = require("../utils/partialFare");
+const { findUnpaidCompletedRide } = require("../utils/unpaidGuard");
 
 // Fire-and-forget search logging for recommendations + demand insights.
 function logSearch({ userId, role, destination, source, pSrc, pDst, resultCount }) {
@@ -325,6 +326,17 @@ exports.bookRide = async (req, res) => {
             return res.status(403).json({ message: "This ride is reserved for female passengers." });
         }
 
+        // Pay-after-completion safeguard: block booking if the passenger has a
+        // completed ride they haven't paid for yet (shared or personal).
+        const unpaid = await findUnpaidCompletedRide(userId);
+        if (unpaid) {
+            return res.status(402).json({
+                code: "UNPAID_RIDE",
+                message: `Please pay for your completed ride to ${unpaid.destination || "your last trip"} (₹${unpaid.amount}) before booking another.`,
+                unpaid,
+            });
+        }
+
         // Reject obviously invalid seat counts up front.
         if (requestedSeats > 4) {
             return res.status(400).json({ message: "You can book at most 4 seats." });
@@ -358,6 +370,19 @@ exports.bookRide = async (req, res) => {
         // last seat (the classic read-modify-write race). 6-digit boarding code
         // matches the check-in verifier.
         const verificationCode = String(Math.floor(100000 + Math.random() * 900000));
+        // Lock the distance-based segment fare NOW (no charge taken — payment
+        // happens after completion). Optional dropCoords = passenger's drop-off.
+        const drop = req.body?.dropCoords && Number.isFinite(Number(req.body.dropCoords.lat))
+            ? { lat: Number(req.body.dropCoords.lat), lng: Number(req.body.dropCoords.lng) }
+            : null;
+        const seg = computeSegmentFare(ride, drop);
+        const lockedFare = seg.fare * requestedSeats;
+        const newPassenger = {
+            user_id: userId, seats: requestedSeats, bookedAt: new Date(), verificationCode,
+            fareAmount: lockedFare,
+            dropCoords: drop || { lat: null, lng: null },
+            paymentStatus: "unpaid",
+        };
         const updated = await Ride.findOneAndUpdate(
             {
                 _id: rideId,
@@ -370,7 +395,7 @@ exports.bookRide = async (req, res) => {
                 "tracking.state": { $nin: ["in_progress", "completed"] },
             },
             {
-                $push: { passengers: { user_id: userId, seats: requestedSeats, bookedAt: new Date(), verificationCode } },
+                $push: { passengers: newPassenger },
                 $inc: { seatsAvailable: -requestedSeats },
             },
             { new: true }
@@ -570,8 +595,8 @@ exports.completeRide = async (req, res) => {
         ride.status = "Completed";
         await ride.save();
 
-        // Arm escrow for paid bookings: held → awaiting_completion + start the
-        // 24h auto-release clock. (No-op when there are no paid bookings.)
+        // Legacy pre-paid bookings (old flow): arm their escrow as before.
+        // No-op for the new pay-after-completion flow (no held payment yet).
         try {
             const { armEscrowForRide } = require("./paymentController");
             await armEscrowForRide(ride._id, { io, users });
@@ -579,20 +604,30 @@ exports.completeRide = async (req, res) => {
             console.error("armEscrowForRide failed (completeRide):", e.message);
         }
 
-        // 🔥 Notify the driver and all passengers.
-        const passengerIds = (ride.passengers || [])
-            .map((p) => (p && typeof p === "object" && p.user_id ? p.user_id.toString() : (p ? p.toString() : null)))
-            .filter(Boolean);
-        const recipients = [ride.user_id.toString(), ...passengerIds];
-        await Promise.all(recipients.map((rid) => createNotification({
-            io, users,
-            userId: rid,
-            type: "ride",
+        // Notify the driver that the ride is complete.
+        await createNotification({
+            io, users, userId: ride.user_id.toString(), type: "ride",
             title: "Ride completed",
             message: `Your ride to ${ride.destination} has been completed.`,
-            rideId: ride._id,
-            link: { tab: rid === ride.user_id.toString() ? "myRides" : "rideHistory" },
-        })));
+            rideId: ride._id, link: { tab: "myRides" },
+        });
+
+        // Notify each passenger. Those who owe a fare and haven't paid get a
+        // "Pay now" prompt (pay-after-completion); free/already-paid riders just
+        // get the completion note.
+        await Promise.all((ride.passengers || []).map((p) => {
+            const pid = p && p.user_id ? p.user_id.toString() : null;
+            if (!pid) return Promise.resolve();
+            const owesPayment = (p.fareAmount || 0) > 0 && p.paymentStatus !== "paid";
+            return createNotification({
+                io, users, userId: pid, type: owesPayment ? "booking" : "ride",
+                title: owesPayment ? "Ride done — payment due" : "Ride completed",
+                message: owesPayment
+                    ? `Your ride to ${ride.destination} is complete. Please pay ₹${p.fareAmount} to finish.`
+                    : `Your ride to ${ride.destination} has been completed.`,
+                rideId: ride._id, link: { tab: "myBookings" },
+            });
+        }));
 
         res.status(200).json({ message: "Ride marked as completed", ride });
     } catch (error) {

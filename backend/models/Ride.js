@@ -81,7 +81,22 @@ const RideSchema = new mongoose.Schema({
         // No-show flags (set via the no-show reporting endpoints).
         noShow: { type: Boolean, default: false },
         // Passenger confirmed drop-off at completion (mirrors escrow confirm).
-        dropOffConfirmed: { type: Boolean, default: false }
+        dropOffConfirmed: { type: Boolean, default: false },
+        // -------- Unified pay-after-completion pricing --------
+        // The fare for THIS passenger's segment, locked at booking time (no charge
+        // taken then). Payment is collected AFTER the ride is completed, the same
+        // as the personalized-ride flow. `dropCoords` is the passenger's drop-off
+        // (their searched destination) used to compute the distance-based fare.
+        fareAmount: { type: Number, default: null },
+        dropCoords: {
+            lat: { type: Number, default: null },
+            lng: { type: Number, default: null },
+        },
+        // Per-passenger payment state for the post-completion charge:
+        //   unpaid  → booked, not yet paid (ride may be upcoming or completed)
+        //   paid    → paid after completion; a Payment doc holds the escrow
+        paymentStatus: { type: String, enum: ["unpaid", "paid"], default: "unpaid" },
+        payment_id: { type: mongoose.Schema.Types.ObjectId, ref: "Payment", default: null }
     }],
     vehicle_id: {
         type: mongoose.Schema.Types.ObjectId,

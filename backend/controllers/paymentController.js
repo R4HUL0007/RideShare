@@ -67,8 +67,6 @@ exports.getConfig = async (req, res) => {
 exports.createOrder = async (req, res) => {
     const userId = req.user.id;
     const { rideId } = req.params;
-    let seats = parseInt(req.body?.seats, 10);
-    if (!Number.isFinite(seats) || seats < 1) seats = 1;
 
     if (!mongoose.Types.ObjectId.isValid(rideId)) {
         return res.status(400).json({ message: "Invalid ride id" });
@@ -81,32 +79,33 @@ exports.createOrder = async (req, res) => {
         const ride = await Ride.findById(rideId);
         if (!ride) return res.status(404).json({ message: "Ride not found" });
 
-        // Same guards as a normal booking — fail fast before charging.
-        if (idStr(ride.user_id) === userId) {
-            return res.status(400).json({ message: "You can't book your own ride." });
+        // Pay-AFTER-completion: the passenger must already be booked on this
+        // ride, and the ride must be completed. The fare was LOCKED at booking
+        // (segment-aware), so we charge exactly that — never recompute here.
+        const booking = (ride.passengers || []).find((p) => idStr(p.user_id) === userId);
+        if (!booking) {
+            return res.status(400).json({ message: "You haven't booked this ride." });
         }
-        if (ride.status === "Cancelled" || ride.status === "Completed") {
-            return res.status(400).json({ message: "This ride is no longer bookable." });
+        if (ride.status !== "Completed") {
+            return res.status(400).json({ message: "You can pay once the ride is completed." });
         }
-        if (seats > 4) return res.status(400).json({ message: "You can book at most 4 seats." });
-        if (ride.seatsAvailable <= 0) return res.status(400).json({ message: "No seats available." });
-        if (seats > ride.seatsAvailable) {
-            return res.status(400).json({ message: `Only ${ride.seatsAvailable} seat(s) available.` });
+        if (booking.paymentStatus === "paid") {
+            return res.status(400).json({ message: "This ride is already paid." });
         }
-        if (alreadyBooked(ride, userId)) {
-            return res.status(400).json({ message: "You have already booked this ride." });
-        }
-
-        // Distance-based SEGMENT fare: if the passenger supplies their drop-off
-        // point, charge for the portion of the route they actually ride (derived
-        // from the driver's full-route price). Server-authoritative — recomputed
-        // here, never trusting any client-sent amount. No drop → full price.
-        const drop = parseDrop(req.body);
-        const seg = computeSegmentFare(ride, drop);
-        const b = computeBreakdown(ride, seats, seg.fare);
-        if (b.total <= 0) {
+        const total = Number(booking.fareAmount) || 0;
+        if (total <= 0) {
             return res.status(400).json({ message: "This ride is free — no payment needed." });
         }
+        // Idempotency: a prior Successful payment means it's already settled.
+        const existingPaid = await Payment.findOne({ ride_id: ride._id, user_id: userId, status: "Successful" }).lean();
+        if (existingPaid) {
+            return res.status(400).json({ message: "This ride is already paid." });
+        }
+
+        const seats = booking.seats || 1;
+        const commissionPct = getCommissionPercent();
+        const platformFee = Math.round((total * commissionPct) / 100);
+        const b = { total, fare: total, platformFee, tax: 0, driverEarnings: Math.max(0, total - platformFee), perSeat: Math.round(total / seats) };
 
         // Create the Razorpay order (amount in paise).
         const razorpay = getRazorpay();
@@ -195,122 +194,41 @@ exports.verifyPayment = async (req, res) => {
             return res.status(400).json({ message: "Payment verification failed." });
         }
 
-        // 2. Re-validate the ride is still bookable (state may have changed
-        //    while the user was paying). If not, mark the payment for refund.
-        let ride = await Ride.findById(payment.ride_id);
-        if (!ride) {
-            payment.status = "Failed";
-            payment.failureReason = "Ride no longer exists";
-            await payment.save();
-            return res.status(404).json({ message: "Ride not found" });
-        }
-        if (ride.status === "Cancelled" || ride.status === "Completed") {
-            // The passenger was already charged (verified pay_*) — refund via gateway.
-            const { gatewayError } = await refundPayment(payment, { reason: "ride_unavailable" });
-            payment.payment_id = razorpay_payment_id;
-            payment.signature = razorpay_signature;
-            payment.failureReason = "Ride became unavailable; refunded";
-            await payment.save();
-            return res.status(409).json({
-                message: gatewayError
-                    ? "Ride is no longer available. Your refund is being processed."
-                    : "Ride is no longer available. Your payment has been refunded.",
-            });
-        }
-
-        // Guard double-booking + overbooking at confirm time.
-        if (alreadyBooked(ride, userId)) {
-            payment.status = "Successful";
-            payment.payment_id = razorpay_payment_id;
-            payment.signature = razorpay_signature;
-            payment.paidAt = new Date();
-            if (payment.escrowStatus === "none") payment.escrowStatus = "held";
-            await payment.save();
-            return res.status(200).json({ message: "Already booked", payment });
-        }
-
-        // 3. Confirm the booking ATOMICALLY — the conditional filter prevents
-        //    overbooking the last seat under concurrent verifications. If it
-        //    fails, the seat was lost after payment → refund via the gateway.
-        const verificationCode = String(Math.floor(100000 + Math.random() * 900000));
-        const updatedRide = await Ride.findOneAndUpdate(
-            {
-                _id: ride._id,
-                seatsAvailable: { $gte: payment.seats },
-                status: { $nin: ["Cancelled", "Completed"] },
-                "passengers.user_id": { $ne: userId },
-            },
-            {
-                $push: { passengers: { user_id: userId, seats: payment.seats, bookedAt: new Date(), verificationCode } },
-                $inc: { seatsAvailable: -payment.seats },
-            },
-            { new: true }
-        );
-        if (!updatedRide) {
-            const { gatewayError } = await refundPayment(payment, { reason: "seats_unavailable" });
-            payment.payment_id = razorpay_payment_id;
-            payment.signature = razorpay_signature;
-            payment.failureReason = "Seats no longer available; refunded";
-            await payment.save();
-            return res.status(409).json({
-                message: gatewayError
-                    ? "Those seats were just taken. Your refund is being processed."
-                    : "Those seats were just taken. Your payment has been refunded.",
-            });
-        }
-        if (updatedRide.seatsAvailable <= 0 && updatedRide.status !== "Booked") {
-            await Ride.updateOne({ _id: ride._id, seatsAvailable: { $lte: 0 } }, { $set: { status: "Booked" } });
-            updatedRide.status = "Booked";
-        }
-        ride = updatedRide;
-
-        // 4. Mark the payment successful + hold the money in escrow.
+        // 2. Payment verified — start escrow. Pay happens AFTER completion, so
+        //    the booking is already reserved and the ride already done; escrow
+        //    goes straight to awaiting_completion with the 24h auto-release clock.
+        const now = new Date();
         payment.status = "Successful";
         payment.payment_id = razorpay_payment_id;
         payment.signature = razorpay_signature;
-        payment.paidAt = new Date();
-        payment.escrowStatus = "held"; // platform holds funds until release
+        payment.paidAt = now;
+        payment.escrowStatus = "awaiting_completion";
+        payment.completedAt = now;
+        payment.autoReleaseAt = computeAutoReleaseAt(now);
         await payment.save();
 
-        // 5. Notifications (user-scoped).
-        const seatLabel = payment.seats > 1 ? `${payment.seats} seats` : "a seat";
+        // Flag the passenger's booking as paid + link the payment.
+        await Ride.updateOne(
+            { _id: payment.ride_id, "passengers.user_id": userId },
+            { $set: { "passengers.$.paymentStatus": "paid", "passengers.$.payment_id": payment._id } }
+        );
+
+        const ride = await Ride.findById(payment.ride_id).lean();
+        const dest = ride?.destination || "your destination";
+
+        // 3. Notifications (user-scoped).
         await createNotification({
-            io, users, userId,
-            type: "system",
-            title: "Payment successful",
-            message: `You paid ₹${payment.amount} for ${seatLabel} to ${ride.destination}. Held safely until the ride is done.`,
-            rideId: ride._id,
-            link: { tab: "payments" },
+            io, users, userId, type: "system", title: "Payment successful",
+            message: `You paid ₹${payment.amount} for your ride to ${dest}. Held safely — confirm anytime to release it to your driver (auto-releases in ${getAutoReleaseHours()}h).`,
+            rideId: payment.ride_id, link: { tab: "payments" },
         });
         await createNotification({
-            io, users,
-            userId: idStr(ride.user_id),
-            type: "booking",
-            title: "Booking paid",
-            message: `${req.user.name} paid ₹${payment.amount} and booked ${seatLabel} to ${ride.destination}.`,
-            rideId: ride._id,
-            link: { tab: "myRides" },
-        });
-        await createNotification({
-            io, users,
-            userId: idStr(ride.user_id),
-            type: "system",
-            title: "New escrow payment",
-            message: `₹${payment.driverEarnings} is held in escrow for your ride to ${ride.destination}. Released after completion.`,
-            rideId: ride._id,
-            link: { tab: "earnings" },
+            io, users, userId: idStr(payment.driver_id), type: "system", title: "Payment received 💰",
+            message: `₹${payment.driverEarnings} is held in escrow for your completed ride to ${dest}. Released after the protection window.`,
+            rideId: payment.ride_id, link: { tab: "earnings" },
         });
 
-        // 6. Real-time seat update for live clients.
-        if (io) {
-            io.emit("rideSeatsUpdated", {
-                rideId: ride._id.toString(),
-                seatsAvailable: ride.seatsAvailable,
-                status: ride.status,
-            });
-        }
-
-        res.status(200).json({ message: "Payment verified & booking confirmed", payment, ride });
+        return res.status(200).json({ message: "Payment verified", payment, ride });
     } catch (error) {
         console.error("Error in verifyPayment:", error);
         res.status(500).json({ message: "Server error", error: error.message });

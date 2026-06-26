@@ -456,7 +456,7 @@ function RideDetailsPage({ ride, nearbyKm, onClose, onBook, booking }) {
                                 {booking ? <><span className="fr-spin" /> Booking…</> : "Book Ride"}
                             </button>
                             <p className="fr-confirm-note" style={{ textAlign: "center", marginTop: "0.6rem", marginBottom: 0 }}>
-                                You can cancel within 3 minutes of booking.
+                                No payment now — you pay after the ride is completed. Free cancellation within 3 minutes.
                             </p>
                         </>
                     ) : (
@@ -626,35 +626,32 @@ const FindRidesInner = ({ onOpenSidebar, onNavigate, user }) => {
         setSelectedRide(null);
     };
 
-    // Free booking (no fare, or payments not configured) — books directly.
+    // Booking now ONLY reserves the seat — payment happens AFTER the ride is
+    // completed (unified pay-after-completion model). The segment fare is locked
+    // server-side from the passenger's drop-off (their searched destination).
     const directBook = async (ride, seats = 1) => {
         setBookingId(ride._id);
         try {
-            await axiosInstance.post(`${API_BASE_URL}/rides/book/${ride._id}`, { seats });
+            const dropCoords = filters.destinationCoords || null;
+            await axiosInstance.post(`${API_BASE_URL}/rides/book/${ride._id}`, { seats, dropCoords });
             setSuccess({ ride, seats });
             setDetailsRide(null);
             doSearch();
         } catch (error) {
-            toast.error(error.response?.data?.message || "Failed to book ride.");
+            // 402 = the user has a completed ride they haven't paid for yet.
+            if (error.response?.status === 402) {
+                toast.error(error.response.data?.message || "Please pay for your last completed ride first.", { autoClose: 6000 });
+            } else {
+                toast.error(error.response?.data?.message || "Failed to book ride.");
+            }
         } finally {
             setBookingId(null);
         }
     };
 
-    // Entry point from the Ride Details "Book Ride" button. Routes paid rides
-    // (positive fare + payments enabled) through the payment summary → Razorpay;
-    // free rides book directly.
+    // Entry point from the Ride Details "Book Ride" button. Always reserves the
+    // seat with no upfront charge — the passenger pays once the ride is done.
     const bookRide = async (ride, seats = 1) => {
-        const perSeat = effPerSeat(ride);
-        if (perSeat > 0 && payConfig.enabled) {
-            setCheckout({
-                ride,
-                seats,
-                breakdown: { perSeat, fare: perSeat * seats, platformFee: 0, tax: 0, total: perSeat * seats },
-            });
-            return;
-        }
-        // Free ride or payments not configured → direct booking.
         await directBook(ride, seats);
     };
 

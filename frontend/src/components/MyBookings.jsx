@@ -8,6 +8,7 @@ import MapsProvider, { useMaps } from "./maps/MapsProvider";
 import LiveRideMap from "./maps/LiveRideMap";
 import ThemedSelect from "./ThemedSelect";
 import { getMyImpact } from "../services/sustainabilityService";
+import { payForRide } from "../services/paymentService";
 import "../styles/myBookings.css";
 
 const RideTracking = lazy(() => import("./RideTracking"));
@@ -127,7 +128,7 @@ function StatusBadge({ status }) {
 }
 
 /* ---------------- booking card ---------------- */
-function BookingCard({ ride, status, seats, onView, onViewRoute, onTrack, onCancel, canCancel, onRate }) {
+function BookingCard({ ride, status, seats, onView, onViewRoute, onTrack, onCancel, canCancel, onRate, onPay, unpaidFare, paying }) {
     const driver = ride.user_id || {};
     const v = ride.vehicle_id || {};
     const trackable = status === "Confirmed" && hasCoords(ride.sourceCoords) && hasCoords(ride.destinationCoords);
@@ -166,6 +167,11 @@ function BookingCard({ ride, status, seats, onView, onViewRoute, onTrack, onCanc
                 </div>
 
                 <div className="mb-card-actions">
+                    {status === "Completed" && unpaidFare > 0 && (
+                        <button className="mb-act track" onClick={() => onPay(ride)} disabled={paying} style={{ fontWeight: 800 }}>
+                            {paying ? <><span className="mb-spin" /> Paying…</> : `Pay ₹${unpaidFare}`}
+                        </button>
+                    )}
                     <button className="mb-act" onClick={() => onView(ride)}>View Details</button>
                     {trackable && (
                         <button className="mb-act track" onClick={() => onTrack(ride)}>Track Ride</button>
@@ -178,10 +184,10 @@ function BookingCard({ ride, status, seats, onView, onViewRoute, onTrack, onCanc
                             Cancel
                         </button>
                     )}
-                    {status === "Completed" && (
+                    {status === "Completed" && unpaidFare <= 0 && (
                         <button className="mb-act track" onClick={() => onRate(ride)}>Rate Driver</button>
                     )}
-                    {status === "Completed" && (
+                    {status === "Completed" && unpaidFare <= 0 && (
                         <button className="mb-act" onClick={() => toast.info("Rebooking is coming soon.")}>Rebook</button>
                     )}
                 </div>
@@ -342,8 +348,25 @@ const MyBookingsInner = ({ user, onOpenSidebar, onNavigate }) => {
     // Completed ride the user chose to review (passenger → driver).
     const [reviewRide, setReviewRide] = useState(null);
     const [impact, setImpact] = useState(null);
+    const [payingId, setPayingId] = useState(null);
 
     const userId = user?.id || user?._id;
+
+    // Pay for a completed-but-unpaid ride (pay-after-completion). Opens Razorpay;
+    // on success the server holds the fare in escrow and frees up booking again.
+    const payForBooking = async (ride) => {
+        setPayingId(ride._id);
+        try {
+            await payForRide({ rideId: ride._id, seats: 1, user: user || {} });
+            toast.success("Payment successful — held safely in escrow for your driver.");
+            load();
+        } catch (err) {
+            if (err?.code === "dismissed") toast.info("Payment cancelled.");
+            else toast.error(err?.message || "Payment failed. Please try again.");
+        } finally {
+            setPayingId(null);
+        }
+    };
 
     const load = useCallback(async () => {
         setLoading(true);
@@ -402,7 +425,8 @@ const MyBookingsInner = ({ user, onOpenSidebar, onNavigate }) => {
         const toEntry = (ride, status) => {
             const b = myBooking(ride, userId);
             const seats = (b && typeof b === "object" && b.seats) || 1;
-            return { ride, status, seats, canCancel: status === "Confirmed" && cancelWindowOpen(b) };
+            const unpaidFare = (b && typeof b === "object" && b.paymentStatus === "unpaid" && (b.fareAmount || 0) > 0) ? b.fareAmount : 0;
+            return { ride, status, seats, unpaidFare, canCancel: status === "Confirmed" && cancelWindowOpen(b) };
         };
         if (tab === "upcoming") return booked.map((r) => toEntry(r, "Confirmed"));
         if (tab === "completed") return history.map((r) => toEntry(r, "Completed"));
@@ -551,6 +575,9 @@ const MyBookingsInner = ({ user, onOpenSidebar, onNavigate }) => {
                                     status={e.status}
                                     seats={e.seats}
                                     canCancel={e.canCancel}
+                                    unpaidFare={e.unpaidFare}
+                                    paying={payingId === e.ride._id}
+                                    onPay={payForBooking}
                                     onView={() => setDetailsEntry(e)}
                                     onViewRoute={(r) => setRouteRide(r)}
                                     onTrack={(r) => setTrackRide(r)}
