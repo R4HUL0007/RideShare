@@ -463,7 +463,10 @@ const MyBookingsInner = ({ user, onOpenSidebar, onNavigate }) => {
         return all.reduce((sum, r) => {
             const b = myBooking(r, userId);
             const s = (b && typeof b === "object" && b.seats) || 1;
-            return sum + (Number(r.pricePerPerson) || 0) * s;
+            // Use the passenger's LOCKED fare (segment/partial-aware); fall back
+            // to the flat price for legacy bookings without a stored fare.
+            const fare = Number(b?.fareAmount) || (Number(r.pricePerPerson) || 0) * s;
+            return sum + fare;
         }, 0);
     }, [booked, history, userId]);
     const pax = impact?.passenger || null;

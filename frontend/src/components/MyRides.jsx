@@ -201,7 +201,7 @@ function RideCard({ ride, status, onView, onViewRoute, onComplete, onCancel, onT
                         <button className="mr-act" onClick={() => onViewRoute(ride)}>View Route</button>
                     )}
                     {status === "Active" && (
-                        <button className="mr-act success" onClick={() => onComplete(ride)}>Complete</button>
+                        <button className="mr-act success" onClick={() => onComplete(ride)}>Complete (Live)</button>
                     )}
                     {status !== "Completed" && status !== "Cancelled" && (
                         <button className="mr-act danger" onClick={() => onCancel(ride)}>Cancel</button>
@@ -286,7 +286,7 @@ function RideDetailsModal({ ride, status, onClose, onRemovePassenger, removingId
                     <div className="mr-modal-foot">
                         <button className="mr-btn danger" onClick={() => onCancel(ride)}>Cancel Ride</button>
                         {status === "Active" && (
-                            <button className="mr-btn success" onClick={() => onComplete(ride)}>Mark Completed</button>
+                            <button className="mr-btn success" onClick={() => onComplete(ride)}>Complete in Live Tracking</button>
                         )}
                     </div>
                 )}
@@ -616,7 +616,7 @@ const MyRidesInner = ({ onOpenSidebar, onNavigate, onTrack }) => {
                             onView={() => setDetailsRide(r)}
                             onViewRoute={(rd) => setRouteRide(rd)}
                             onTrack={onTrack}
-                            onComplete={(rd) => setConfirm({ type: "complete", ride: rd })}
+                            onComplete={(rd) => { setDetailsRide(null); onTrack(rd._id); }}
                             onCancel={(rd) => setConfirm({ type: "cancel", ride: rd })}
                         />
                     ))}
@@ -629,7 +629,7 @@ const MyRidesInner = ({ onOpenSidebar, onNavigate, onTrack }) => {
                     status={rideStatus(detailsRide)}
                     removingId={removingId}
                     onRemovePassenger={doRemovePassenger}
-                    onComplete={(rd) => setConfirm({ type: "complete", ride: rd })}
+                    onComplete={(rd) => { setDetailsRide(null); onTrack(rd._id); }}
                     onCancel={(rd) => setConfirm({ type: "cancel", ride: rd })}
                     onRate={(rd, pax) => setReviewTarget({
                         rideId: rd._id,

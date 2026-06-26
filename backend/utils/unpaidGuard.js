@@ -10,12 +10,17 @@
 
 const Ride = require("../models/Ride");
 const PersonalRideRequest = require("../models/PersonalRideRequest");
+const { isRazorpayConfigured } = require("../config/razorpay");
 
 /**
  * Find the user's oldest completed-but-unpaid ride across both products.
  * @returns {Promise<null | { type:'shared'|'personal', rideId:string, amount:number, destination:string }>}
  */
 async function findUnpaidCompletedRide(userId) {
+    // If online payments aren't configured there's no way for the user to pay,
+    // so blocking them would be a permanent lockout — skip the guard entirely.
+    if (!isRazorpayConfigured()) return null;
+
     // Shared: a Completed ride where this user is a passenger, owes a fare
     // (fareAmount > 0), and hasn't paid yet.
     const shared = await Ride.findOne({

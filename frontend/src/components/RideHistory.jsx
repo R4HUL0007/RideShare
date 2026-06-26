@@ -273,11 +273,12 @@ const RideHistoryInner = ({ user, onOpenSidebar, onNavigate }) => {
             let fare = 0;
             let counterpartName = "—";
             if (isDriver) {
-                const total = (ride.passengers || []).reduce((sum, p) => sum + ((p?.seats) || 1), 0);
-                fare = per * total;
+                // Sum each passenger's locked fare (segment-aware); fall back to flat price.
+                fare = (ride.passengers || []).reduce((sum, p) => sum + (Number(p?.fareAmount) || (per * ((p?.seats) || 1))), 0);
                 counterpartName = `${(ride.passengers || []).length} passenger${(ride.passengers || []).length !== 1 ? "s" : ""}`;
             } else {
-                fare = per * seats;
+                // Passenger pays their LOCKED fare (segment/partial), not the flat price.
+                fare = Number(booking?.fareAmount) || (per * seats);
                 counterpartName = ride.user_id?.name ? ride.user_id.name.split(" ")[0] : "Driver";
             }
             return { ride, role, fare, counterpartName, counterpart: counterpartName };

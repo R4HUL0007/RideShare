@@ -15,6 +15,7 @@
 // =======================================================
 
 const { haversineKm, validPoint } = require("./geo");
+const Ride = require("../models/Ride");
 
 // Configurable thresholds (env-overridable). Defaults tuned for real trips;
 // kept low enough that short campus rides still satisfy the minimums.
@@ -95,31 +96,43 @@ function validateManualCompletion(ride, loc) {
  */
 async function finalizeCompletion(ride, { method, endLocation, actorId, io, users } = {}) {
     const now = new Date();
-    ride.tracking = ride.tracking || {};
-    ride.tracking.state = "completed";
-    ride.tracking.endedAt = now;
-    ride.tracking.completionMethod = method || "DRIVER_MANUAL";
-    const endLoc = endLocation || ride.tracking.driverLocation || null;
-    if (endLoc && endLoc.lat != null) {
-        ride.tracking.endLocation = { lat: endLoc.lat, lng: endLoc.lng };
-    }
-    ride.status = "Completed";
-    await ride.save();
+    const endLoc = endLocation || (ride.tracking && ride.tracking.driverLocation) || null;
+    const set = {
+        status: "Completed",
+        "tracking.state": "completed",
+        "tracking.endedAt": now,
+        "tracking.completionMethod": method || "DRIVER_MANUAL",
+    };
+    if (endLoc && endLoc.lat != null) set["tracking.endLocation"] = { lat: endLoc.lat, lng: endLoc.lng };
 
-    const startedAt = ride.tracking.startedAt ? new Date(ride.tracking.startedAt).getTime() : null;
+    // Atomic claim: only the FIRST completion wins. Prevents double audit logs +
+    // double payment notifications when auto-GPS and a manual/passenger complete
+    // race each other.
+    const claimed = await Ride.findOneAndUpdate(
+        { _id: ride._id, status: { $ne: "Completed" } },
+        { $set: set },
+        { new: true }
+    );
+    if (!claimed) return { durationMin: null, alreadyCompleted: true };
+
+    // Reflect into the in-memory doc so callers' socket emits read fresh values.
+    ride.status = "Completed";
+    ride.tracking = claimed.tracking;
+
+    const startedAt = claimed.tracking?.startedAt ? new Date(claimed.tracking.startedAt).getTime() : null;
     const durationMin = startedAt ? Math.max(1, Math.round((Date.now() - startedAt) / 60000)) : null;
 
     // Admin audit log: completion method, distance, duration, start/end coords.
     try {
         const { _log } = require("../controllers/checkinController");
-        await _log(ride._id, "ride_completed", {
+        await _log(claimed._id, "ride_completed", {
             actor_id: actorId || null,
             details: {
-                method: ride.tracking.completionMethod,
-                distanceKm: Number(ride.tracking.distanceKm) || 0,
+                method: claimed.tracking.completionMethod,
+                distanceKm: Number(claimed.tracking.distanceKm) || 0,
                 durationMin,
-                startLocation: ride.tracking.startLocation || null,
-                endLocation: ride.tracking.endLocation || null,
+                startLocation: claimed.tracking.startLocation || null,
+                endLocation: claimed.tracking.endLocation || null,
             },
         });
     } catch { /* non-fatal */ }
@@ -127,7 +140,7 @@ async function finalizeCompletion(ride, { method, endLocation, actorId, io, user
     // Legacy pre-paid bookings: arm their escrow (no-op for pay-after flow).
     try {
         const { armEscrowForRide } = require("../controllers/paymentController");
-        await armEscrowForRide(ride._id, { io, users });
+        await armEscrowForRide(claimed._id, { io, users });
     } catch (e) {
         console.error("armEscrowForRide failed (finalizeCompletion):", e.message);
     }
@@ -135,7 +148,7 @@ async function finalizeCompletion(ride, { method, endLocation, actorId, io, user
     // Notify passengers — those who owe a fare get a pay prompt.
     try {
         const { createNotification } = require("./notify");
-        for (const p of (ride.passengers || [])) {
+        for (const p of (claimed.passengers || [])) {
             const pid = p && p.user_id ? (p.user_id._id ? p.user_id._id.toString() : p.user_id.toString()) : null;
             if (!pid) continue;
             const owes = (p.fareAmount || 0) > 0 && p.paymentStatus !== "paid";
@@ -144,9 +157,9 @@ async function finalizeCompletion(ride, { method, endLocation, actorId, io, user
                 type: owes ? "booking" : "ride",
                 title: owes ? "Ride done — payment due" : "Ride completed",
                 message: owes
-                    ? `Your ride to ${ride.destination} is complete. Please pay ₹${p.fareAmount} to finish.`
-                    : `Your ride to ${ride.destination} has been completed.`,
-                rideId: ride._id, link: { tab: "myBookings" },
+                    ? `Your ride to ${claimed.destination} is complete. Please pay ₹${p.fareAmount} to finish.`
+                    : `Your ride to ${claimed.destination} has been completed.`,
+                rideId: claimed._id, link: { tab: "myBookings" },
             });
         }
     } catch (e) {
