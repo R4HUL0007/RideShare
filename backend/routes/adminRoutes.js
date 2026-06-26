@@ -29,6 +29,7 @@ router.delete("/users/:id", superOnly, admin.deleteUser);
 
 // Rides + bookings
 router.get("/rides", admin.listRides);
+router.get("/rides/unpaid", admin.listUnpaidRides);
 router.post("/rides/:id/cancel", admin.cancelRide);
 router.get("/bookings", admin.listBookings);
 

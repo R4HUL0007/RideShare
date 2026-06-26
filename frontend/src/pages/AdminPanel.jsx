@@ -10,6 +10,7 @@ import "../styles/admin.css";
 const AdminDashboard = lazy(() => import("../components/admin/AdminDashboard"));
 const AdminUsers = lazy(() => import("../components/admin/AdminUsers"));
 const AdminRides = lazy(() => import("../components/admin/AdminRides"));
+const AdminUnpaidRides = lazy(() => import("../components/admin/AdminUnpaidRides"));
 const AdminBookings = lazy(() => import("../components/admin/AdminBookings"));
 const AdminPayments = lazy(() => import("../components/admin/AdminPayments"));
 const AdminEscrow = lazy(() => import("../components/admin/AdminEscrow"));
@@ -33,6 +34,7 @@ const SECTIONS = [
     { key: "dashboard", label: "Dashboard", icon: "📊" },
     { key: "users", label: "Users", icon: "👥" },
     { key: "rides", label: "Rides", icon: "🚗" },
+    { key: "unpaid", label: "Unpaid Rides", icon: "💸" },
     { key: "personalrides", label: "Ride Requests", icon: "🚕" },
     { key: "bookings", label: "Bookings", icon: "📖" },
     { key: "payments", label: "Payments", icon: "💰" },
@@ -250,6 +252,7 @@ const AdminPanel = () => {
                         {activeSection === "dashboard" && <AdminDashboard />}
                         {activeSection === "users" && <AdminUsers />}
                         {activeSection === "rides" && <AdminRides />}
+                        {activeSection === "unpaid" && <AdminUnpaidRides />}
                         {activeSection === "personalrides" && <AdminPersonalRides />}
                         {activeSection === "ledger" && <AdminDriverLedger />}
                         {activeSection === "settlements" && <AdminSettlements />}

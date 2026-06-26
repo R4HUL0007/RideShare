@@ -19,6 +19,7 @@ export const adminSetUserRole = (id, isAdmin, adminRole, reason) => axiosInstanc
 export const adminDeleteUser = (id, reason) => axiosInstance.delete(`${base}/users/${id}`, { data: { reason } });
 
 export const adminRides = (params) => axiosInstance.get(`${base}/rides`, { params });
+export const adminUnpaidRides = () => axiosInstance.get(`${base}/rides/unpaid`);
 export const adminCancelRide = (id, reason) => axiosInstance.post(`${base}/rides/${id}/cancel`, { reason });
 export const adminBookings = (params) => axiosInstance.get(`${base}/bookings`, { params });
 

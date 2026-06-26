@@ -335,6 +335,62 @@ exports.listRides = async (req, res) => {
     }
 };
 
+// Admin: list completed-but-unpaid rides (pay-after-completion oversight).
+// Surfaces every passenger who owes a fare on a completed ride (shared) and
+// every completed-unpaid personalized ride. Read-only oversight tool.
+exports.listUnpaidRides = async (req, res) => {
+    try {
+        const PersonalRideRequest = require("../models/PersonalRideRequest");
+
+        // Shared: completed rides with at least one unpaid passenger (fare > 0).
+        const sharedRides = await Ride.find({
+            status: "Completed",
+            passengers: { $elemMatch: { paymentStatus: "unpaid", fareAmount: { $gt: 0 } } },
+        }).select("source destination timing user_id passengers updatedAt")
+            .populate("passengers.user_id", "name email")
+            .sort({ updatedAt: -1 }).limit(200).lean();
+
+        const shared = [];
+        for (const r of sharedRides) {
+            for (const p of (r.passengers || [])) {
+                if (p.paymentStatus === "unpaid" && (p.fareAmount || 0) > 0) {
+                    shared.push({
+                        type: "shared",
+                        rideId: r._id,
+                        passenger: p.user_id ? { _id: p.user_id._id, name: p.user_id.name, email: p.user_id.email } : null,
+                        amount: p.fareAmount,
+                        route: `${r.source || "—"} → ${r.destination || "—"}`,
+                        completedAt: r.updatedAt,
+                    });
+                }
+            }
+        }
+
+        // Personalized: completed but payment not yet received.
+        const personalDocs = await PersonalRideRequest.find({
+            status: "RIDE_COMPLETED", finalFare: { $gt: 0 }, "payment.status": { $ne: "received" },
+        }).select("passenger_id passengerName destination finalFare completedAt")
+            .populate("passenger_id", "name email")
+            .sort({ completedAt: -1 }).limit(200).lean();
+
+        const personal = personalDocs.map((d) => ({
+            type: "personal",
+            rideId: d._id,
+            passenger: d.passenger_id ? { _id: d.passenger_id._id, name: d.passenger_id.name, email: d.passenger_id.email } : { name: d.passengerName },
+            amount: d.finalFare,
+            route: `→ ${d.destination?.address || "—"}`,
+            completedAt: d.completedAt,
+        }));
+
+        const items = [...shared, ...personal].sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt));
+        const totalOwed = items.reduce((s, i) => s + (i.amount || 0), 0);
+        res.status(200).json({ items, count: items.length, totalOwed });
+    } catch (e) {
+        console.error("admin listUnpaidRides:", e);
+        res.status(500).json({ message: "Server error", error: e.message });
+    }
+};
+
 // Admin cancels a ride (soft-cancel + notify participants).
 exports.cancelRide = async (req, res) => {
     const { id } = req.params;
