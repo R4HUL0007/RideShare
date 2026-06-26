@@ -11,6 +11,7 @@ export const myActivePersonalRide = () => axiosInstance.get(`${base}/mine`);
 export const getPersonalRide = (id) => axiosInstance.get(`${base}/${id}`);
 export const cancelPersonalRide = (id, reason) => axiosInstance.post(`${base}/${id}/cancel`, { reason });
 export const payPersonalRide = (id, body = {}) => axiosInstance.post(`${base}/${id}/pay`, body);
+export const confirmArrivalPersonal = (id) => axiosInstance.post(`${base}/${id}/arrived`);
 export const personalRideHistory = () => axiosInstance.get(`${base}/history`);
 
 // Driver

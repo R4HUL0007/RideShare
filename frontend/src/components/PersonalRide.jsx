@@ -5,7 +5,7 @@ import LocationSearchBox from "./maps/LocationSearchBox";
 import LiveRideMap from "./maps/LiveRideMap";
 import {
     estimatePersonalRide, createPersonalRide, myActivePersonalRide,
-    cancelPersonalRide, payPersonalRide, personalRideStats,
+    cancelPersonalRide, payPersonalRide, personalRideStats, confirmArrivalPersonal,
 } from "../services/personalRideService";
 import { getSocket } from "../utils/socket";
 import "../styles/rideRequest.css";
@@ -137,6 +137,19 @@ const PersonalRideInner = ({ onOpenSidebar, onNavigate }) => {
     };
 
     const reset = () => { setActive(null); setDriverLoc(null); setForm({ source: "", sourceCoords: null, destination: "", destinationCoords: null, vehicleType: "Car", notes: "" }); setEstimate(null); };
+
+    // GPS-fallback completion: passenger confirms they've reached the destination.
+    const confirmArrival = async () => {
+        if (!activeId) return;
+        setBusy(true);
+        try {
+            const { data } = await confirmArrivalPersonal(activeId);
+            setActive(data);
+            toast.success("Arrival confirmed — your trip is complete. Please pay to finish.");
+        } catch (e) {
+            toast.error(e.response?.data?.message || "Couldn't confirm arrival.");
+        } finally { setBusy(false); }
+    };
 
     // Map source/dest (live ride uses the stored ride; idle uses the form).
     const mapSrc = active ? active.pickup : form.sourceCoords;
@@ -312,7 +325,13 @@ const PersonalRideInner = ({ onOpenSidebar, onNavigate }) => {
                                 <p className="rrq-note">Your driver is on the way. An OTP will appear here when they arrive.</p>
                             )}
                             {status === "RIDE_STARTED" && (
-                                <p className="rrq-note">Enjoy your ride. Live location is shared with your safety contacts.</p>
+                                <>
+                                    <p className="rrq-note">Enjoy your ride. Live location is shared with your safety contacts.</p>
+                                    <button className="rrq-broadcast" onClick={confirmArrival} disabled={busy} style={{ marginTop: "0.6rem" }}>
+                                        <span className="rrq-broadcast-main">{busy ? "Confirming…" : "✓ I've reached my destination"}</span>
+                                        <span className="rrq-broadcast-sub">Confirm arrival to complete the trip</span>
+                                    </button>
+                                </>
                             )}
 
                             {/* Pay on completion */}
