@@ -431,7 +431,33 @@ exports.updateLocation = async (req, res) => {
     }
 };
 
-/* ============== Driver: complete ride ============== */
+// Shared finalize for both completion paths. Recomputes the fare from the
+// actual GPS distance, records the completion method, and notifies.
+async function finalizePersonalCompletion(doc, method, { io, users } = {}) {
+    const billedKm = (doc.tracking?.distanceKm && doc.tracking.distanceKm > 0)
+        ? doc.tracking.distanceKm
+        : doc.distanceKm;
+    const finalFare = computeFare(doc.vehicleType, billedKm);
+    const { commission, netEarnings } = splitFare(finalFare);
+    doc.finalFare = finalFare;
+    doc.commission = commission;
+    doc.driverEarnings = netEarnings;
+    doc.status = "RIDE_COMPLETED";
+    doc.completedAt = new Date();
+    doc.tracking.state = "completed";
+    doc.completionMethod = method || "DRIVER_MANUAL";
+    const dloc = doc.tracking?.driverLocation;
+    if (dloc && dloc.lat != null) doc.tracking.endLocation = { lat: dloc.lat, lng: dloc.lng };
+    await doc.save();
+
+    emitToUser(io, users, doc.passenger_id, "ride_completed", { id: idStr(doc._id), fare: finalFare });
+    emitToUser(io, users, doc.driver_id, "ride_completed", { id: idStr(doc._id), earnings: netEarnings });
+    await createNotification({ io, users, userId: doc.passenger_id, type: "ride", title: "Ride completed", message: `Your trip is complete. Pay ₹${finalFare} via UPI to finish.`, link: { tab: "requestRide" } });
+    if (io) io.emit("personal_ride:update", { at: Date.now() });
+    return finalFare;
+}
+
+/* ============== Driver: complete ride (destination-validated) ============== */
 exports.complete = async (req, res) => {
     try {
         const { id } = req.params;
@@ -441,29 +467,52 @@ exports.complete = async (req, res) => {
         if (idStr(doc.driver_id) !== idStr(req.user._id)) return res.status(403).json({ message: "Not your ride" });
         if (doc.status !== "RIDE_STARTED") return res.status(400).json({ message: "Ride is not in progress." });
 
-        // Final fare = recomputed from the ACTUAL travelled distance when we have
-        // it (GPS-accumulated), falling back to the straight-line estimate for
-        // rides with no location stream. Server-authoritative either way.
-        const billedKm = (doc.tracking?.distanceKm && doc.tracking.distanceKm > 0)
-            ? doc.tracking.distanceKm
-            : doc.distanceKm;
-        const finalFare = computeFare(doc.vehicleType, billedKm);
-        const { commission, netEarnings } = splitFare(finalFare);
-        doc.finalFare = finalFare;
-        doc.commission = commission;
-        doc.driverEarnings = netEarnings;
-        doc.status = "RIDE_COMPLETED";
-        doc.completedAt = new Date();
-        doc.tracking.state = "completed";
-        await doc.save();
+        // Backend-enforced completion (parity with shared rides): the driver must
+        // be within the destination radius and meet min distance + duration —
+        // a driver can't complete from anywhere.
+        const { CONFIG } = require("../utils/rideCompletion");
+        const cfg = CONFIG();
+        const blat = Number(req.body?.lat), blng = Number(req.body?.lng);
+        const fix = (Number.isFinite(blat) && Number.isFinite(blng)) ? { lat: blat, lng: blng } : null;
+        if (fix) { doc.tracking = doc.tracking || {}; doc.tracking.driverLocation = { lat: fix.lat, lng: fix.lng, updatedAt: new Date() }; }
+        const dloc = fix || doc.tracking?.driverLocation;
+        const dest = doc.destination;
+        if (dloc?.lat != null && dest?.lat != null) {
+            const distM = haversineKm({ lat: dloc.lat, lng: dloc.lng }, { lat: dest.lat, lng: dest.lng }) * 1000;
+            if (distM > cfg.destRadiusM) {
+                return res.status(400).json({ message: "You are too far from the destination to complete this ride.", code: "TOO_FAR" });
+            }
+        }
+        const km = Number(doc.tracking?.distanceKm) || 0;
+        if (dest?.lat != null && km > 0 && km < cfg.minTripKm) {
+            return res.status(400).json({ message: `The trip is too short to complete (min ${cfg.minTripKm} km).`, code: "TOO_SHORT" });
+        }
+        const startedMs = doc.startedAt ? new Date(doc.startedAt).getTime() : null;
+        if (startedMs && (Date.now() - startedMs) / 60000 < cfg.minTripMin) {
+            return res.status(400).json({ message: `The ride just started — you can complete it after ${cfg.minTripMin} min.`, code: "TOO_QUICK" });
+        }
 
         const io = io_(req); const users = users_(req);
-        emitToUser(io, users, doc.passenger_id, "ride_completed", { id: idStr(doc._id), fare: finalFare });
-        emitToUser(io, users, doc.driver_id, "ride_completed", { id: idStr(doc._id), earnings: netEarnings });
-        await createNotification({ io, users, userId: doc.passenger_id, type: "ride", title: "Ride completed", message: `Your trip is complete. Pay ₹${finalFare} via UPI to finish.`, link: { tab: "requestRide" } });
-        if (io) io.emit("personal_ride:update", { at: Date.now() });
-
+        await finalizePersonalCompletion(doc, "DRIVER_MANUAL", { io, users });
         res.status(200).json(driverView(await populated(doc._id)));
+    } catch (e) {
+        res.status(500).json({ message: "Server error", error: e.message });
+    }
+};
+
+/* ============== Passenger: confirm arrival (GPS fallback) ============== */
+exports.confirmArrival = async (req, res) => {
+    try {
+        const { id } = req.params;
+        if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ message: "Invalid id" });
+        const doc = await PersonalRideRequest.findById(id);
+        if (!doc) return res.status(404).json({ message: "Not found" });
+        if (idStr(doc.passenger_id) !== idStr(req.user._id)) return res.status(403).json({ message: "Not your ride" });
+        if (doc.status !== "RIDE_STARTED") return res.status(400).json({ message: "The ride hasn't started yet." });
+
+        const io = io_(req); const users = users_(req);
+        await finalizePersonalCompletion(doc, "PASSENGER_CONFIRMATION", { io, users });
+        res.status(200).json(await populated(doc._id));
     } catch (e) {
         res.status(500).json({ message: "Server error", error: e.message });
     }

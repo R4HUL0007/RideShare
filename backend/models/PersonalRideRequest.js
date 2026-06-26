@@ -76,6 +76,18 @@ const PersonalRideRequestSchema = new mongoose.Schema(
             // Cumulative GPS distance travelled during the trip (km) — used to
             // bill the actual route rather than the straight-line estimate.
             distanceKm: { type: Number, default: 0 },
+            // GPS-validated completion (parity with shared rides).
+            startLocation: { lat: { type: Number, default: null }, lng: { type: Number, default: null } },
+            endLocation: { lat: { type: Number, default: null }, lng: { type: Number, default: null } },
+            atDestination: { type: Boolean, default: false },
+            arrivedAtDestAt: { type: Date, default: null },
+        },
+
+        // How the ride was completed: AUTO_GPS | DRIVER_MANUAL | PASSENGER_CONFIRMATION.
+        completionMethod: {
+            type: String,
+            enum: [null, "AUTO_GPS", "DRIVER_MANUAL", "PASSENGER_CONFIRMATION"],
+            default: null,
         },
 
         // Payment (UPI to RidexShare — passenger never pays the driver directly).

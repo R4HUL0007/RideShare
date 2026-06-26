@@ -38,5 +38,6 @@ router.post("/:id/reached-pickup", protect, pr.reachedPickup);
 router.post("/:id/verify-otp", protect, pr.verifyOtp);
 router.post("/:id/location", protect, pr.updateLocation);
 router.post("/:id/complete", protect, pr.complete);
+router.post("/:id/arrived", protect, pr.confirmArrival); // passenger confirms arrival (GPS fallback)
 
 module.exports = router;
