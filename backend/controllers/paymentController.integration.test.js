@@ -1,11 +1,15 @@
 const crypto = require("crypto");
 const { connectTestDB, clearTestDB, disconnectTestDB } = require("../test/dbHelper");
 
-// Integration test for the payment verify→book flow against an in-memory Mongo.
-// We set Razorpay env BEFORE requiring the controller so config picks it up,
-// and we stub the Razorpay order creation (no network). The signature check
-// uses the REAL secret, so this proves bookings only confirm after a valid
-// signature.
+// Integration test for the UNIFIED pay-AFTER-completion flow against an in-memory
+// Mongo. The passenger is already booked (seat reserved at booking, fare locked)
+// and the ride is Completed; verifyPayment then marks the payment Successful,
+// starts escrow (awaiting_completion + 24h auto-release), and flags the booking
+// paid — WITHOUT touching seats (they were reserved at booking time).
+//
+// We set Razorpay env BEFORE requiring the controller so config picks it up.
+// The signature check uses the REAL secret, so this proves payment is only
+// recorded after a valid signature.
 
 const TEST_SECRET = "rzp_test_secret_value";
 process.env.RAZORPAY_KEY_ID = "rzp_test_key_id";
@@ -47,16 +51,22 @@ beforeEach(async () => {
         name: "Pat Passenger", username: "pat", email: "pat@paruluniversity.ac.in",
         password: "x", phoneNumber: "9000000002", role: "Student", gender: "Female", isVerified: true,
     });
+    // Pay-after-completion: the passenger is ALREADY booked (2 seats reserved,
+    // fare locked) and the ride is COMPLETED — ready to be paid.
     ride = await Ride.create({
         user_id: driver._id, role: "Student", gender_preference: "Any",
-        source: "A", destination: "B", timing: new Date(Date.now() + 3600_000),
-        status: "Available", seatsAvailable: 3, pricePerPerson: 100,
+        source: "A", destination: "B", timing: new Date(Date.now() - 3600_000),
+        status: "Completed", seatsAvailable: 1, pricePerPerson: 100,
+        passengers: [{
+            user_id: passenger._id, seats: 2, bookedAt: new Date(),
+            fareAmount: 200, paymentStatus: "unpaid",
+        }],
     });
 });
 
-describe("verifyPayment → booking confirmation", () => {
-    // Build a Pending payment row the way createOrder would.
-    const makePendingPayment = async (orderId, seats = 1) =>
+describe("verifyPayment → post-completion payment + escrow", () => {
+    // Build a Pending payment row the way createOrder would (post-completion).
+    const makePendingPayment = async (orderId, seats = 2) =>
         Payment.create({
             user_id: passenger._id, driver_id: driver._id, ride_id: ride._id,
             seats, order_id: orderId, amount: 100 * seats, currency: "INR",
@@ -65,7 +75,7 @@ describe("verifyPayment → booking confirmation", () => {
             routeSnapshot: { source: ride.source, destination: ride.destination, timing: ride.timing },
         });
 
-    it("confirms the booking and reduces seats on a VALID signature", async () => {
+    it("records payment + starts escrow on a VALID signature (seats unchanged)", async () => {
         const orderId = "order_valid_1";
         const paymentId = "pay_valid_1";
         await makePendingPayment(orderId, 2);
@@ -83,19 +93,21 @@ describe("verifyPayment → booking confirmation", () => {
         const updatedRide = await Ride.findById(ride._id);
         const updatedPayment = await Payment.findOne({ order_id: orderId });
 
-        // Seats reduced (3 → 1), passenger added, payment marked Successful.
+        // Seats are NOT changed by payment (reserved at booking). The booking is
+        // flagged paid, the payment is Successful, and escrow is armed.
         expect(updatedRide.seatsAvailable).toBe(1);
         expect(updatedRide.passengers).toHaveLength(1);
-        expect(updatedRide.passengers[0].user_id.toString()).toBe(passenger._id.toString());
-        expect(updatedRide.passengers[0].seats).toBe(2);
+        expect(updatedRide.passengers[0].paymentStatus).toBe("paid");
         expect(updatedPayment.status).toBe("Successful");
         expect(updatedPayment.payment_id).toBe(paymentId);
+        expect(updatedPayment.escrowStatus).toBe("awaiting_completion");
+        expect(updatedPayment.autoReleaseAt).toBeTruthy();
     });
 
-    it("does NOT confirm the booking on an INVALID signature (seats untouched)", async () => {
+    it("does NOT record payment on an INVALID signature (booking stays unpaid)", async () => {
         const orderId = "order_bad_1";
         const paymentId = "pay_bad_1";
-        await makePendingPayment(orderId, 1);
+        await makePendingPayment(orderId, 2);
 
         const req = {
             user: { id: passenger._id.toString(), name: passenger.name },
@@ -110,16 +122,15 @@ describe("verifyPayment → booking confirmation", () => {
         const updatedRide = await Ride.findById(ride._id);
         const updatedPayment = await Payment.findOne({ order_id: orderId });
 
-        // No seats reserved, no passenger, payment marked Failed.
-        expect(updatedRide.seatsAvailable).toBe(3);
-        expect(updatedRide.passengers).toHaveLength(0);
+        expect(updatedRide.passengers[0].paymentStatus).toBe("unpaid");
         expect(updatedPayment.status).toBe("Failed");
+        expect(updatedPayment.escrowStatus).toBe("none");
     });
 
-    it("is idempotent — re-verifying a Successful payment does not double-book", async () => {
+    it("is idempotent — re-verifying a Successful payment is a no-op", async () => {
         const orderId = "order_idem_1";
         const paymentId = "pay_idem_1";
-        await makePendingPayment(orderId, 1);
+        await makePendingPayment(orderId, 2);
 
         const makeReq = () => ({
             user: { id: passenger._id.toString(), name: passenger.name },
@@ -131,15 +142,16 @@ describe("verifyPayment → booking confirmation", () => {
         await paymentController.verifyPayment(makeReq(), mockRes()); // second time
 
         const updatedRide = await Ride.findById(ride._id);
-        // Only one seat consumed despite two verify calls.
-        expect(updatedRide.seatsAvailable).toBe(2);
-        expect(updatedRide.passengers).toHaveLength(1);
+        const payments = await Payment.find({ order_id: orderId });
+        expect(payments).toHaveLength(1);
+        expect(payments[0].status).toBe("Successful");
+        expect(updatedRide.passengers[0].paymentStatus).toBe("paid");
     });
 
     it("rejects a user verifying someone else's payment", async () => {
         const orderId = "order_owner_1";
         const paymentId = "pay_owner_1";
-        await makePendingPayment(orderId, 1);
+        await makePendingPayment(orderId, 2);
 
         const stranger = await User.create({
             name: "Stranger", username: "stx", email: "stx@paruluniversity.ac.in",
@@ -155,7 +167,7 @@ describe("verifyPayment → booking confirmation", () => {
         await paymentController.verifyPayment(req, res);
 
         expect(res.statusCode).toBe(403);
-        const updatedRide = await Ride.findById(ride._id);
-        expect(updatedRide.passengers).toHaveLength(0);
+        const updatedPayment = await Payment.findOne({ order_id: orderId });
+        expect(updatedPayment.status).toBe("Pending");
     });
 });
