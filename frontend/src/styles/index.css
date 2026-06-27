@@ -824,6 +824,30 @@ html, body {
   [class*="-item"]:hover {
     transform: none !important;
   }
+
+  /* ---------------------------------------------------------------
+     4) The biggest remaining offender: blurred box-shadows and radial-gradient
+        fills. Both are re-rasterized on every scroll frame and are the classic
+        cause of the "smear / repeated-text / scratchy" garbage on Android GPUs
+        (it shows even on solid-bg pages like Safety because the CARDS carry the
+        shadows). On mobile we drop ALL box-shadows (purely decorative depth)
+        and flatten gradient page backgrounds to a solid fill. Desktop keeps the
+        full look.
+     --------------------------------------------------------------- */
+  * { box-shadow: none !important; }
+
+  [class$="-root"], .vehicle {
+    background-image: none !important;
+    background-color: #0a0a0b !important;
+  }
+  /* Flatten the gradient CARD/surface fills on the heaviest pages so they stay
+     visible (as solid cards) without the gradient rasterization cost. */
+  .pay-stat, .payh-stat, .payh-help,
+  .mr-card, .mr-stat, .pay-modal, .pay-result,
+  .rec-card, .recx-card {
+    background-image: none !important;
+    background-color: #141416 !important;
+  }
 }
 
 /* Respect users who ask for reduced motion: drop large transition/animation
