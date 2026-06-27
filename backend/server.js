@@ -99,6 +99,10 @@ const isOriginAllowed = (origin) => {
     if (isDevelopment) {
         if (origin.match(/^https?:\/\/localhost(:\d+)?$/)) return true;
         if (origin.match(/^https?:\/\/127\.0\.0\.1(:\d+)?$/)) return true;
+        // Private LAN IPs (192.168.x.x, 10.x.x.x, 172.16–31.x.x) on any port —
+        // enables direct on-device testing over the local network without
+        // reconfiguring FRONTEND_URL for each network's IP.
+        if (origin.match(/^https?:\/\/(192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(?:1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3})(:\d+)?$/)) return true;
         if (origin.match(/^https?:\/\/.*\.(loca\.lt|ngrok\.io|ngrok-free\.app|ngrok-free\.dev|ngrok\.app|ngrok\.dev|cloudflaretunnel\.com|trycloudflare\.com|devtunnels\.ms|inc1\.devtunnels\.ms)(:\d+)?$/)) return true;
     }
     return allowedOrigins.indexOf(origin) !== -1;
