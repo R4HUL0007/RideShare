@@ -16,12 +16,7 @@
     padding: 0;
     min-height: 100vh;
     min-height: 100dvh;
-    /* `overflow-x: clip` (NOT hidden): hidden forces overflow-y to compute as a
-       scroll container, taking the page off the fast native root scroller onto a
-       composited scrolling box — which ghost-trails during scroll on Mali GPUs
-       (Vivo/Realme/etc.). `clip` clips horizontally without creating a scroll
-       container, so the document stays the root scroller. */
-    overflow-x: clip;
+    overflow-x: hidden;
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -30,7 +25,7 @@
 
   html, body, #root {
     max-width: 100%;
-    overflow-x: clip;
+    overflow-x: hidden;
     width: 100%;
   }
 }
@@ -598,13 +593,9 @@
 /* "No locations found" empty state text inside the dark dropdown */
 .location-suggestions-dropdown .text-gray-500 { color: #9ca3af; }
 
-/* Prevent horizontal scroll globally. Use `clip` (not `hidden`): `hidden`
-   forces overflow-y to become a scroll container, taking the page off the fast
-   native root scroller onto a composited scroll box that ghost-trails during
-   scroll on Mali GPUs (Vivo/Realme/etc.). `clip` clips horizontally without
-   creating a scroll container. */
+/* Prevent horizontal scroll globally */
 html, body {
-  overflow-x: clip;
+  overflow-x: hidden;
   max-width: 100%;
 }
 
@@ -787,90 +778,6 @@ html, body {
   .rt-topbar,
   .lt-topbar {
     background: rgba(12, 12, 14, 0.95) !important;
-  }
-
-  /* A translucent position:sticky header leaves "trails" of the content
-     scrolling under it once the backdrop blur is gone. Force every page's
-     sticky top bar fully opaque on mobile. */
-  [class$="-topbar"],
-  [class$="-navbar"],
-  .ch-win-head {
-    background: #0c0c0e !important;
-  }
-
-  /* ---------------------------------------------------------------
-     Mobile GPU compositing hardening (kills the "smearing / trails /
-     scratchy garbage" some Android GPUs show on scroll). Three triggers:
-
-     1) No opaque base layer → fast-scroll/overscroll reveals an uninitialized
-        GL buffer. Force a solid dark base behind everything.
-     2) Continuous INFINITE animations on composited/fixed layers (the global
-        AI FAB pulse runs on every page, plus radar/pulse rings) keep
-        invalidating layers and corrupt unrelated tiles. Drop the decorative
-        ones — small functional spinners are fine and left alone.
-     3) Sticky :hover transforms get "stuck" after a tap on touch, leaving a
-        promoted layer behind. Neutralize hover transforms on touch.
-     --------------------------------------------------------------- */
-  html, body, #root { background-color: #0a0a0b !important; }
-
-  .ai-fab::after,
-  .sos-pulse,
-  .rrp-radar span,
-  .rrq-radar span,
-  .rrq-step.active .rrq-step-ic {
-    animation: none !important;
-  }
-
-  /* Neutralize decorative :hover lift/scale on mobile so a tap-induced
-     "stuck" hover can't leave a promoted GPU layer behind. Scoped to this
-     app's own component naming (cards/stats/buttons/etc.) across ALL pages —
-     deliberately NOT universal, so third-party widgets that rely on transforms
-     (e.g. Google Maps tiles/markers) are never touched. */
-  [class*="-card"]:hover, [class*="-stat"]:hover, [class*="-feature"]:hover,
-  [class*="-act"]:hover, [class*="-btn"]:hover, [class*="-qa"]:hover,
-  [class*="-help"]:hover, [class*="-star"]:hover, [class*="-submit"]:hover,
-  [class*="-call"]:hover, [class*="-tile"]:hover, [class*="-chip"]:hover,
-  [class*="-item"]:hover {
-    transform: none !important;
-  }
-
-  /* ---------------------------------------------------------------
-     4) The biggest remaining offender: blurred box-shadows and radial-gradient
-        fills. Both are re-rasterized on every scroll frame and are the classic
-        cause of the "smear / repeated-text / scratchy" garbage on Android GPUs
-        (it shows even on solid-bg pages like Safety because the CARDS carry the
-        shadows). On mobile we drop ALL box-shadows (purely decorative depth)
-        and flatten gradient page backgrounds to a solid fill. Desktop keeps the
-        full look.
-     --------------------------------------------------------------- */
-  * { box-shadow: none !important; }
-
-  /* Remove transform-based layer promotion from CONTENT. The `*-rise` reveal
-     animations run `forwards` and END at `transform: translateY(0)` — still a
-     transform, so every revealed card/section stays permanently promoted to its
-     own GPU layer. On a weak Mali GPU, many composited layers = the GPU can't
-     re-raster tiles fast enough on scroll -> stale/duplicate tiles ("ghost
-     trails"). Flatten them so content paints on the base layer. */
-  [class*="-rise"] {
-    animation: none !important;
-    opacity: 1 !important;
-    transform: none !important;
-  }
-
-  /* Animated/smooth scrolling worsens this on these GPUs. */
-  html { scroll-behavior: auto !important; }
-
-  [class$="-root"], .vehicle {
-    background-image: none !important;
-    background-color: #0a0a0b !important;
-  }
-  /* Flatten the gradient CARD/surface fills on the heaviest pages so they stay
-     visible (as solid cards) without the gradient rasterization cost. */
-  .pay-stat, .payh-stat, .payh-help,
-  .mr-card, .mr-stat, .pay-modal, .pay-result,
-  .rec-card, .recx-card {
-    background-image: none !important;
-    background-color: #141416 !important;
   }
 }
 

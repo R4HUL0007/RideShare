@@ -9,7 +9,7 @@
     min-height: 100dvh;
     background: radial-gradient(125% 125% at 100% 0%, #161618 0%, #0e0e10 45%, #0a0a0b 100%);
     position: relative;
-    overflow-x: clip;
+    overflow-x: hidden;
     overflow-y: auto;
     padding: clamp(0.5rem, 1.5vw, 1rem);
 }
@@ -352,7 +352,7 @@ form button:disabled {
         align-items: stretch;
         justify-content: flex-start;
         padding: 0;
-        overflow-x: clip;
+        overflow-x: hidden;
     }
 
     /* Hide the decorative floating circles on mobile — they bled in as dark

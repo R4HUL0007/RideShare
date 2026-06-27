@@ -49,7 +49,7 @@
 .adm-user-meta strong { font-size: 0.76rem; font-weight: 700; color: #f4f4f5; white-space: nowrap; }
 .adm-user-meta span { font-size: 0.66rem; color: #9ca3af; }
 .adm-back-btn { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #d4d4d8; padding: 0.45rem 0.8rem; border-radius: 0.5rem; font-size: 0.78rem; font-weight: 700; cursor: pointer; }
-.adm-content { padding: 1.3rem; overflow-x: clip; }
+.adm-content { padding: 1.3rem; overflow-x: hidden; }
 
 /* ---------------- Stat cards ---------------- */
 .adm-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 0.9rem; margin-bottom: 1.4rem; }
