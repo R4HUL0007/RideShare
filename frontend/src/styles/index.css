@@ -845,30 +845,19 @@ html, body {
      --------------------------------------------------------------- */
   * { box-shadow: none !important; }
 
-  /* The persistent FIXED overlays (global bell + AI FAB) are on every page. If
-     they aren't isolated on their own compositor layer, this class of Android
-     GPU repaints the whole viewport on every scroll frame and leaves trails
-     ("ghost" duplicates of cards/text). Promote them to dedicated layers so the
-     page scrolls cleanly underneath. (Sidebar excluded — it owns a translateX
-     transform for its slide-in.) */
-  .rs-global-bell, .ai-fab {
-    will-change: transform;
-    -webkit-backface-visibility: hidden;
-    backface-visibility: hidden;
-  }
-
-  /* Conversely, remove transform-based layer promotion from CONTENT. The
-     `*-rise` reveal animations run `forwards` and END at `transform:
-     translateY(0)` — which is still a transform, so every revealed card/section
-     stays permanently promoted to its own layer. Dozens of these promoted
-     content layers are what trail/duplicate during scroll. Flatten them. */
+  /* Remove transform-based layer promotion from CONTENT. The `*-rise` reveal
+     animations run `forwards` and END at `transform: translateY(0)` — still a
+     transform, so every revealed card/section stays permanently promoted to its
+     own GPU layer. On a weak Mali GPU, many composited layers = the GPU can't
+     re-raster tiles fast enough on scroll -> stale/duplicate tiles ("ghost
+     trails"). Flatten them so content paints on the base layer. */
   [class*="-rise"] {
     animation: none !important;
     opacity: 1 !important;
     transform: none !important;
   }
 
-  /* Animated/smooth scrolling worsens blit-ghosting on these GPUs. */
+  /* Animated/smooth scrolling worsens this on these GPUs. */
   html { scroll-behavior: auto !important; }
 
   [class$="-root"], .vehicle {
