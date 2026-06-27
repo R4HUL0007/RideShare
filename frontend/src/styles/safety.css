@@ -56,7 +56,7 @@
 .sf-help-btn { display: inline-flex; align-items: center; gap: 0.45rem; text-decoration: none; }
 
 /* Tabs */
-.sf-tabs { display: flex; gap: 0.4rem; overflow-x: auto; padding: 1rem clamp(1rem, 3vw, 1.5rem) 0; }
+.sf-tabs { display: flex; flex-wrap: wrap; gap: 0.4rem; padding: 1rem clamp(1rem, 3vw, 1.5rem) 0; }
 .sf-tab { white-space: nowrap; padding: 0.55rem 0.9rem; border-radius: 0.6rem; font-size: 0.82rem; font-weight: 600; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #b6b6bd; cursor: pointer; font-family: inherit; }
 .sf-tab:hover { background: rgba(255,255,255,0.08); color: #f4f4f5; }
 .sf-tab.active { background: #f4f4f5; color: #0a0a0b; border-color: #f4f4f5; }
@@ -189,6 +189,11 @@
   .sf-hamburger { display: inline-flex; }
   /* Larger SOS on mobile */
   .sos-btn { padding: 1rem 1.6rem; font-size: 1.05rem; }
+  /* Compact, wrapping tab strip so all tabs are visible (no cramped scroll). */
+  .sf-tabs { gap: 0.35rem; }
+  .sf-tab { padding: 0.45rem 0.7rem; font-size: 0.78rem; }
+  /* Report-type chips: 2 per row instead of cramming. */
+  .sf-report-types { grid-template-columns: 1fr 1fr; }
 }
 
 /* =======================================================
