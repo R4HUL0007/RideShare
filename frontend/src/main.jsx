@@ -5,6 +5,7 @@ import App from './App';
 import { GOOGLE_CLIENT_ID } from './utils/constants';
 import { registerServiceWorker, initInstallPrompt } from './utils/pwa';
 import './styles/index.css';
+import './styles/gpuDebug.css';
 
 // Only mount the Google provider when a client ID is configured, so the app
 // runs cleanly in environments without Google OAuth set up.

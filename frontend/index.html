@@ -18,6 +18,29 @@
 
     <title>RidexShare — University Ride Sharing</title>
     <!-- Google Maps API will be loaded by LoadScript component from @react-google-maps/api -->
+
+    <!-- GPU rendering diagnostic switch (temporary). Toggle Chrome/Mali repaint
+         suspects on-device via the URL, e.g. ?gpu=no-sticky , ?gpu=no-fixed ,
+         ?gpu=no-anim , ?gpu=no-transform , ?gpu=no-shadow , ?gpu=no-blur ,
+         ?gpu=no-gradient , ?gpu=flat  (combine with commas). ?gpu=off clears it.
+         The choice persists (localStorage) across SPA navigation + reloads. -->
+    <script>
+      (function () {
+        try {
+          var q = new URLSearchParams(location.search).get('gpu');
+          if (q === 'off' || q === 'none' || q === 'reset') localStorage.removeItem('rs-gpu');
+          else if (q) localStorage.setItem('rs-gpu', q);
+          var mode = localStorage.getItem('rs-gpu');
+          if (mode) {
+            mode.split(',').forEach(function (m) {
+              m = m.trim();
+              if (m) document.documentElement.classList.add('gpu-' + m);
+            });
+            document.documentElement.setAttribute('data-gpu', mode);
+          }
+        } catch (e) { /* ignore */ }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
