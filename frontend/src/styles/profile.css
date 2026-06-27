@@ -366,3 +366,38 @@
 .pf-activity-title { font-size: 0.82rem; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pf-activity-sub { font-size: 0.72rem; color: var(--pf-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pf-activity-time { font-size: 0.68rem; color: #6b7280; flex-shrink: 0; white-space: nowrap; }
+
+/* =======================================================
+   MOBILE RESPONSIVE OVERRIDES — MUST BE LAST
+   -------------------------------------------------------
+   The earlier @media blocks were defined BEFORE the base .pf-grid3 / .pf-hero /
+   .pf-impact rules in the "Profile redesign additions" section above. Media
+   queries add no specificity, so those later base rules (repeat(3,1fr) etc.)
+   won at every width — the layout never collapsed on phones (3 cramped columns,
+   text wrapping one letter per line). Re-declaring the collapses here, at the
+   very end of the file, makes them win by source order. No !important needed.
+   ======================================================= */
+@media (max-width: 1200px) {
+  .pf-grid3 { grid-template-columns: 1fr 1fr; }
+  .pf-stats { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 1023px) {
+  .pf-grid { grid-template-columns: 1fr; }
+  .pf-hero { flex-direction: column; align-items: stretch; }
+  .pf-trust { width: 100%; }
+}
+@media (max-width: 820px) {
+  .pf-grid3 { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  .pf-stats { grid-template-columns: repeat(2, 1fr); }
+  .pf-trust-top { flex-wrap: wrap; }
+  .pf-trust-list { width: 100%; }
+}
+@media (max-width: 560px) {
+  .pf-hero-id { flex-direction: column; text-align: center; align-items: center; }
+  .pf-verify-chips, .pf-hero-meta, .pf-name-row { justify-content: center; }
+  .pf-row { grid-template-columns: 1fr; }
+  .pf-stats { grid-template-columns: 1fr 1fr; }
+  .pf-root .pf-input { font-size: 16px; } /* prevent iOS zoom */
+}

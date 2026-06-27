@@ -359,7 +359,7 @@ const DashboardHome = ({ user, onNavigate, onOpenSidebar }) => {
                                 <div className="dh-card dh-next">
                                     <div className="dh-next-route">
                                         <Svg size={18}>{I.pin}</Svg>
-                                        <span className="dh-next-text">
+                                        <span className="dh-next-text" title={nextRide.source ? `${nextRide.source} → ${nextRide.destination}` : nextRide.destination}>
                                             {nextRide.source ? `${nextRide.source} → ${nextRide.destination}` : nextRide.destination}
                                         </span>
                                         <span className={`dh-status ${String(nextRide.status).toLowerCase()}`}>{nextRide.status}</span>
@@ -368,6 +368,10 @@ const DashboardHome = ({ user, onNavigate, onOpenSidebar }) => {
                                         <span><Svg size={15}>{I.calendar}</Svg> {formatDateTime(nextRide.timing)}</span>
                                         <span><Svg size={15}>{I.car}</Svg> {nextRide.seatsAvailable} seat{nextRide.seatsAvailable !== 1 ? "s" : ""}</span>
                                     </div>
+                                    <button className="dh-next-cta" onClick={() => onNavigate("myRides")}>
+                                        View details
+                                        <Svg size={15}>{I.chevron}</Svg>
+                                    </button>
                                 </div>
                             ) : (
                                 <div className="dh-card dh-empty">

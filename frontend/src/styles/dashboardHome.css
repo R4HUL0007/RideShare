@@ -351,10 +351,20 @@
 }
 
 /* Next trip */
-.dh-next-route { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.7rem; }
-.dh-next-text { font-weight: 700; font-size: 0.92rem; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dh-next-route { display: flex; align-items: flex-start; gap: 0.5rem; margin-bottom: 0.7rem; }
+.dh-next-text { font-weight: 700; font-size: 0.92rem; flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .dh-next-meta { display: flex; flex-wrap: wrap; gap: 1rem; color: var(--dh-muted); font-size: 0.78rem; }
 .dh-next-meta span { display: inline-flex; align-items: center; gap: 0.35rem; }
+.dh-next-cta {
+  display: inline-flex; align-items: center; gap: 0.3rem;
+  margin-top: 0.9rem; padding: 0.5rem 0.85rem;
+  border: 1px solid var(--dh-border); border-radius: 0.6rem;
+  background: var(--dh-surface-2); color: var(--dh-text);
+  font-size: 0.8rem; font-weight: 700; cursor: pointer;
+  font-family: inherit; transition: background 0.15s ease;
+}
+.dh-next-cta:hover { background: rgba(255,255,255,0.08); }
+.dh-next-cta svg { color: var(--dh-muted); }
 
 .dh-status {
   font-size: 0.66rem;
