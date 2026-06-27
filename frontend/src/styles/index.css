@@ -821,6 +821,19 @@ html, body {
   input, select, textarea, .pf-input, .rsl-input, .rsr-input, .pay-input {
     font-size: 16px;
   }
+
+  /* Chrome on Mali GPUs (Vivo/Realme/etc.) leaves "ghost trail" repaint
+     artifacts when it composites position:sticky bars during scroll. On phones
+     make the page top bars normal-flow (they scroll away with the page —
+     standard mobile behavior) to remove that compositing path. Desktop keeps
+     sticky bars. (Sidebar + in-table headers are left alone.) */
+  [class$="-topbar"],
+  [class$="-navbar"],
+  .dashboard-header,
+  .nb-group-label {
+    position: static !important;
+    top: auto !important;
+  }
 }
 
 /* Respect users who ask for reduced motion: drop large transition/animation
