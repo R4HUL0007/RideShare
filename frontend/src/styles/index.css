@@ -874,6 +874,40 @@ html, body {
   }
 }
 
+/* =======================================================
+   MOBILE RESPONSIVENESS / HORIZONTAL-OVERFLOW GUARD
+   -------------------------------------------------------
+   Stops cards/rows/content from running off the right edge of small screens
+   (so the full ride/card details stay visible). Three root causes covered:
+     1) Flex & grid children default to `min-width: auto`, which refuses to
+        shrink below their content's intrinsic size → a single long word or a
+        non-shrinking child pushes the whole row past the viewport. Allowing
+        them to shrink (min-width: 0) is the single biggest fix.
+     2) Media (images/maps/svg) wider than its column.
+     3) Long unbreakable strings (transaction ids, emails, route text) that
+        can't wrap.
+   `:where(...)` keeps specificity at 0 so component styles still win where they
+   set an intentional value.
+   ======================================================= */
+@media (max-width: 768px) {
+  .main-content :where(div, section, article, aside, header, footer,
+                        ul, ol, li, p, span, a, button, form, label, h1, h2, h3) {
+    min-width: 0;
+  }
+  .main-content img,
+  .main-content svg,
+  .main-content video,
+  .main-content canvas,
+  .main-content table { max-width: 100%; }
+
+  /* Long unbreakable strings wrap instead of forcing width. */
+  .pay-txid, .dh-menu-email, .pf-email,
+  [class*="-route"], [class*="-email"], [class*="-txid"], [class*="-txn"] {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+}
+
 /* Respect users who ask for reduced motion: drop large transition/animation
    work that can also stutter on low-end devices. */
 @media (prefers-reduced-motion: reduce) {

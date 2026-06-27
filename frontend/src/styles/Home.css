@@ -409,11 +409,13 @@ form button:disabled {
         background: radial-gradient(125% 125% at 100% 0%, #161618 0%, #0e0e10 45%, #0a0a0b 100%);
     }
 
-    /* The form becomes a translucent dark glass panel, full-bleed. */
+    /* The form is a clean, full-bleed SOLID dark panel. (It was a translucent
+       frosted-glass panel relying on backdrop-filter blur, but blur is disabled
+       on mobile to avoid GPU smearing — without it a translucent panel let the
+       page gradient bleed through and looked mismatched. A solid surface that
+       fills the screen is clean and consistent.) */
     .form-container {
-        background: rgba(18, 18, 20, 0.72) !important;
-        backdrop-filter: blur(18px) saturate(140%);
-        -webkit-backdrop-filter: blur(18px) saturate(140%);
+        background: #121214 !important;
         border: none !important;
         color: #f4f4f5;
     }
