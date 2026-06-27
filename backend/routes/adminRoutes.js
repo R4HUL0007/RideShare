@@ -18,6 +18,7 @@ router.get("/analytics", admin.getAnalytics);
 router.get("/notifications", admin.getAdminNotifications);
 router.get("/badges", admin.getAdminBadges);
 router.get("/live", admin.liveMonitoring);
+router.get("/rides/:rideId/live", admin.liveRideDetail);
 router.get("/audit-logs", admin.listAuditLogs);
 
 // Users

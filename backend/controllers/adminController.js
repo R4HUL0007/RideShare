@@ -941,6 +941,78 @@ exports.liveMonitoring = async (req, res) => {
     }
 };
 
+/**
+ * GET /api/admin/rides/:rideId/live
+ * Per-ride live telemetry for the Admin Live Monitor: current status, driver
+ * location, distance travelled, remaining distance + ETA, route-deviation flag,
+ * and real-time connection (presence) of the driver and each passenger.
+ */
+exports.liveRideDetail = async (req, res) => {
+    const { rideId } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(rideId)) {
+        return res.status(400).json({ message: "Invalid ride id" });
+    }
+    try {
+        const { isOnline } = require("../utils/presence");
+        const { metersToDestination } = require("../utils/rideCompletion");
+
+        const ride = await Ride.findById(rideId)
+            .populate("user_id", "name")
+            .populate("passengers.user_id", "name")
+            .lean();
+        if (!ride) return res.status(404).json({ message: "Ride not found" });
+
+        const t = ride.tracking || {};
+        const loc = t.driverLocation && t.driverLocation.lat != null
+            ? { lat: t.driverLocation.lat, lng: t.driverLocation.lng } : null;
+
+        // Remaining distance + ETA from the latest driver fix (when in progress).
+        let remainingKm = null, etaMin = null;
+        const distM = (t.state === "in_progress" && loc) ? metersToDestination(ride, loc) : null;
+        if (distM != null) {
+            remainingKm = Number((distM / 1000).toFixed(2));
+            etaMin = Math.max(1, Math.round((remainingKm / 25) * 60)); // ~25 km/h city avg
+        }
+
+        const driverId = idStr(ride.user_id?._id || ride.user_id);
+        const passengers = await Promise.all(
+            (ride.passengers || []).map(async (p) => {
+                const pid = idStr(p.user_id?._id || p.user_id);
+                return {
+                    user_id: pid,
+                    name: p.user_id?.name || "Passenger",
+                    boardingVerified: Boolean(p.boardingVerified),
+                    paymentStatus: p.paymentStatus || "unpaid",
+                    connected: pid ? await isOnline(pid) : false,
+                };
+            })
+        );
+
+        res.status(200).json({
+            rideId: idStr(ride._id),
+            status: ride.status,
+            state: t.state || "scheduled",
+            completionMethod: t.completionMethod || null,
+            source: ride.source,
+            destination: ride.destination,
+            destinationCoords: ride.destinationCoords || null,
+            currentLocation: loc,
+            locationUpdatedAt: t.driverLocation?.updatedAt || null,
+            distanceTravelledKm: Number(t.distanceKm) || 0,
+            remainingKm,
+            etaMin,
+            atDestination: Boolean(t.atDestination),
+            deviationFlagged: Boolean(t.deviationFlagged),
+            startedAt: t.startedAt || null,
+            endedAt: t.endedAt || null,
+            driver: { user_id: driverId, name: ride.user_id?.name || "Driver", connected: driverId ? await isOnline(driverId) : false },
+            passengers,
+        });
+    } catch (e) {
+        res.status(500).json({ message: "Server error", error: e.message });
+    }
+};
+
 exports.listAuditLogs = async (req, res) => {
     try {
         const { page, limit, skip } = paging(req);
