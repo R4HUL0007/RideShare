@@ -424,6 +424,45 @@ const Dashboard = () => {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     // Live ride tracking overlay (full-screen) — holds the rideId being tracked.
     const [trackingRideId, setTrackingRideId] = useState(null);
+
+    // ---- Swipe-to-open/close the mobile sidebar ----
+    // Right-swipe starting from the left edge opens the drawer; left-swipe (while
+    // open) closes it. Touch-only, so desktop is unaffected. Mirrors native app
+    // navigation-drawer behavior.
+    useEffect(() => {
+        const EDGE_PX = 28;      // how close to the left edge an "open" swipe must start
+        const THRESHOLD = 55;    // min horizontal travel to count as a swipe
+        let startX = null, startY = null, tracking = false;
+
+        const onStart = (e) => {
+            if (window.innerWidth > 768) return; // mobile only
+            const t = e.touches[0];
+            startX = t.clientX; startY = t.clientY;
+            // Track an OPEN gesture only when starting near the left edge while
+            // closed; track a CLOSE gesture anywhere while the drawer is open.
+            tracking = sidebarOpen || startX <= EDGE_PX;
+        };
+        const onEnd = (e) => {
+            if (!tracking || startX == null) { tracking = false; startX = null; return; }
+            const t = e.changedTouches[0];
+            const dx = t.clientX - startX;
+            const dy = t.clientY - startY;
+            // Mostly-horizontal swipe past the threshold.
+            if (Math.abs(dx) > THRESHOLD && Math.abs(dx) > Math.abs(dy)) {
+                if (dx > 0 && !sidebarOpen) setSidebarOpen(true);
+                else if (dx < 0 && sidebarOpen) setSidebarOpen(false);
+            }
+            startX = startY = null; tracking = false;
+        };
+
+        document.addEventListener("touchstart", onStart, { passive: true });
+        document.addEventListener("touchend", onEnd, { passive: true });
+        return () => {
+            document.removeEventListener("touchstart", onStart);
+            document.removeEventListener("touchend", onEnd);
+        };
+    }, [sidebarOpen]);
+
     // Queue of reviews the user still owes after completed rides. The first item
     // is surfaced as an auto-opening review modal (user can Skip).
     const [reviewQueue, setReviewQueue] = useState([]);

@@ -946,17 +946,10 @@ svg {
   }
 
   .sidebar-toggle {
-    display: block;
-    position: fixed;
-    top: 1rem;
-    left: 1rem;
-    background: white;
-    border: 1px solid #e5e7eb;
-    border-radius: 0.375rem;
-    padding: 0.5rem;
-    z-index: 40;
-    cursor: pointer;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    /* Hidden: every dashboard page renders its own integrated hamburger in its
+       top bar (via onOpenSidebar). This global floating toggle was a second,
+       duplicate hamburger overlapping the page one. */
+    display: none;
   }
 
   .sidebar-overlay {
