@@ -289,3 +289,23 @@
 .earn-tip-icon { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; flex-shrink: 0; border-radius: 0.5rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); }
 .earn-tip-text { flex: 1; min-width: 0; font-size: 0.78rem; color: #d4d4d8; line-height: 1.35; }
 .earn-tip-arrow { color: #6b7280; flex-shrink: 0; }
+
+/* =======================================================
+   MOBILE OVERFLOW HARDENING (authoritative, placed last)
+   -------------------------------------------------------
+   The right rail's nowrap content (route text in Recent Activity, the Need-help
+   copy) was forcing the card wider than the phone viewport. Root cause: a `1fr`
+   grid track and flex items default to a CONTENT-based minimum (min-width:auto),
+   so wide nowrap text expands the track past the screen. Pin min-width:0 down
+   the chain + use minmax(0,1fr) so tracks can shrink and text can ellipsis.
+   ======================================================= */
+.payh-layout { grid-template-columns: minmax(0, 1fr) 320px; }
+.payh-main, .payh-rail, .payh-rail-card,
+.payh-activity, .payh-activity-row, .payh-activity-route,
+.payh-help, .payh-help-text { min-width: 0; }
+.payh-rail-card { max-width: 100%; overflow: hidden; }
+.payh-activity-route { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+@media (max-width: 1100px) {
+  .payh-layout { grid-template-columns: minmax(0, 1fr); }
+}
