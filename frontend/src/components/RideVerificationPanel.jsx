@@ -103,7 +103,11 @@ const RideVerificationPanel = ({ rideId, trackingState, isDriver, onVerifiedChan
                 {!started && !data.boardingVerified && (
                     <>
                         <p className="vr-hint">Show this code (or QR) to your driver before boarding.</p>
-                        <div className="vr-code">{data.code}</div>
+                        <div className="vr-code" aria-label={`Boarding code ${data.code}`}>
+                            {String(data.code || "").split("").map((ch, i) => (
+                                <span key={i} className="vr-code-cell">{ch}</span>
+                            ))}
+                        </div>
                         {qr && <img className="vr-qr" src={qr} alt="Boarding QR code" />}
                         {!data.checkedIn && (
                             <button className="vr-btn" onClick={doCheckIn} disabled={busy}>

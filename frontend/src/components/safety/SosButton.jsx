@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import ReactDOM from "react-dom";
 import { toast } from "react-toastify";
 import { triggerSos } from "../../services/safetyService";
 import "../../styles/safety.css";
@@ -53,7 +54,7 @@ const SosButton = ({ rideId = null, compact = false }) => {
                 🚨 {compact ? "SOS" : "Emergency"}
             </button>
 
-            {confirming && (
+            {confirming && ReactDOM.createPortal(
                 <div className="sos-overlay" onMouseDown={(e) => e.target === e.currentTarget && !sending && setConfirming(false)}>
                     <div className="sos-modal" role="dialog" aria-modal="true">
                         {!result ? (
@@ -92,7 +93,8 @@ const SosButton = ({ rideId = null, compact = false }) => {
                             </>
                         )}
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </>
     );

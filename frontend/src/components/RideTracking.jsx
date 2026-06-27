@@ -350,7 +350,10 @@ function RideTrackingInner({ rideId, user, onClose }) {
                         >
                             📍 Share
                         </button>
-                        <SosButton rideId={rideId} compact />
+                        {/* SOS is only meaningful once the ride is actually in progress —
+                            showing it while scheduled/arriving invites accidental or
+                            abusive triggers, so it's gated to the started state. */}
+                        {state === "in_progress" && <SosButton rideId={rideId} compact />}
                     </div>
                 )}
                 <span className={`rt-state-badge ${state}`}>{STATE_LABEL[state]}</span>
@@ -449,7 +452,6 @@ function RideTrackingInner({ rideId, user, onClose }) {
                                     <button className="rt-btn success" onClick={confirmArrival} disabled={busy} style={{ flex: 1 }}>
                                         {busy ? <span className="rt-spin" /> : "✓"} Yes, I've arrived
                                     </button>
-                                    <SosButton rideId={rideId} compact />
                                 </div>
                             </div>
                         ) : (
