@@ -159,7 +159,13 @@ exports.createRide = async (req, res) => {
 // Smart Route Matching (route overlap, intermediate stops, nearby destinations)
 // when the passenger provides coordinates.
 exports.findRides = async (req, res) => {
-    const { destination, gender_preference, timing } = req.query;
+    let { destination, gender_preference, timing } = req.query;
+    // Coerce free-text filters to strings (defense in depth on top of the global
+    // operator sanitizer) so they can't be turned into query operators — in
+    // particular gender_preference, which feeds the women's-safety filter.
+    destination = destination == null ? undefined : String(destination);
+    gender_preference = gender_preference == null ? undefined : String(gender_preference);
+    timing = timing == null ? undefined : String(timing);
     const userId = req.user.id;
 
     // Optional passenger coordinates → enables Smart Route Matching.

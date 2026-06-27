@@ -66,7 +66,11 @@ const setOtpForUser = async (userId, otp, otpExpiry) => {
 
 // Register User - Send OTP
 exports.registerUser = async (req, res) => {
-    const { name, username, email, password, phoneNumber, role, gender } = req.body;
+    let { name, username, email, password, phoneNumber, role, gender } = req.body;
+    // Coerce identity fields to strings (defense in depth on top of the global
+    // operator sanitizer) so query/string operations can't be subverted.
+    email = email == null ? "" : String(email);
+    username = username == null ? "" : String(username);
 
     try {
         // Validate phone number format (10 digits)
@@ -154,7 +158,8 @@ exports.registerUser = async (req, res) => {
 
 // Verify OTP
 exports.verifyOTP = async (req, res) => {
-    const { email, otp, pendingToken } = req.body;
+    const { otp, pendingToken } = req.body;
+    const email = req.body.email == null ? "" : String(req.body.email);
 
     try {
         // ---- New flow: pending-signup token (account not yet in the DB) ----
@@ -249,7 +254,8 @@ exports.verifyOTP = async (req, res) => {
 
 // Resend OTP
 exports.resendOTP = async (req, res) => {
-    const { email, pendingToken } = req.body;
+    const { pendingToken } = req.body;
+    const email = req.body.email == null ? "" : String(req.body.email);
 
     try {
         // ---- New flow: re-issue a fresh OTP + pending token (no DB account) ----
@@ -321,7 +327,8 @@ exports.resendOTP = async (req, res) => {
 
 // Login User - Check verification and use httpOnly cookies
 exports.loginUser = async (req, res) => {
-    const { email, password } = req.body;
+    const { password } = req.body;
+    const email = req.body.email == null ? "" : String(req.body.email);
 
     try {
         if (!email || !password) {
@@ -357,7 +364,7 @@ exports.loginUser = async (req, res) => {
 
 // Forgot Password - Send OTP
 exports.forgotPassword = async (req, res) => {
-    const { email } = req.body;
+    const email = req.body.email == null ? "" : String(req.body.email);
 
     try {
         const user = await User.findOne({ email });
@@ -384,7 +391,8 @@ exports.forgotPassword = async (req, res) => {
 
 // Reset Password - Verify OTP and reset
 exports.resetPassword = async (req, res) => {
-    const { email, otp, newPassword } = req.body;
+    const { otp, newPassword } = req.body;
+    const email = req.body.email == null ? "" : String(req.body.email);
 
     try {
         if (!newPassword || newPassword.length < 6) {

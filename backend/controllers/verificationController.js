@@ -101,7 +101,7 @@ exports.listVerifications = async (req, res) => {
         const lookups = [{ $lookup: { from: "users", localField: "user_id", foreignField: "_id", as: "u" } }];
         const post = [];
         if (req.query.q) {
-            const rx = new RegExp(req.query.q.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+            const rx = new RegExp(String(req.query.q).trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
             post.push({ $match: { $or: [
                 { "u.name": rx }, { "u.email": rx }, { "ocrData.dlNumber": rx },
                 { $expr: { $regexMatch: { input: { $toString: "$_id" }, regex: rx } } },

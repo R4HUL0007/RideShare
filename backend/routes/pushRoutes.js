@@ -1,11 +1,15 @@
 const express = require("express");
 const { protect } = require("../middleware/authMiddleware");
+const { rateLimit } = require("../middleware/rateLimit");
 const PushSubscription = require("../models/PushSubscription");
 
 const router = express.Router();
 
+// Throttle subscription writes (each is an upsert) per client.
+const subscribeLimiter = rateLimit({ key: "push-subscribe", windowMs: 60 * 1000, max: 20 });
+
 // Store / refresh a Web Push subscription for the logged-in user.
-router.post("/subscribe", protect, async (req, res) => {
+router.post("/subscribe", protect, subscribeLimiter, async (req, res) => {
     const { subscription } = req.body || {};
     if (!subscription?.endpoint) return res.status(400).json({ message: "Invalid subscription" });
     try {

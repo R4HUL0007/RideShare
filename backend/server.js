@@ -10,6 +10,7 @@ const jwt = require("jsonwebtoken");
 const authRoutes = require("./routes/authRoutes");
 const rideRoutes = require("./routes/rideRoutes");
 const { rateLimit } = require("./middleware/rateLimit");
+const { sanitizeRequest } = require("./middleware/sanitize");
 const User = require("./models/User");
 dotenv.config();
 
@@ -21,7 +22,11 @@ process.on("unhandledRejection", (reason) => {
     console.error("[unhandledRejection]", reason);
 });
 process.on("uncaughtException", (err) => {
+    // An uncaught exception leaves the process in an undefined/corrupted state.
+    // Log it and exit so the container restart policy brings up a clean
+    // instance, rather than continuing to serve from a half-broken process.
     console.error("[uncaughtException]", err);
+    process.exit(1);
 });
 
 // Fail fast if the JWT secret is missing or weak — a forgeable/absent secret is
@@ -49,8 +54,13 @@ app.set("trust proxy", trustProxy != null && trustProxy !== ""
 // is on by default.
 app.use(helmet({ contentSecurityPolicy: false, crossOriginResourcePolicy: false }));
 
-app.use(express.json());
+app.use(express.json({ limit: "100kb" }));
+app.use(express.urlencoded({ extended: true, limit: "100kb" }));
 app.use(cookieParser());
+
+// Strip MongoDB operator keys ($..., dotted paths) from all request inputs to
+// neutralize NoSQL injection before any controller builds a query.
+app.use(sanitizeRequest);
 
 // In production, never leak internal error detail to clients: strip any `error`
 // field from 5xx JSON responses (controllers may still return it in dev for
@@ -80,37 +90,29 @@ const allowedOrigins = process.env.FRONTEND_URL
     ? process.env.FRONTEND_URL.split(',') 
     : ["http://localhost:3000", "http://localhost:5173"];
 
+// Shared origin allow-list used by BOTH the Express CORS middleware and the
+// Socket.io CORS layer, so the realtime channel can't be opened from an origin
+// the HTTP API would reject. Returns true if the origin is permitted.
+const isOriginAllowed = (origin) => {
+    // Requests with no Origin header (mobile apps, curl, same-origin) are allowed.
+    if (!origin) return true;
+    if (isDevelopment) {
+        if (origin.match(/^https?:\/\/localhost(:\d+)?$/)) return true;
+        if (origin.match(/^https?:\/\/127\.0\.0\.1(:\d+)?$/)) return true;
+        if (origin.match(/^https?:\/\/.*\.(loca\.lt|ngrok\.io|ngrok-free\.app|ngrok-free\.dev|ngrok\.app|ngrok\.dev|cloudflaretunnel\.com|trycloudflare\.com|devtunnels\.ms|inc1\.devtunnels\.ms)(:\d+)?$/)) return true;
+    }
+    return allowedOrigins.indexOf(origin) !== -1;
+};
+
 app.use(cors({
     origin: function (origin, callback) {
-        // Allow requests with no origin (like mobile apps or curl requests)
-        if (!origin) return callback(null, true);
-        
-        // In development, allow all localhost origins and port-forwarded URLs
+        if (isOriginAllowed(origin)) {
+            return callback(null, true);
+        }
         if (isDevelopment) {
-            // Allow localhost with any port
-            if (origin.match(/^https?:\/\/localhost(:\d+)?$/)) {
-                return callback(null, true);
-            }
-            // Allow 127.0.0.1 with any port
-            if (origin.match(/^https?:\/\/127\.0\.0\.1(:\d+)?$/)) {
-                return callback(null, true);
-            }
-            // Allow common port forwarding patterns (e.g., *.loca.lt, *.ngrok.io, *.devtunnels.ms, etc.)
-            if (origin.match(/^https?:\/\/.*\.(loca\.lt|ngrok\.io|ngrok-free\.app|ngrok-free\.dev|ngrok\.app|ngrok\.dev|cloudflaretunnel\.com|trycloudflare\.com|devtunnels\.ms|inc1\.devtunnels\.ms)(:\d+)?$/)) {
-                return callback(null, true);
-            }
+            console.warn(`⚠️  CORS blocked origin: ${origin}. Add it to FRONTEND_URL env variable.`);
         }
-        
-        // Check against allowed origins list
-        if (allowedOrigins.indexOf(origin) !== -1) {
-            callback(null, true);
-        } else {
-            // In development, log the blocked origin for debugging
-            if (isDevelopment) {
-                console.warn(`⚠️  CORS blocked origin: ${origin}. Add it to FRONTEND_URL env variable.`);
-            }
-            callback(new Error('Not allowed by CORS'));
-        }
+        callback(new Error('Not allowed by CORS'));
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
@@ -121,7 +123,14 @@ app.use(cors({
 
 const server = http.createServer(app);  // Create an HTTP server
 const io = socketIo(server, {
-    cors: { origin: true, credentials: true },
+    // Mirror the Express CORS allow-list — don't reflect arbitrary origins with
+    // credentials. An unrestricted origin here would let any website open an
+    // authenticated realtime socket against the API.
+    cors: {
+        origin: (origin, callback) =>
+            isOriginAllowed(origin) ? callback(null, true) : callback(new Error("Not allowed by CORS")),
+        credentials: true,
+    },
 });
 
 // ---- Cross-instance real-time fan-out ----

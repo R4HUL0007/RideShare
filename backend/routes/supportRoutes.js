@@ -2,20 +2,25 @@ const express = require("express");
 const support = require("../controllers/supportController");
 const { protect } = require("../middleware/authMiddleware");
 const { requireAdmin } = require("../middleware/adminMiddleware");
+const { rateLimit } = require("../middleware/rateLimit");
 
 const router = express.Router();
+
+// Throttle inbound message/ticket writes (each can fan out notifications/email).
+const msgLimiter = rateLimit({ key: "support-msg", windowMs: 60 * 1000, max: 30 });
+const ticketLimiter = rateLimit({ key: "support-ticket", windowMs: 60 * 1000, max: 10 });
 
 // ---- User endpoints (auth) ----
 router.post("/request", protect, support.requestSupport);
 router.get("/my-session", protect, support.mySession);
-router.post("/:id/message", protect, support.userMessage);
+router.post("/:id/message", protect, msgLimiter, support.userMessage);
 router.post("/:id/close", protect, support.userClose);
 
 // ---- Support tickets ("Email us") (auth) ----
-router.post("/ticket", protect, support.createTicket);
+router.post("/ticket", protect, ticketLimiter, support.createTicket);
 router.get("/my-tickets", protect, support.myTickets);
 router.get("/my-tickets/:id", protect, support.getMyTicket);
-router.post("/ticket/:id/reply", protect, support.userTicketReply);
+router.post("/ticket/:id/reply", protect, msgLimiter, support.userTicketReply);
 router.delete("/ticket/:id", protect, support.deleteMyTicket);
 
 // ---- Agent endpoints (auth + admin) ----

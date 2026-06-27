@@ -10,8 +10,12 @@ const {
     unarchiveChat,
 } = require("../controllers/chatController");
 const { protect } = require("../middleware/authMiddleware");
+const { rateLimit } = require("../middleware/rateLimit");
 
 const router = express.Router();
+
+// Throttle outbound messages (each persists + emits a socket event/notification).
+const sendLimiter = rateLimit({ key: "chat-send", windowMs: 60 * 1000, max: 60 });
 
 // All chat routes require authentication (existing JWT/cookie flow).
 router.get("/conversations", protect, getConversations);
@@ -21,7 +25,7 @@ router.get("/unread-count", protect, getUnreadCount);
 router.patch("/archive/:counterpartId", protect, archiveChat);
 router.patch("/unarchive/:counterpartId", protect, unarchiveChat);
 router.get("/:rideId/:counterpartId", protect, getMessages);
-router.post("/:rideId/:counterpartId", protect, sendMessage);
+router.post("/:rideId/:counterpartId", protect, sendLimiter, sendMessage);
 router.patch("/:rideId/:counterpartId/read", protect, markRead);
 router.delete("/:rideId/:counterpartId", protect, clearChat);
 

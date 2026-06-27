@@ -14,9 +14,13 @@ const router = express.Router();
 // enough not to block a real emergency, tight enough to stop a flood.
 const sosLimiter = rateLimit({ key: "sos", windowMs: 60 * 1000, max: 10 });
 const reportLimiter = rateLimit({ key: "safety-report", windowMs: 60 * 1000, max: 10 });
+// Trip-share creation writes a token record; the PUBLIC view endpoint updates
+// the share on every hit, so cap it per IP to stop an unauthenticated flood.
+const shareLimiter = rateLimit({ key: "safety-share", windowMs: 60 * 1000, max: 20 });
+const sharedViewLimiter = rateLimit({ key: "safety-trip-view", windowMs: 60 * 1000, max: 60 });
 
 // ---- PUBLIC: shared trip view (no auth — secured by unguessable token) ----
-router.get("/trip/:token", viewSharedTrip);
+router.get("/trip/:token", sharedViewLimiter, viewSharedTrip);
 
 // ---- Everything below requires auth, hard-scoped to req.user ----
 router.get("/overview", protect, overview);
@@ -33,7 +37,7 @@ router.post("/sos", protect, sosLimiter, triggerSos);
 router.post("/sos/:id/cancel", protect, cancelSos);
 
 // Trip sharing
-router.post("/share", protect, shareTrip);
+router.post("/share", protect, shareLimiter, shareTrip);
 
 // Reports
 router.post("/report", protect, reportLimiter, submitReport);
