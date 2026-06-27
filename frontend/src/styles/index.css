@@ -16,7 +16,12 @@
     padding: 0;
     min-height: 100vh;
     min-height: 100dvh;
-    overflow-x: hidden;
+    /* `overflow-x: clip` (NOT hidden): hidden forces overflow-y to compute as a
+       scroll container, taking the page off the fast native root scroller onto a
+       composited scrolling box — which ghost-trails during scroll on Mali GPUs
+       (Vivo/Realme/etc.). `clip` clips horizontally without creating a scroll
+       container, so the document stays the root scroller. */
+    overflow-x: clip;
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -25,7 +30,7 @@
 
   html, body, #root {
     max-width: 100%;
-    overflow-x: hidden;
+    overflow-x: clip;
     width: 100%;
   }
 }
@@ -593,9 +598,13 @@
 /* "No locations found" empty state text inside the dark dropdown */
 .location-suggestions-dropdown .text-gray-500 { color: #9ca3af; }
 
-/* Prevent horizontal scroll globally */
+/* Prevent horizontal scroll globally. Use `clip` (not `hidden`): `hidden`
+   forces overflow-y to become a scroll container, taking the page off the fast
+   native root scroller onto a composited scroll box that ghost-trails during
+   scroll on Mali GPUs (Vivo/Realme/etc.). `clip` clips horizontally without
+   creating a scroll container. */
 html, body {
-  overflow-x: hidden;
+  overflow-x: clip;
   max-width: 100%;
 }
 
