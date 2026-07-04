@@ -26,8 +26,8 @@ test-results/
 # AI generated data (local vector store index — regenerated on boot)
 backend/ai/data/
 
-# Local tooling
-tools/ngrok.exe
+# Local tooling (scripts, runbooks, and local secret env files — never commit)
+tools/
 
 # IDE / editor config (not part of the shipped project)
 .vscode/
