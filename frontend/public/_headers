@@ -1,0 +1,10 @@
+# Security headers for Cloudflare Pages (served on every response).
+# Vite copies /public to /dist, so Pages picks this up automatically.
+/*
+  Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-XSS-Protection: 0
+  Permissions-Policy: geolocation=(self), camera=(self), microphone=(), payment=(self "https://checkout.razorpay.com"), fullscreen=(self)
+  Content-Security-Policy: default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; upgrade-insecure-requests; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://maps.googleapis.com https://maps.gstatic.com https://*.gstatic.com https://accounts.google.com https://apis.google.com https://checkout.razorpay.com https://*.razorpay.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://api.ridexshare.online wss://api.ridexshare.online https://*.googleapis.com https://*.gstatic.com https://api.cloudinary.com https://accounts.google.com https://*.razorpay.com; frame-src 'self' https://checkout.razorpay.com https://*.razorpay.com https://accounts.google.com https://*.google.com; worker-src 'self' blob:; manifest-src 'self'
