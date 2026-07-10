@@ -593,6 +593,46 @@
 /* "No locations found" empty state text inside the dark dropdown */
 .location-suggestions-dropdown .text-gray-500 { color: #9ca3af; }
 
+/* ---- Recent Location Searches quick-pick (inside the same dark dropdown) ---- */
+.lsb-recent-head {
+  padding: 0.5rem 1rem 0.35rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #6b7280;
+}
+.lsb-recent-row { align-items: center; }
+.lsb-recent-x {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: #6b7280;
+  font-size: 1.05rem;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.lsb-recent-x:hover { background: rgba(255, 255, 255, 0.1); color: #f4f4f5; }
+.lsb-recent-clear {
+  width: 100%;
+  text-align: center;
+  padding: 0.6rem 1rem;
+  background: transparent;
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  color: #9ca3af;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.lsb-recent-clear:hover { background: rgba(255, 255, 255, 0.05); color: #f4f4f5; }
+
 /* Prevent horizontal scroll globally */
 html, body {
   overflow-x: hidden;

@@ -209,6 +209,7 @@
 .rrq-loc-input .lsb-label { color: #d4d4d8 !important; font-size: 0.78rem !important; }
 .rrq-loc-input .lsb-input { background: rgba(255,255,255,0.05) !important; border: 1px solid rgba(255,255,255,0.14) !important; color: #f4f4f5 !important; border-radius: 0.6rem !important; }
 .rrq-loc-input .lsb-input::placeholder { color: #6b7280 !important; }
+.rrq-currentloc { margin-top: 0.5rem; }
 
 .rrq-choose-title { font-size: 0.86rem; font-weight: 800; margin-top: 0.3rem; }
 .rrq-vehicles { display: flex; flex-direction: column; gap: 0.5rem; }
@@ -272,6 +273,9 @@
   .rrq-menu { display: inline-flex; align-items: center; justify-content: center; }
   .rrq-grid { grid-template-columns: 1fr; }
   .rrq-steps { justify-content: flex-start; }
+  /* Map fills its card (LiveRideMap gets `fill`), so this height is the actual
+     map height on mobile — keeps it compact with no empty gap below it. */
+  .rrq-map { height: 300px; }
 }
 @media (max-width: 560px) {
   .rrq-nearby-grid { grid-template-columns: repeat(2, 1fr); }

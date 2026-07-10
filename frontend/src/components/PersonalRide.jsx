@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { toast } from "react-toastify";
 import MapsProvider from "./maps/MapsProvider";
 import LocationSearchBox from "./maps/LocationSearchBox";
+import CurrentLocationButton from "./maps/CurrentLocationButton";
 import LiveRideMap from "./maps/LiveRideMap";
 import {
     estimatePersonalRide, createPersonalRide, myActivePersonalRide,
@@ -31,6 +32,11 @@ const PersonalRideInner = ({ onOpenSidebar, onNavigate }) => {
     const pollRef = useRef(null);
 
     const setF = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+
+    // Fill the pickup from the device's current location (reverse-geocoded).
+    const useCurrentLocationForPickup = ({ coords, address }) => {
+        setForm((f) => ({ ...f, source: address || f.source, sourceCoords: coords }));
+    };
 
     // Load any in-progress ride on mount.
     useEffect(() => {
@@ -186,7 +192,7 @@ const PersonalRideInner = ({ onOpenSidebar, onNavigate }) => {
                     <div className="rrq-map-card">
                         <div className="rrq-map">
                             {showMap ? (
-                                <LiveRideMap sourceCoords={mapSrc} destinationCoords={mapDst} source={active ? active.pickup?.address : form.source} destination={active ? active.destination?.address : form.destination} driverCoords={(status === "DRIVER_ASSIGNED" || status === "RIDE_STARTED") ? driverLoc : null} hideOverlay />
+                                <LiveRideMap sourceCoords={mapSrc} destinationCoords={mapDst} source={active ? active.pickup?.address : form.source} destination={active ? active.destination?.address : form.destination} driverCoords={(status === "DRIVER_ASSIGNED" || status === "RIDE_STARTED") ? driverLoc : null} hideOverlay fill />
                             ) : (
                                 <div className="rrq-map-ph">
                                     <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="1.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>
@@ -239,7 +245,10 @@ const PersonalRideInner = ({ onOpenSidebar, onNavigate }) => {
                     {!active ? (
                         <>
                             {!hasCoords(form.sourceCoords) ? (
-                                <div className="rrq-loc-input"><LocationSearchBox label="Pickup Location" placeholder="Where are you?" value={form.source} onChange={(v) => setF("source", v)} onCoordinatesChange={(c) => setF("sourceCoords", c)} isSource /></div>
+                                <div className="rrq-loc-input">
+                                    <LocationSearchBox label="Pickup Location" placeholder="Where are you?" value={form.source} onChange={(v) => setF("source", v)} onCoordinatesChange={(c) => setF("sourceCoords", c)} isSource />
+                                    <div className="rrq-currentloc"><CurrentLocationButton onLocate={useCurrentLocationForPickup} /></div>
+                                </div>
                             ) : (
                                 <div className="rrq-loc"><span className="rrq-dot pickup" /><div className="rrq-loc-text"><label>Pickup</label><strong>{form.source || "My location"}</strong></div><button className="rrq-loc-x" onClick={() => { setF("source", ""); setF("sourceCoords", null); }}>✕</button></div>
                             )}

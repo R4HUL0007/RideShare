@@ -59,10 +59,28 @@ const matchTone = (score) => (score >= 90 ? "high" : score >= 75 ? "mid" : "low"
 /* =======================================================
    Rides overview map (all pickups + selected route)
    ======================================================= */
-function RidesMap({ rides, userLocation, selectedRide, onSelectRide }) {
+function RidesMap({ rides, userLocation, selectedRide, onSelectRide, onLocate }) {
     const { isLoaded, loadError } = useMapsCtx();
     const mapRef = useRef(null);
     const [route, setRoute] = useState(null);
+    const [locating, setLocating] = useState(false);
+
+    // "My location" button — pan to the user's live position (like Google Maps).
+    const locateMe = () => {
+        if (!navigator.geolocation) return;
+        setLocating(true);
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+                setLocating(false);
+                onLocate?.(loc);
+                if (mapRef.current?.panTo) mapRef.current.panTo(loc);
+                if (mapRef.current?.setZoom) mapRef.current.setZoom(14);
+            },
+            () => setLocating(false),
+            { enableHighAccuracy: true, timeout: 15000 }
+        );
+    };
 
     // Fit bounds to either the selected ride's route, or all ride pickups.
     useEffect(() => {
@@ -139,6 +157,7 @@ function RidesMap({ rides, userLocation, selectedRide, onSelectRide }) {
         : (rides.find((r) => hasCoords(r.sourceCoords))?.sourceCoords || { lat: 22.3, lng: 73.18 });
 
     return (
+        <>
         <GoogleMap
             onLoad={(map) => { mapRef.current = map; }}
             center={center}
@@ -147,13 +166,13 @@ function RidesMap({ rides, userLocation, selectedRide, onSelectRide }) {
             options={{
                 styles: DARK_MAP_STYLE,
                 backgroundColor: "#0f0f10",
-                disableDefaultUI: false,
-                zoomControl: true,
-                zoomControlOptions: window.google?.maps?.ControlPosition
-                    ? { position: window.google.maps.ControlPosition.RIGHT_BOTTOM } : undefined,
+                disableDefaultUI: true,
+                zoomControl: false,
                 mapTypeControl: false,
                 streetViewControl: false,
                 fullscreenControl: false,
+                rotateControl: false,
+                keyboardShortcuts: false,
                 gestureHandling: "greedy",
                 clickableIcons: false,
             }}
@@ -191,6 +210,29 @@ function RidesMap({ rides, userLocation, selectedRide, onSelectRide }) {
                 </>
             )}
         </GoogleMap>
+        {/* "My location" FAB (Google-Maps style, bottom-right) */}
+        <button
+            type="button"
+            onClick={locateMe}
+            aria-label="Show my location"
+            title="Show my location"
+            style={{
+                position: "absolute", right: "12px", bottom: "34px", width: "46px", height: "46px",
+                borderRadius: "50%", border: "1px solid rgba(255,255,255,0.3)",
+                background: "rgba(20,20,22,0.96)", color: hasCoords(userLocation) ? "#4285F4" : "#f4f4f5",
+                display: "inline-flex", alignItems: "center", justifyContent: "center",
+                cursor: "pointer", boxShadow: "0 6px 18px rgba(0,0,0,0.6)", zIndex: 5,
+            }}
+        >
+            {locating ? (
+                <span style={{ width: "18px", height: "18px", border: "2px solid rgba(255,255,255,0.3)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin 0.7s linear infinite" }} />
+            ) : (
+                <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="3.2" /><line x1="12" y1="2" x2="12" y2="5" /><line x1="12" y1="19" x2="12" y2="22" /><line x1="2" y1="12" x2="5" y2="12" /><line x1="19" y1="12" x2="22" y2="12" />
+                </svg>
+            )}
+        </button>
+        </>
     );
 }
 
@@ -575,6 +617,19 @@ const FindRidesInner = ({ onOpenSidebar, onNavigate, user }) => {
         return () => { active = false; };
     }, []);
 
+    // Center the map on the user's real location on load (best-effort). Without
+    // this the map falls back to a fixed Vadodara center; with it, the map opens
+    // wherever the user actually is (like Uber/Google Maps). Silent if the user
+    // denies the permission.
+    useEffect(() => {
+        if (!("geolocation" in navigator)) return;
+        navigator.geolocation.getCurrentPosition(
+            (pos) => setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+            () => { /* denied/unavailable — keep the ride-based/default center */ },
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+        );
+    }, []);
+
     const doSearch = useCallback(async (e) => {
         if (e) e.preventDefault();
         if (!filters.destination.trim()) {
@@ -796,7 +851,7 @@ const FindRidesInner = ({ onOpenSidebar, onNavigate, user }) => {
         <div className="fr-mapcol">
             <div className="fr-panel-head"><span className="fr-panel-title2">Search on Map</span></div>
             <div className="fr-map">
-                <RidesMap rides={visible} userLocation={userLocation} selectedRide={selectedRide} onSelectRide={setSelectedRide} />
+                <RidesMap rides={visible} userLocation={userLocation} selectedRide={selectedRide} onSelectRide={setSelectedRide} onLocate={setUserLocation} />
             </div>
         </div>
     );

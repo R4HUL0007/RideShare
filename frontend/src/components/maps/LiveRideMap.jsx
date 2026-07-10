@@ -6,6 +6,7 @@ import {
 } from '@react-google-maps/api';
 import { useMaps } from './MapsProvider';
 import { DARK_MAP_STYLE } from '../../config/googleMapsConfig';
+import { haversineKm, formatNearby } from '../../utils/mapUtils';
 
 // Premium teardrop pin as a data-URI SVG. `color` fills the pin body; `glyph`
 // is a small white path drawn in the pin head.
@@ -26,6 +27,18 @@ const buildPinIcon = (color, glyph) => {
     // Guard SDK value-objects (absent in the test mock).
     if (window.google?.maps?.Size) icon.scaledSize = new window.google.maps.Size(42, 52);
     if (window.google?.maps?.Point) icon.anchor = new window.google.maps.Point(21, 48);
+    return icon;
+};
+
+// Google-Maps-style "you are here" blue dot (with soft accuracy halo).
+const buildUserDot = () => {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 26 26">
+        <circle cx="13" cy="13" r="12" fill="#4285F4" fill-opacity="0.18"/>
+        <circle cx="13" cy="13" r="6.5" fill="#4285F4" stroke="#ffffff" stroke-width="2.5"/>
+    </svg>`;
+    const icon = { url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg) };
+    if (window.google?.maps?.Size) icon.scaledSize = new window.google.maps.Size(26, 26);
+    if (window.google?.maps?.Point) icon.anchor = new window.google.maps.Point(13, 13);
     return icon;
 };
 
@@ -66,6 +79,7 @@ const LiveRideMap = ({
     pricePerPerson,
     driverCoords,
     hideOverlay = false,
+    fill = false,
     onRouteInfo,
     onSourceCoordsChange,
     onDestinationCoordsChange,
@@ -79,6 +93,45 @@ const LiveRideMap = ({
     // Subtle loading state shown while a route is being recalculated (e.g. after
     // a marker drag) when a route is already on screen.
     const [isRecalculating, setIsRecalculating] = React.useState(false);
+
+    // Live "my location" (Google-Maps-style blue dot). Populated on demand via
+    // the locate button, then kept fresh with watchPosition so it tracks the
+    // user in real time (like Uber showing where you are vs. the pickup).
+    const [userLoc, setUserLoc] = React.useState(null);
+    const [locating, setLocating] = React.useState(false);
+    const watchIdRef = useRef(null);
+
+    // Stop watching GPS (on unmount or toggle-off) to free the sensor.
+    useEffect(() => () => {
+        if (watchIdRef.current != null && navigator.geolocation) {
+            navigator.geolocation.clearWatch(watchIdRef.current);
+            watchIdRef.current = null;
+        }
+    }, []);
+
+    const locateMe = () => {
+        if (!navigator.geolocation) { return; }
+        setLocating(true);
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+                setUserLoc(loc);
+                setLocating(false);
+                if (mapRef.current?.panTo) mapRef.current.panTo(loc);
+                if (mapRef.current?.setZoom) mapRef.current.setZoom(15);
+                // Keep the dot live after the first fix.
+                if (watchIdRef.current == null && navigator.geolocation.watchPosition) {
+                    watchIdRef.current = navigator.geolocation.watchPosition(
+                        (p) => setUserLoc({ lat: p.coords.latitude, lng: p.coords.longitude }),
+                        () => {},
+                        { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 }
+                    );
+                }
+            },
+            () => setLocating(false),
+            { enableHighAccuracy: true, timeout: 15000 }
+        );
+    };
 
     const reverseGeocode = (coords, onAddressChange) => {
         if (!coords || !window.google?.maps?.Geocoder) return;
@@ -191,7 +244,7 @@ const LiveRideMap = ({
         return (
             <div
                 className="w-full rounded-lg overflow-hidden flex items-center justify-center"
-                style={{ height: 'clamp(14rem, 35vw, 24rem)', background: '#161618', border: '1px solid rgba(244,63,94,0.4)' }}
+                style={{ height: fill ? '100%' : 'clamp(14rem, 35vw, 24rem)', background: '#161618', border: '1px solid rgba(244,63,94,0.4)' }}
             >
                 <p className="text-sm font-medium px-4 text-center" style={{ color: '#fca5a5' }}>Map could not be loaded.</p>
             </div>
@@ -204,7 +257,7 @@ const LiveRideMap = ({
         return (
             <div
                 className="w-full rounded-lg overflow-hidden flex items-center justify-center"
-                style={{ height: 'clamp(14rem, 35vw, 24rem)', background: '#161618', border: '1px solid rgba(255,255,255,0.08)' }}
+                style={{ height: fill ? '100%' : 'clamp(14rem, 35vw, 24rem)', background: '#161618', border: '1px solid rgba(255,255,255,0.08)' }}
             >
                 <div className="flex flex-col items-center gap-3">
                     <div className="h-8 w-8 rounded-full" style={{ border: '3px solid rgba(255,255,255,0.18)', borderTopColor: '#f4f4f5', animation: 'spin 0.8s linear infinite' }}></div>
@@ -219,7 +272,7 @@ const LiveRideMap = ({
            position:relative needed for the floating overlays. */
         <div
             className="w-full rounded-lg overflow-hidden relative"
-            style={{ height: 'clamp(14rem, 35vw, 24rem)', transition: 'height 0.3s ease', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 10px 30px rgba(0,0,0,0.45)' }}
+            style={{ height: fill ? '100%' : 'clamp(14rem, 35vw, 24rem)', transition: 'height 0.3s ease', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 10px 30px rgba(0,0,0,0.45)' }}
         >
             {/* Loading overlay while map tiles load */}
             {isMapLoading && (
@@ -232,7 +285,6 @@ const LiveRideMap = ({
             )}
 
             <GoogleMap
-                ref={mapRef}
                 zoom={sourceCoords && destinationCoords ? 14 : 12}
                 center={defaultCenter}
                 mapContainerStyle={{
@@ -242,21 +294,20 @@ const LiveRideMap = ({
                 options={{
                     styles: DARK_MAP_STYLE,
                     backgroundColor: '#0f0f10',
-                    disableDefaultUI: false,
-                    zoomControl: true,
-                    zoomControlOptions: window.google?.maps?.ControlPosition
-                        ? { position: window.google.maps.ControlPosition.RIGHT_BOTTOM }
-                        : undefined,
+                    // Clean, Uber-style map: no on-screen buttons. Pinch / scroll
+                    // still zooms (gestureHandling: 'greedy'); our own locate
+                    // button below replaces the default controls.
+                    disableDefaultUI: true,
+                    zoomControl: false,
                     mapTypeControl: false,
                     streetViewControl: false,
-                    fullscreenControl: true,
-                    fullscreenControlOptions: window.google?.maps?.ControlPosition
-                        ? { position: window.google.maps.ControlPosition.RIGHT_TOP }
-                        : undefined,
+                    fullscreenControl: false,
+                    rotateControl: false,
+                    keyboardShortcuts: false,
                     gestureHandling: 'greedy',
                     clickableIcons: false
                 }}
-                onLoad={() => setIsMapLoading(false)}
+                onLoad={(map) => { mapRef.current = map; setIsMapLoading(false); }}
             >
                 {/* Route Polyline — glow (wide, translucent) + core (bright white) layers */}
                 {routeInfo && routeInfo.polyline && (
@@ -342,7 +393,60 @@ const LiveRideMap = ({
                         zIndex={6}
                     />
                 )}
+
+                {/* Live "you are here" blue dot — set by the locate button, then
+                    kept fresh via watchPosition so it tracks the user's movement. */}
+                {userLoc && Number.isFinite(userLoc.lat) && Number.isFinite(userLoc.lng) && (
+                    <Marker
+                        position={userLoc}
+                        icon={buildUserDot()}
+                        title="Your location"
+                        zIndex={7}
+                        clickable={false}
+                    />
+                )}
             </GoogleMap>
+
+            {/* "My location" button (Google-Maps style). Centers the map on the
+                user and starts live tracking of their position. */}
+            <button
+                type="button"
+                onClick={locateMe}
+                aria-label="Show my location"
+                title="Show my location"
+                style={{
+                    position: 'absolute', right: '12px', bottom: '34px', width: '46px', height: '46px',
+                    borderRadius: '50%', border: '1px solid rgba(255,255,255,0.3)',
+                    background: 'rgba(20,20,22,0.96)', color: userLoc ? '#4285F4' : '#f4f4f5',
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                    cursor: 'pointer', boxShadow: '0 6px 18px rgba(0,0,0,0.6)', zIndex: 40
+                }}
+            >
+                {locating ? (
+                    <span className="rounded-full" style={{ width: '18px', height: '18px', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', animation: 'spin 0.7s linear infinite' }} />
+                ) : (
+                    <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="3.2" /><line x1="12" y1="2" x2="12" y2="5" /><line x1="12" y1="19" x2="12" y2="22" /><line x1="2" y1="12" x2="5" y2="12" /><line x1="19" y1="12" x2="22" y2="12" />
+                    </svg>
+                )}
+            </button>
+
+            {/* Distance-from-pickup chip (Uber-style) — how far the user is from
+                the pickup point, live as they move. */}
+            {userLoc && sourceCoords && formatNearby(haversineKm(userLoc, sourceCoords)) && (
+                <div
+                    className="inline-flex items-center gap-2"
+                    style={{
+                        position: 'absolute', left: '50%', transform: 'translateX(-50%)', bottom: '34px',
+                        background: 'rgba(20,20,22,0.96)', border: '1px solid rgba(255,255,255,0.3)',
+                        borderRadius: '999px', padding: '0.4rem 0.8rem', color: '#f4f4f5',
+                        fontSize: '0.78rem', fontWeight: 700, boxShadow: '0 6px 18px rgba(0,0,0,0.6)', whiteSpace: 'nowrap', zIndex: 40
+                    }}
+                >
+                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#4285F4', boxShadow: '0 0 0 3px rgba(66,133,244,0.25)' }} />
+                    {formatNearby(haversineKm(userLoc, sourceCoords))} from pickup
+                </div>
+            )}
 
             {/* Floating glass route-info overlay (top) — pickup → destination,
                 distance, ETA, price. Updates whenever the route changes. */}

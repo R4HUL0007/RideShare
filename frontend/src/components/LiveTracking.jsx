@@ -71,7 +71,7 @@ function TrackingMap({ pickup, destination, driver, route }) {
             center={center}
             zoom={13}
             mapContainerStyle={{ width: "100%", height: "100%" }}
-            options={{ styles: DARK_MAP_STYLE, backgroundColor: "#0f0f10", disableDefaultUI: false, zoomControl: true, zoomControlOptions: window.google?.maps?.ControlPosition ? { position: window.google.maps.ControlPosition.RIGHT_TOP } : undefined, mapTypeControl: false, streetViewControl: false, fullscreenControl: false, gestureHandling: "greedy", clickableIcons: false }}
+            options={{ styles: DARK_MAP_STYLE, backgroundColor: "#0f0f10", disableDefaultUI: true, zoomControl: false, mapTypeControl: false, streetViewControl: false, fullscreenControl: false, rotateControl: false, keyboardShortcuts: false, gestureHandling: "greedy", clickableIcons: false }}
         >
             {hasCoords(pickup) && <Marker position={pickup} icon={pinIcon("#10B981", PICKUP_GLYPH)} title="Pickup" zIndex={3} />}
             {hasCoords(destination) && <Marker position={destination} icon={pinIcon("#EF4444", FLAG_GLYPH)} title="Destination" zIndex={3} />}

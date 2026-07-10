@@ -74,7 +74,7 @@ function TrackMap({ snapshot, driverLoc, routePath }) {
             center={center}
             zoom={13}
             mapContainerStyle={{ width: "100%", height: "100%" }}
-            options={{ styles: DARK_MAP_STYLE, backgroundColor: "#0f0f10", disableDefaultUI: false, zoomControl: true, mapTypeControl: false, streetViewControl: false, fullscreenControl: false, gestureHandling: "greedy", clickableIcons: false }}
+            options={{ styles: DARK_MAP_STYLE, backgroundColor: "#0f0f10", disableDefaultUI: true, zoomControl: false, mapTypeControl: false, streetViewControl: false, fullscreenControl: false, rotateControl: false, keyboardShortcuts: false, gestureHandling: "greedy", clickableIcons: false }}
         >
             {hasCoords(src) && <Marker position={src} icon={pickupIcon()} title="Pickup" zIndex={3} />}
             {hasCoords(dst) && <Marker position={dst} icon={destIcon()} title="Destination" zIndex={3} />}

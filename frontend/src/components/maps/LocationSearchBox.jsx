@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useMaps } from './MapsProvider';
+import { getRecent, addRecent, removeRecent, clearRecent } from '../../services/recentSearchService';
 
 const LocationSearchBox = ({ 
     label, 
@@ -23,6 +24,53 @@ const LocationSearchBox = ({
     const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0 });
     // Selection-time error, e.g. a place with no usable geometry (Req 4.3).
     const [error, setError] = useState('');
+    // Recent Location Searches (per-account quick picks). Loaded lazily on the
+    // first focus of an empty input; entirely additive and degrades to [] on any
+    // failure so the existing autocomplete behavior is never affected.
+    const [recent, setRecent] = useState([]);
+    const [recentLoaded, setRecentLoaded] = useState(false);
+
+    // Lazily load the user's recent places once (on first empty focus).
+    const loadRecent = async () => {
+        if (recentLoaded) return;
+        setRecentLoaded(true);
+        const items = await getRecent();
+        setRecent(Array.isArray(items) ? items : []);
+    };
+
+    const handleFocus = () => {
+        setIsFocused(true);
+        if (!value) loadRecent();
+    };
+
+    // Pick a recent place: fill label + emit coords WITHOUT another geocode,
+    // then bump it to the top (fire-and-forget).
+    const handleRecentSelect = (entry) => {
+        const c = entry?.coords || {};
+        onChange(entry?.label || '');
+        setSuggestions([]);
+        setIsFocused(false);
+        if (Number.isFinite(c.lat) && Number.isFinite(c.lng)) {
+            onCoordinatesChange({ lat: c.lat, lng: c.lng });
+            addRecent({ label: entry.label, placeId: entry.placeId || '', lat: c.lat, lng: c.lng })
+                .then((items) => { if (Array.isArray(items) && items.length) setRecent(items); })
+                .catch(() => { /* swallow */ });
+        }
+    };
+
+    const handleRemoveRecent = (e, id) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setRecent((r) => r.filter((x) => x._id !== id));
+        removeRecent(id).catch(() => { /* swallow */ });
+    };
+
+    const handleClearRecent = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setRecent([]);
+        clearRecent().catch(() => { /* swallow */ });
+    };
 
     // Initialize session token on mount
     useEffect(() => {
@@ -31,16 +79,23 @@ const LocationSearchBox = ({
         }
     }, []);
 
-    // Recalculate dropdown position whenever focus state or value changes
+    // Recalculate dropdown position whenever focus state or value changes, and
+    // keep it aligned while the page scrolls/resizes (the dropdown is a fixed,
+    // viewport-positioned portal, so stale coordinates would misplace it).
     useEffect(() => {
-        if (isFocused && inputRef.current) {
+        if (!isFocused) return;
+        const reposition = () => {
+            if (!inputRef.current) return;
             const rect = inputRef.current.getBoundingClientRect();
-            setDropdownPos({
-                top: rect.bottom + 4,   // 4px gap in viewport coordinates
-                left: rect.left,
-                width: rect.width
-            });
-        }
+            setDropdownPos({ top: rect.bottom + 4, left: rect.left, width: rect.width });
+        };
+        reposition();
+        window.addEventListener('scroll', reposition, true);
+        window.addEventListener('resize', reposition);
+        return () => {
+            window.removeEventListener('scroll', reposition, true);
+            window.removeEventListener('resize', reposition);
+        };
     }, [isFocused, value]);
 
     // Debounced autocomplete search — relies on parent LoadScript
@@ -109,6 +164,11 @@ const LocationSearchBox = ({
                     lat: location.lat(),
                     lng: location.lng()
                 });
+                // Record for recent places — fire-and-forget, AFTER the emit so
+                // it can never affect the existing selection behavior.
+                addRecent({ label: displayText, placeId: prediction.place_id || '', lat: location.lat(), lng: location.lng() })
+                    .then((items) => { if (Array.isArray(items) && items.length) { setRecent(items); setRecentLoaded(true); } })
+                    .catch(() => { /* swallow */ });
             } else {
                 // No usable geometry — surface a clear message and emit nothing bad (Req 4.3).
                 setError('Please select a valid location from the dropdown');
@@ -201,7 +261,7 @@ const LocationSearchBox = ({
                     type="text"
                     value={value}
                     onChange={handleInputChange}
-                    onFocus={() => setIsFocused(true)}
+                    onFocus={handleFocus}
                     onBlur={() => setTimeout(() => setIsFocused(false), 200)}
                     placeholder={placeholder}
                     autoComplete="off"
@@ -230,6 +290,50 @@ const LocationSearchBox = ({
                         </button>
                     )}
                 </div>
+
+                {/* Recent places quick-pick — shown when the input is empty and
+                    the user has recent selections (Uber/Ola-style). Hidden as
+                    soon as the user types (autocomplete takes over below). */}
+                {isFocused && !value && recent.length > 0 && dropdownContent(
+                    <>
+                        <div className="lsb-recent-head">Recent</div>
+                        {recent.map((entry) => (
+                            <div
+                                key={entry._id}
+                                className="location-suggestion-item lsb-recent-row"
+                                role="button"
+                                tabIndex={0}
+                                onMouseDown={(e) => e.preventDefault()}
+                                onClick={() => handleRecentSelect(entry)}
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="text-gray-400 flex-shrink-0" width="16" height="16" style={{ marginTop: '2px' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <circle cx="12" cy="12" r="9" strokeWidth={2} />
+                                    <polyline points="12 7 12 12 15 14" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                                </svg>
+                                <div className="location-suggestion-text">
+                                    <p className="location-suggestion-main">{entry.label}</p>
+                                </div>
+                                <button
+                                    type="button"
+                                    className="lsb-recent-x"
+                                    aria-label="Remove recent place"
+                                    onMouseDown={(e) => e.preventDefault()}
+                                    onClick={(e) => handleRemoveRecent(e, entry._id)}
+                                >
+                                    ×
+                                </button>
+                            </div>
+                        ))}
+                        <button
+                            type="button"
+                            className="lsb-recent-clear"
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={handleClearRecent}
+                        >
+                            Clear recent
+                        </button>
+                    </>
+                )}
 
                 {/* Suggestions Dropdown — rendered in a portal so it stays above the dashboard */}
                 {isFocused && suggestions.length > 0 && dropdownContent(
