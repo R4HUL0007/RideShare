@@ -570,3 +570,59 @@
   }
   .dh-stat:hover, .dh-action:hover, .dh-vehicle:hover, .dh-btn:hover, .dh-hero-btn:hover { transform: none; }
 }
+
+/* ===================================================================
+   Smart Ride Suggestions — smart card, recent searches, favorite places
+   (rule-based homepage additions; dark theme consistent)
+   =================================================================== */
+.dh-smart {
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+}
+.dh-smart:hover { border-color: rgba(255, 255, 255, 0.22); }
+.dh-smart-greet { font-size: 1.05rem; font-weight: 800; color: #f4f4f5; }
+.dh-smart-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: #9ca3af; font-weight: 700; margin-top: 0.15rem; }
+.dh-smart-route { display: flex; align-items: center; gap: 0.55rem; font-size: 0.95rem; }
+.dh-smart-route strong { font-weight: 700; color: #f4f4f5; }
+.dh-smart-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.dh-smart-dot.pickup { background: #34d399; box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.2); }
+.dh-smart-dot.drop { background: #fb7185; box-shadow: 0 0 0 3px rgba(251, 113, 133, 0.2); }
+.dh-smart-conn { width: 2px; height: 14px; margin-left: 4px; background: rgba(255, 255, 255, 0.18); }
+.dh-smart-reason { font-size: 0.78rem; color: #9ca3af; margin-top: 0.35rem; }
+.dh-smart .dh-next-cta { margin-top: 0.7rem; align-self: flex-start; }
+
+.dh-recent-list { display: flex; flex-direction: column; gap: 0.5rem; }
+.dh-recent-row {
+    display: flex; align-items: center; gap: 0.7rem;
+    padding: 0.7rem 0.85rem;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 0.7rem;
+    background: rgba(255, 255, 255, 0.02);
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+.dh-recent-row:hover { background: rgba(255, 255, 255, 0.06); border-color: rgba(255, 255, 255, 0.16); }
+.dh-recent-ic { color: #9ca3af; flex-shrink: 0; display: inline-flex; }
+.dh-recent-text { flex: 1; min-width: 0; font-size: 0.86rem; color: #e4e4e7; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dh-recent-x {
+    flex-shrink: 0; width: 24px; height: 24px; border-radius: 50%; border: none;
+    background: transparent; color: #6b7280; font-size: 1.15rem; line-height: 1; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+}
+.dh-recent-x:hover { background: rgba(255, 255, 255, 0.1); color: #f4f4f5; }
+
+.dh-fav-list { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.dh-fav-chip {
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    padding: 0.5rem 0.85rem;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.03);
+    color: #e4e4e7; font-size: 0.82rem; font-weight: 600; cursor: pointer;
+}
+.dh-fav-chip:hover { background: rgba(255, 255, 255, 0.08); border-color: rgba(255, 255, 255, 0.22); }
+.dh-fav-chip span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 14rem; }

@@ -635,7 +635,16 @@ const Dashboard = () => {
         }
     };
 
-    // Render loading spinner
+    // Wait for the session/user to load before rendering any tab. On a hard
+    // reload of a deep route (e.g. /find-rides), `user` is null until checkAuth
+    // resolves — rendering tab content against a null user crashes some views
+    // (caught by the ErrorBoundary, hence the "Something went wrong" screen that
+    // a reload couldn't fix). If auth fails, checkAuth redirects to "/".
+    if (!user) {
+        return <div style={{ minHeight: "100vh", background: "#0a0a0b" }} aria-busy="true" />;
+    }
+
+    // Render the dashboard once the user is available.
     return (
         <div className="dashboard-layout">
             <Sidebar 

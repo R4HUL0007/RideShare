@@ -11,6 +11,7 @@ const { haversineKm } = require("../utils/geo");
 const { createNotification } = require("../utils/notify");
 const { computeFare, computeDurationMin, splitFare, VEHICLE_PRICING, VEHICLE_TYPES, config } = require("../utils/personalFare");
 const { getOnlineIds } = require("../utils/presence");
+const { phoneVerificationRequired } = require("../utils/phoneGate");
 
 const idStr = (v) => (v == null ? null : typeof v === "string" ? v : v._id ? v._id.toString() : v.toString());
 
@@ -111,6 +112,14 @@ exports.createRequest = async (req, res) => {
         const { pickup, destination, vehicleType, notes } = req.body || {};
         if (!destination?.address) return res.status(400).json({ message: "Destination is required." });
         if (!VEHICLE_TYPES.includes(vehicleType)) return res.status(400).json({ message: "Choose a valid ride type." });
+
+        // ---- Phone verification gate (when enabled) ----
+        if (phoneVerificationRequired() && !req.user.phoneVerified) {
+            return res.status(403).json({
+                message: "Please verify your phone number before requesting a ride.",
+                code: "PHONE_VERIFICATION_REQUIRED",
+            });
+        }
 
         // One active request at a time.
         const existing = await PersonalRideRequest.findOne({ passenger_id: req.user._id, status: { $in: ["SEARCHING", "DRIVER_ASSIGNED", "RIDE_STARTED", "RIDE_COMPLETED"] } });

@@ -885,3 +885,41 @@ html, body {
     transition-duration: 0.001ms !important;
   }
 }
+
+/* ===================================================================
+   react-toastify — synchronized with the RideShare dark theme.
+   Dark surface + soft border + per-type accent (no white background).
+   =================================================================== */
+.Toastify__toast {
+  background: #17181b;
+  color: #f4f4f5;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.75rem;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.86rem;
+  padding: 0.7rem 0.9rem;
+}
+.Toastify__toast-body { color: #e4e4e7; align-items: center; }
+.Toastify__close-button { color: #9ca3af; opacity: 0.85; align-self: center; }
+.Toastify__close-button:hover { color: #f4f4f5; }
+
+.Toastify__toast--success { border-left: 3px solid #22c55e; }
+.Toastify__toast--error   { border-left: 3px solid #ef4444; }
+.Toastify__toast--info    { border-left: 3px solid #3b82f6; }
+.Toastify__toast--warning { border-left: 3px solid #f59e0b; }
+.Toastify__toast--default { border-left: 3px solid #6b7280; }
+
+.Toastify__toast--success .Toastify__toast-icon svg { fill: #22c55e; }
+.Toastify__toast--error   .Toastify__toast-icon svg { fill: #ef4444; }
+.Toastify__toast--info    .Toastify__toast-icon svg { fill: #3b82f6; }
+.Toastify__toast--warning .Toastify__toast-icon svg { fill: #f59e0b; }
+
+.Toastify__progress-bar--success { background: #22c55e; }
+.Toastify__progress-bar--error   { background: #ef4444; }
+.Toastify__progress-bar--info    { background: #3b82f6; }
+.Toastify__progress-bar--warning { background: #f59e0b; }
+
+@media (max-width: 640px) {
+  .Toastify__toast-container { width: calc(100vw - 1.5rem); left: 0.75rem; right: 0.75rem; }
+}

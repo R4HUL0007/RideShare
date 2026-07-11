@@ -9,6 +9,8 @@ import {
     updateNotificationPrefs,
     uploadToCloudinary,
     isCloudinaryConfigured,
+    sendPhoneOtp as sendPhoneOtpApi,
+    verifyPhone as verifyPhoneApi,
 } from "../services/profileService";
 import { getUserVehicles } from "../services/vehicleService";
 import { getUserReviews } from "../services/reviewService";
@@ -174,6 +176,17 @@ const ProfilePage = ({ onOpenSidebar, onUserUpdated, onNavigate }) => {
     const [avatarUploading, setAvatarUploading] = useState(false);
     const fileRef = useRef(null);
 
+    // -------- Phone verification (Firebase Phone Auth) --------
+    // `phoneVerifyStep`: idle → sending → otp (code sent, awaiting entry) → verifying
+    const [phoneVerifyStep, setPhoneVerifyStep] = useState("idle");
+    const [phoneOtp, setPhoneOtp] = useState("");
+    const [resendIn, setResendIn] = useState(0); // seconds until "Resend" re-enables
+    const resendTimerRef = useRef(null);         // countdown interval
+    // Inline phone-number editing (independent of the full-profile edit).
+    const [editingPhone, setEditingPhone] = useState(false);
+    const [phoneDraft, setPhoneDraft] = useState("");
+    const [savingPhone, setSavingPhone] = useState(false);
+
     const [pw, setPw] = useState({ current: "", next: "", confirm: "" });
     const [showPw, setShowPw] = useState({ current: false, next: false, confirm: false });
     const [savingPw, setSavingPw] = useState(false);
@@ -257,6 +270,9 @@ const ProfilePage = ({ onOpenSidebar, onUserUpdated, onNavigate }) => {
         return () => { active = false; };
     }, [profile?._id, roleSide]);
 
+    // Clear the resend countdown when leaving the page.
+    useEffect(() => () => clearInterval(resendTimerRef.current), []);
+
     const isGoogleAccount = profile?.authProvider === "google";
 
     const handleAvatarPick = () => {
@@ -311,6 +327,117 @@ const ProfilePage = ({ onOpenSidebar, onUserUpdated, onNavigate }) => {
             toast.error(error.response?.data?.message || "Failed to update profile");
         } finally {
             setSavingProfile(false);
+        }
+    };
+
+    // ---- Phone verification (WhatsApp OTP via the backend) ----
+    // Reset the verification flow (on cancel, success, or error).
+    const resetPhoneVerify = () => {
+        setPhoneVerifyStep("idle");
+        setPhoneOtp("");
+        setResendIn(0);
+        clearInterval(resendTimerRef.current);
+    };
+
+    // Start (or restart) the resend cooldown so users don't spam OTP sends.
+    const startResendCountdown = (secs = 30) => {
+        clearInterval(resendTimerRef.current);
+        setResendIn(secs);
+        resendTimerRef.current = setInterval(() => {
+            setResendIn((s) => {
+                if (s <= 1) { clearInterval(resendTimerRef.current); return 0; }
+                return s - 1;
+            });
+        }, 1000);
+    };
+
+    // Core: ask the backend to send an OTP to the user's WhatsApp.
+    // Shared by the initial "Verify" and the "Resend code" action.
+    const requestPhoneOtp = async () => {
+        const digits = (profile.phoneNumber || "").replace(/\D/g, "");
+        if (!/^\d{10}$/.test(digits)) {
+            toast.error("Add a valid 10-digit phone number first.");
+            return false;
+        }
+        try {
+            await sendPhoneOtpApi();
+            startResendCountdown(30);
+            return true;
+        } catch (error) {
+            toast.error(error.response?.data?.message || "Couldn't send the code. Please try again.");
+            return false;
+        }
+    };
+
+    // Step 1: initial send (from the amber "Verify" button).
+    const startPhoneVerify = async () => {
+        if (phoneVerifyStep !== "idle") return; // guard against double-clicks
+        setPhoneVerifyStep("sending");
+        const ok = await requestPhoneOtp();
+        if (ok) {
+            setPhoneVerifyStep("otp");
+            toast.success("Code sent via SMS.");
+        } else {
+            resetPhoneVerify();
+        }
+    };
+
+    // Resend the code (only when the cooldown has elapsed).
+    const resendPhoneOtp = async () => {
+        if (resendIn > 0 || phoneVerifyStep === "verifying") return;
+        setPhoneOtp("");
+        setPhoneVerifyStep("sending");
+        const ok = await requestPhoneOtp();
+        setPhoneVerifyStep("otp");
+        if (ok) toast.success("A new code has been sent.");
+    };
+
+    // Step 2: confirm the entered code with the backend.
+    const confirmPhoneVerify = async () => {
+        if (!/^\d{6}$/.test(phoneOtp)) {
+            toast.error("Enter the 6-digit code.");
+            return;
+        }
+        setPhoneVerifyStep("verifying");
+        try {
+            const { data } = await verifyPhoneApi(phoneOtp);
+            setProfile((p) => ({ ...p, phoneVerified: true }));
+            if (onUserUpdated && data?.user) onUserUpdated(data.user);
+            toast.success("Phone number verified!");
+            resetPhoneVerify();
+        } catch (error) {
+            console.error("Phone verify confirm failed:", error);
+            toast.error(error.response?.data?.message || "Verification failed. Please try again.");
+            setPhoneVerifyStep("otp");
+        }
+    };
+
+    // ---- Inline phone-number edit (only the phone, nothing else) ----
+    const startEditPhone = () => {
+        resetPhoneVerify();            // cancel any in-flight verification
+        setPhoneDraft(profile.phoneNumber || "");
+        setEditingPhone(true);
+    };
+    const cancelEditPhone = () => {
+        setEditingPhone(false);
+        setPhoneDraft("");
+    };
+    const savePhone = async () => {
+        if (!/^\d{10}$/.test(phoneDraft)) return toast.error("Phone number must be 10 digits");
+        if (phoneDraft === profile.phoneNumber) { setEditingPhone(false); return; }
+        setSavingPhone(true);
+        try {
+            // Update ONLY the phone number. Changing it resets phoneVerified on
+            // the backend, so the "Verify" button reappears for the new number.
+            const { data } = await updateProfile({ phoneNumber: phoneDraft });
+            setProfile(data.user);
+            if (onUserUpdated) onUserUpdated(data.user);
+            setEditingPhone(false);
+            toast.success("Phone number updated!");
+        } catch (error) {
+            toast.error(error.response?.data?.message || "Failed to update phone number");
+        } finally {
+            setSavingPhone(false);
         }
     };
 
@@ -369,7 +496,7 @@ const ProfilePage = ({ onOpenSidebar, onUserUpdated, onNavigate }) => {
 
     // Verification + trust score (derived from existing profile data).
     const emailVerified = !!profile.isVerified;
-    const phoneVerified = !!profile.phoneNumber;
+    const phoneVerified = !!profile.phoneVerified;
     const universityVerified = /@paruluniversity\.ac\.in$/i.test(profile.email || "");
     const idVerified = !!profile.isDriverVerified;
     const verifs = [
@@ -526,11 +653,82 @@ const ProfilePage = ({ onOpenSidebar, onUserUpdated, onNavigate }) => {
                             <div className="pf-input-wrap">
                                 <FieldIcon>{I.phone}</FieldIcon>
                                 <input id="pf-phone" className="pf-input" type="tel" inputMode="numeric" maxLength={10}
-                                    value={editing ? form.phoneNumber : profile.phoneNumber}
-                                    onChange={(e) => setForm((f) => ({ ...f, phoneNumber: e.target.value.replace(/\D/g, "").slice(0, 10) }))}
-                                    disabled={!editing || savingProfile} autoComplete="tel" />
-                                {!editing && phoneVerified && <span className="pf-readonly-tag verified">Verified</span>}
+                                    value={editingPhone ? phoneDraft : (editing ? form.phoneNumber : profile.phoneNumber)}
+                                    onChange={(e) => {
+                                        const v = e.target.value.replace(/\D/g, "").slice(0, 10);
+                                        if (editingPhone) setPhoneDraft(v);
+                                        else setForm((f) => ({ ...f, phoneNumber: v }));
+                                    }}
+                                    disabled={!(editing || editingPhone) || savingProfile || savingPhone} autoComplete="tel" />
+
+                                {/* Inline phone-only edit controls */}
+                                {editingPhone && (
+                                    <span className="pf-phone-edit-actions">
+                                        <button type="button" className="pf-verify-confirm" onClick={savePhone}
+                                            disabled={savingPhone || phoneDraft.length !== 10}>
+                                            {savingPhone ? "Saving…" : "Save"}
+                                        </button>
+                                        <button type="button" className="pf-verify-cancel" onClick={cancelEditPhone} disabled={savingPhone}>
+                                            Cancel
+                                        </button>
+                                    </span>
+                                )}
+
+                                {/* Verified tag / Verify + Edit affordances (only when not editing) */}
+                                {!editing && !editingPhone && phoneVerified && <span className="pf-readonly-tag verified">Verified</span>}
+                                {!editing && !editingPhone && phoneVerifyStep === "idle" && (
+                                    <span className="pf-phone-inline-btns">
+                                        {!phoneVerified && profile.phoneNumber && (
+                                            <button type="button" className="pf-verify-btn" onClick={startPhoneVerify}>
+                                                Verify
+                                            </button>
+                                        )}
+                                        <button type="button" className="pf-phone-edit-btn" onClick={startEditPhone} title="Edit phone number" aria-label="Edit phone number">
+                                            <Svg size={14}>{I.edit}</Svg>
+                                        </button>
+                                    </span>
+                                )}
                             </div>
+
+                            {/* Inline OTP verification panel */}
+                            {!editing && !phoneVerified && phoneVerifyStep !== "idle" && (
+                                <div className="pf-phone-verify">
+                                    {phoneVerifyStep === "sending" && (
+                                        <span className="pf-verify-hint">Sending code via SMS…</span>
+                                    )}
+                                    {(phoneVerifyStep === "otp" || phoneVerifyStep === "verifying") && (
+                                        <>
+                                            <span className="pf-verify-hint">Enter the 6-digit code sent via SMS to +91 {profile.phoneNumber}</span>
+                                            <div className="pf-verify-row">
+                                                <input
+                                                    className="pf-input pf-otp-input"
+                                                    type="text"
+                                                    inputMode="numeric"
+                                                    maxLength={6}
+                                                    placeholder="123456"
+                                                    value={phoneOtp}
+                                                    onChange={(e) => setPhoneOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                                                    disabled={phoneVerifyStep === "verifying"}
+                                                />
+                                                <button type="button" className="pf-verify-confirm"
+                                                    onClick={confirmPhoneVerify}
+                                                    disabled={phoneVerifyStep === "verifying" || phoneOtp.length !== 6}>
+                                                    {phoneVerifyStep === "verifying" ? "Verifying…" : "Confirm"}
+                                                </button>
+                                                <button type="button" className="pf-verify-cancel"
+                                                    onClick={resetPhoneVerify} disabled={phoneVerifyStep === "verifying"}>
+                                                    Cancel
+                                                </button>
+                                            </div>
+                                            <button type="button" className="pf-verify-resend"
+                                                onClick={resendPhoneOtp}
+                                                disabled={resendIn > 0 || phoneVerifyStep === "verifying"}>
+                                                {resendIn > 0 ? `Resend code in ${resendIn}s` : "Resend code"}
+                                            </button>
+                                        </>
+                                    )}
+                                </div>
+                            )}
                         </div>
 
                         <div className="pf-row">

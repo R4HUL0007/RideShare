@@ -13,7 +13,10 @@ const {
     updateProfile,
     changePassword,
     updateNotificationPrefs,
-    refreshSession
+    refreshSession,
+    sendPhoneOtp,
+    verifyPhone,
+    getPublicConfig
 } = require("../controllers/authController");
 const { protect } = require("../middleware/authMiddleware");
 const { rateLimit } = require("../middleware/rateLimit");
@@ -41,8 +44,12 @@ router.post("/reset-password", otpVerifyLimiter, resetPassword);
 router.post("/refresh", refreshLimiter, refreshSession);
 router.get("/me", protect, getCurrentUser);
 router.put("/profile", protect, updateProfile);
+router.post("/phone/send-otp", protect, otpSendLimiter, sendPhoneOtp);
+router.post("/phone/verify", protect, otpVerifyLimiter, verifyPhone);
 router.put("/change-password", protect, changePassword);
 router.put("/notification-prefs", protect, updateNotificationPrefs);
 router.post("/logout", logoutUser);
+// Public runtime config (e.g. whether phone verification is enforced).
+router.get("/config", getPublicConfig);
 
 module.exports = router;

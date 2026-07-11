@@ -9,6 +9,8 @@ const { haversineKm } = require("../utils/geo");
 const { computeSegmentFare } = require("../utils/partialFare");
 const { findUnpaidCompletedRide } = require("../utils/unpaidGuard");
 const { validateManualCompletion, finalizeCompletion } = require("../utils/rideCompletion");
+const { maskRideContacts, maskRidesContacts } = require("../utils/maskContacts");
+const { phoneVerificationRequired } = require("../utils/phoneGate");
 
 // Fire-and-forget search logging for recommendations + demand insights.
 function logSearch({ userId, role, destination, source, pSrc, pDst, resultCount }) {
@@ -48,6 +50,14 @@ exports.createRide = async (req, res) => {
             return res.status(403).json({
                 message: "Driver verification is required before creating rides. Please complete your verification.",
                 code: "VERIFICATION_REQUIRED",
+            });
+        }
+
+        // ---- Phone verification gate (when enabled) ----
+        if (phoneVerificationRequired() && !user.phoneVerified) {
+            return res.status(403).json({
+                message: "Please verify your phone number before creating rides.",
+                code: "PHONE_VERIFICATION_REQUIRED",
             });
         }
 
@@ -230,7 +240,7 @@ exports.findRides = async (req, res) => {
             if (rides.length === 0) {
                 return res.status(404).json({ message: "No rides found matching the criteria" });
             }
-            return res.status(200).json(rides);
+            return res.status(200).json(maskRidesContacts(rides, userId));
         }
 
         // ===================================================
@@ -291,7 +301,7 @@ exports.findRides = async (req, res) => {
         if (results.length === 0) {
             return res.status(404).json({ message: "No rides found matching the criteria" });
         }
-        return res.status(200).json(results);
+        return res.status(200).json(maskRidesContacts(results, userId));
     } catch (error) {
         console.error("Error in findRides:", error);
         res.status(500).json({ message: "Server error", error: error.message });
@@ -323,6 +333,14 @@ exports.bookRide = async (req, res) => {
         // A driver cannot book their own ride.
         if (ride.user_id.toString() === userId) {
             return res.status(400).json({ message: "You can't book your own ride." });
+        }
+
+        // ---- Phone verification gate (when enabled) ----
+        if (phoneVerificationRequired() && !req.user.phoneVerified) {
+            return res.status(403).json({
+                message: "Please verify your phone number before booking a ride.",
+                code: "PHONE_VERIFICATION_REQUIRED",
+            });
         }
 
         // Women's-safety rule: male passengers cannot book female-only rides.
@@ -638,7 +656,7 @@ exports.getRideHistory = async (req, res) => {
             return res.status(404).json({ message: "No past rides found" });
         }
 
-        res.status(200).json(rides);
+        res.status(200).json(maskRidesContacts(rides, userId));
     } catch (error) {
         res.status(500).json({ message: "Server error", error: error.message });
     }
@@ -666,7 +684,7 @@ exports.getUserRides = async (req, res) => {
             return res.status(404).json({ message: "No rides created yet." });
         }
 
-        res.status(200).json(rides);
+        res.status(200).json(maskRidesContacts(rides, userId));
     } catch (error) {
         console.error("Error in getUserRides:", error);
         res.status(500).json({
@@ -693,7 +711,7 @@ exports.getMyBookings = async (req, res) => {
             return res.status(404).json({ message: "No booked rides found." });
         }
 
-        res.status(200).json(rides);
+        res.status(200).json(maskRidesContacts(rides, userId));
     } catch (error) {
         console.error("Error in getMyBookings:", error);
         res.status(500).json({
@@ -843,11 +861,12 @@ exports.removePassenger = async (req, res) => {
         const updatedRide = await Ride.findById(rideId)
             .populate('vehicle_id')
             .populate('user_id', 'name email phoneNumber role profilePicture ratings isDriverVerified')
-            .populate('passengers.user_id', 'name email phoneNumber profilePicture ratings');
+            .populate('passengers.user_id', 'name email phoneNumber profilePicture ratings')
+            .lean();
 
         res.status(200).json({ 
             message: "Passenger removed successfully", 
-            ride: updatedRide 
+            ride: maskRideContacts(updatedRide, req.user.id) 
         });
     } catch (error) {
         console.error("Error in removePassenger:", error);

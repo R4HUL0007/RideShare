@@ -24,7 +24,15 @@ function App() {
             <ErrorBoundary>
                 <AppRouter />
             </ErrorBoundary>
-            <ToastContainer position="top-right" autoClose={3000} />
+            <ToastContainer
+                position="top-right"
+                autoClose={3000}
+                theme="dark"
+                newestOnTop
+                closeOnClick
+                pauseOnHover
+                draggable={false}
+            />
             <InstallPrompt />
             {updateReg && (
                 <div className="pwa-update" role="alert">

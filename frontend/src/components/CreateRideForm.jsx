@@ -288,6 +288,15 @@ const CreateRideForm = ({ onSuccess, onOpenSidebar, onNavigate }) => {
                 return;
             }
 
+            // Phone verification gate — send them to Profile to verify.
+            if (error.response?.data?.code === "PHONE_VERIFICATION_REQUIRED") {
+                const msg = error.response.data.message || "Please verify your phone number before creating rides.";
+                setError(msg);
+                toast.info(msg, { autoClose: 5000 });
+                if (onNavigate) onNavigate("profile");
+                return;
+            }
+
             // Any non-verification error means the ride was NOT created. Do not
             // falsely report success — surface the failure so the user can retry.
             const errorMessage =
@@ -725,9 +734,15 @@ const CreateRideForm = ({ onSuccess, onOpenSidebar, onNavigate }) => {
 
                 {/* ---- Left column: the form ---- */}
                 <div className="cr-form-col">
+                    {/* Vehicle first — the rest of the form is gated behind
+                        having a vehicle selected/registered (can't set a route,
+                        timing or price without a vehicle to offer). */}
+                    {vehicleCard}
+
+                    {hasVehicle && (
+                    <>
                     {routeCard}
                     {tripCard}
-                    {vehicleCard}
 
                     {/* ---- Submit ---- */}
                     <div className="cr-actions">
@@ -755,6 +770,19 @@ const CreateRideForm = ({ onSuccess, onOpenSidebar, onNavigate }) => {
                             )}
                         </button>
                     </div>
+                    </>
+                    )}
+
+                    {/* No vehicle → gate the route/timing/price behind it. */}
+                    {!hasVehicle && (
+                        <div className="cr-card">
+                            <p className="cr-hint" style={{ textAlign: "center", margin: 0 }}>
+                                {vehicles.length === 0
+                                    ? "Register a vehicle above to set your route, timing and price."
+                                    : "Select a vehicle above to continue."}
+                            </p>
+                        </div>
+                    )}
                 </div>
 
                 {/* ---- Right column: route preview ---- */}

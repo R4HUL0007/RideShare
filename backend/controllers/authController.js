@@ -5,6 +5,18 @@ const { OAuth2Client } = require("google-auth-library");
 const User = require("../models/User");
 const { sendOTPEmail } = require("../utils/emailService");
 const { isSafeHttpUrl } = require("../utils/sanitize");
+const { isApitxtEnabled, sendApitxtOtp } = require("../config/apitxt");
+const { isMessageCentralEnabled, sendMcOtp, validateMcOtp } = require("../config/messageCentral");
+const { phoneVerificationRequired } = require("../utils/phoneGate");
+
+// Public runtime config for the client (no auth, no secrets).
+exports.getPublicConfig = (req, res) => {
+    res.json({ requirePhoneVerification: phoneVerificationRequired() });
+};
+
+// Which SMS OTP provider to use: "messagecentral" (provider-managed OTP) or
+// "apitxt" (self-managed OTP). Defaults to apitxt.
+const phoneOtpProvider = () => (process.env.PHONE_OTP_PROVIDER || "apitxt").toLowerCase();
 const RefreshToken = require("../models/RefreshToken");
 const {
     signAccessToken, issueRefreshToken, setAuthCookies, clearAuthCookies,
@@ -32,6 +44,7 @@ const publicUser = (user) => ({
     username: user.username,
     email: user.email,
     role: user.role,
+    phoneVerified: user.phoneVerified || false,
 });
 
 // Issue a fresh session: a short-lived access token + a rotating refresh token,
@@ -663,6 +676,7 @@ exports.getCurrentUser = async (req, res) => {
             username: user.username,
             email: user.email,
             phoneNumber: user.phoneNumber,
+            phoneVerified: user.phoneVerified || false,
             role: user.role,
             gender: user.gender,
             authProvider: user.authProvider,
@@ -677,6 +691,179 @@ exports.getCurrentUser = async (req, res) => {
             createdAt: user.createdAt,
         });
     } catch (error) {
+        res.status(500).json({ message: "Server error", error: error.message });
+    }
+};
+
+// Public user shape returned after a phone-verify state change.
+const publicPhoneUser = (user) => ({
+    _id: user.id,
+    name: user.name,
+    username: user.username,
+    email: user.email,
+    phoneNumber: user.phoneNumber,
+    phoneVerified: user.phoneVerified || false,
+    role: user.role,
+    gender: user.gender,
+    authProvider: user.authProvider,
+    profilePicture: user.profilePicture || "",
+    notificationPrefs: user.notificationPrefs,
+    createdAt: user.createdAt,
+});
+
+// Step 1: send a phone-verification OTP over SMS. The OTP is NEVER logged or
+// returned to the client — only delivered by SMS. Two provider modes:
+//   - "messagecentral": the provider generates + delivers the code; we store its
+//     verificationId to validate against later.
+//   - "apitxt": we generate the code (hashed + short expiry) and APITxT delivers it.
+exports.sendPhoneOtp = async (req, res) => {
+    const provider = phoneOtpProvider();
+
+    try {
+        const enabled = provider === "messagecentral" ? isMessageCentralEnabled() : isApitxtEnabled();
+        if (!enabled) {
+            return res.status(503).json({ message: "Phone verification is not configured on the server" });
+        }
+
+        const user = await User.findById(req.user.id);
+        if (!user) return res.status(404).json({ message: "User not found" });
+        if (user.phoneVerified) {
+            return res.status(400).json({ message: "Your phone is already verified" });
+        }
+
+        const digits = (user.phoneNumber || "").replace(/\D/g, "");
+        if (!/^\d{10}$/.test(digits)) {
+            return res.status(400).json({ message: "Add a valid 10-digit phone number first." });
+        }
+
+        const expiryMin = Number(process.env.PHONE_OTP_EXPIRY_MINUTES) || 3;
+        const expiry = new Date(Date.now() + expiryMin * 60 * 1000);
+
+        // Provider-managed send (Message Central generates + delivers the OTP).
+        const sendViaMc = async () => {
+            const { verificationId } = await sendMcOtp(digits, "91");
+            user.phoneVerificationId = verificationId;
+            user.phoneOtp = undefined;           // ensure only one provider's state is set
+            user.phoneOtpAttempts = 0;
+            user.phoneOtpExpiry = expiry;
+            await user.save();
+        };
+        // Self-managed send (we generate + hash the OTP; APITxT delivers it).
+        const sendViaApitxt = async () => {
+            const otp = generateOTP();
+            const otpHash = await bcrypt.hash(otp, 10);
+            user.phoneOtp = otpHash;
+            user.phoneVerificationId = undefined; // ensure only one provider's state is set
+            user.phoneOtpExpiry = expiry;
+            user.phoneOtpAttempts = 0;
+            await user.save();
+            await sendApitxtOtp(`91${digits}`, otp);
+        };
+
+        if (provider === "messagecentral" && isMessageCentralEnabled()) {
+            try {
+                await sendViaMc();
+            } catch (err) {
+                console.error("Message Central OTP send failed:", err?.details || err.message);
+                // Auto-fallback to APITxT when available (e.g. MC credits exhausted).
+                if (isApitxtEnabled()) {
+                    try {
+                        await sendViaApitxt();
+                        console.warn("Phone OTP: fell back to APITxT after Message Central failure.");
+                    } catch (err2) {
+                        console.error("APITxT fallback send failed:", err2?.details || err2.message);
+                        return res.status(502).json({ message: "Couldn't send the code. Please try again." });
+                    }
+                } else {
+                    return res.status(502).json({ message: "Couldn't send the code. Please try again." });
+                }
+            }
+        } else {
+            // APITxT primary (or MC not configured).
+            try {
+                await sendViaApitxt();
+            } catch (err) {
+                console.error("APITxT OTP send failed:", err?.details || err.message);
+                return res.status(502).json({ message: "Couldn't send the code. Please try again." });
+            }
+        }
+
+        return res.json({ message: "Verification code sent via SMS.", expiresInMin: expiryMin });
+    } catch (error) {
+        console.error("Error in sendPhoneOtp:", error?.message || error);
+        return res.status(502).json({ message: "Couldn't send the code. Please try again." });
+    }
+};
+
+// Step 2: verify the OTP the user entered and, on success, mark phone verified.
+exports.verifyPhone = async (req, res) => {
+    const { otp } = req.body;
+
+    try {
+        const user = await User.findById(req.user.id).select("-password");
+        if (!user) return res.status(404).json({ message: "User not found" });
+        if (user.phoneVerified) {
+            return res.json({ message: "Your phone is already verified", user: publicPhoneUser(user) });
+        }
+        if (!/^\d{4,8}$/.test(String(otp || ""))) {
+            return res.status(400).json({ message: "Enter the code from the SMS." });
+        }
+
+        // Branch on which provider actually sent the current code (robust to the
+        // auto-fallback): a stored verificationId → Message Central; otherwise a
+        // stored hash → APITxT.
+        if (user.phoneVerificationId) {
+            // Provider-managed: validate the code against the stored verificationId.
+            let result;
+            try {
+                result = await validateMcOtp(user.phoneVerificationId, otp);
+            } catch (err) {
+                console.error("Message Central validate failed:", err?.details || err.message);
+                return res.status(502).json({ message: "Verification failed. Please try again." });
+            }
+            if (!result.ok) {
+                // Wrong/expired code — let the user retry (or resend).
+                return res.status(400).json({ message: "Invalid or expired code. Please try again." });
+            }
+            user.phoneVerified = true;
+            user.phoneVerificationId = undefined;
+            user.phoneOtpExpiry = undefined;
+            await user.save();
+            return res.json({ message: "Phone number verified successfully!", user: publicPhoneUser(user) });
+        }
+
+        // Self-managed (APITxT): compare against our stored hash.
+        if (!user.phoneOtp || !user.phoneOtpExpiry) {
+            return res.status(400).json({ message: "No code requested. Please request a code first." });
+        }
+        if (new Date() > user.phoneOtpExpiry) {
+            return res.status(400).json({ message: "Code expired. Please resend." });
+        }
+
+        const ok = await bcrypt.compare(String(otp || ""), user.phoneOtp);
+        if (!ok) {
+            const attempts = (user.phoneOtpAttempts || 0) + 1;
+            if (attempts >= OTP_MAX_ATTEMPTS) {
+                user.phoneOtp = undefined;
+                user.phoneOtpExpiry = undefined;
+                user.phoneOtpAttempts = 0;
+                await user.save();
+                return res.status(429).json({ message: "Too many incorrect attempts. Please request a new code." });
+            }
+            user.phoneOtpAttempts = attempts;
+            await user.save();
+            return res.status(400).json({ message: "Invalid OTP" });
+        }
+
+        user.phoneVerified = true;
+        user.phoneOtp = undefined;
+        user.phoneOtpExpiry = undefined;
+        user.phoneOtpAttempts = 0;
+        await user.save();
+
+        return res.json({ message: "Phone number verified successfully!", user: publicPhoneUser(user) });
+    } catch (error) {
+        console.error("Error in verifyPhone:", error);
         res.status(500).json({ message: "Server error", error: error.message });
     }
 };
@@ -699,6 +886,14 @@ exports.updateProfile = async (req, res) => {
                 return res.status(400).json({ message: "Phone number must be 10 digits" });
             }
             updates.phoneNumber = phoneNumber;
+            // Changing the number invalidates any prior phone verification — the
+            // new number hasn't been proven to belong to the user. Only reset when
+            // it actually differs so a no-op save (e.g. editing just the name)
+            // doesn't wipe an existing verification.
+            const current = await User.findById(req.user.id).select("phoneNumber");
+            if (current && current.phoneNumber !== phoneNumber) {
+                updates.phoneVerified = false;
+            }
         }
         if (gender !== undefined) {
             if (!["Male", "Female"].includes(gender)) {
@@ -723,6 +918,7 @@ exports.updateProfile = async (req, res) => {
                 username: user.username,
                 email: user.email,
                 phoneNumber: user.phoneNumber,
+                phoneVerified: user.phoneVerified || false,
                 role: user.role,
                 gender: user.gender,
                 authProvider: user.authProvider,

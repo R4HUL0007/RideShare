@@ -5,7 +5,11 @@ import axiosInstance from "../utils/axiosConfig";
 import { getUserVehicles } from "../services/vehicleService";
 import { getMyImpact } from "../services/sustainabilityService";
 import { logoutUser } from "../services/authService";
+import { getSuggestions, removeSearch, clearSearches } from "../services/suggestionsService";
 import { clearAuthTokens, clearAppCaches } from "../utils/authToken";
+
+// One-shot bridge: DashboardHome writes a prefill FindRides reads on mount.
+const FIND_PREFILL_KEY = "rs_find_prefill";
 import { API_BASE_URL } from "../utils/constants";
 import carImg from "../assets/images/Car.png";
 import "../styles/dashboardHome.css";
@@ -105,6 +109,50 @@ const DashboardHome = ({ user, onNavigate, onOpenSidebar }) => {
     const [menuOpen, setMenuOpen] = useState(false);
     const menuRef = useRef(null);
     const navigate = useNavigate();
+
+    // ---- Smart Ride Suggestions (rule-based; additive, degrades gracefully) ----
+    const [sugg, setSugg] = useState({ smartCard: null, favoritePlaces: [], frequentDestinations: [], recentSearches: [] });
+
+    useEffect(() => {
+        let active = true;
+        const load = (coords) => {
+            const now = new Date();
+            getSuggestions({ lat: coords?.lat, lng: coords?.lng, hour: now.getHours(), day: now.getDay() })
+                .then((d) => { if (active) setSugg(d); })
+                .catch(() => { /* swallow */ });
+        };
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (pos) => load({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+                () => load(null),
+                { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
+            );
+        } else {
+            load(null);
+        }
+        return () => { active = false; };
+    }, []);
+
+    // One-tap: prefill FindRides with a destination (+ optional pickup) and go.
+    const startFind = ({ destination, destinationCoords, source, sourceCoords }) => {
+        try {
+            localStorage.setItem(FIND_PREFILL_KEY, JSON.stringify({ destination, destinationCoords, source, sourceCoords, ts: Date.now() }));
+        } catch { /* ignore */ }
+        onNavigate("findRides");
+    };
+    const coordOrNull = (o) => (o && Number.isFinite(o.lat) && Number.isFinite(o.lng) ? { lat: o.lat, lng: o.lng } : null);
+    const handleRemoveRecent = async (id) => {
+        const listRes = await removeSearch(id);
+        setSugg((s) => ({ ...s, recentSearches: Array.isArray(listRes) ? listRes : s.recentSearches.filter((x) => x._id !== id) }));
+    };
+    const handleClearRecent = async () => {
+        setSugg((s) => ({ ...s, recentSearches: [] }));
+        await clearSearches();
+    };
+    const greetingWord = (() => {
+        const h = new Date().getHours();
+        return h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
+    })();
 
     useEffect(() => {
         let active = true;
@@ -315,6 +363,80 @@ const DashboardHome = ({ user, onNavigate, onOpenSidebar }) => {
                             <img className="dh-hero-carimg" src={carImg} alt="" />
                         </div>
                     </section>
+
+                    {/* ---------- Smart suggestion card (rule-based) ---------- */}
+                    {sugg.smartCard && (
+                        <section className="dh-section dh-rise">
+                            <div
+                                className="dh-card dh-smart"
+                                role="button"
+                                tabIndex={0}
+                                onClick={() => startFind({ destination: sugg.smartCard.destination, destinationCoords: coordOrNull(sugg.smartCard.destCoords) })}
+                            >
+                                <div className="dh-smart-greet">{greetingWord}, {firstName} 👋</div>
+                                <div className="dh-smart-label">Suggested ride</div>
+                                <div className="dh-smart-route">
+                                    <span className="dh-smart-dot pickup" />
+                                    <strong>{sugg.smartCard.origin || "Your location"}</strong>
+                                </div>
+                                <div className="dh-smart-conn" />
+                                <div className="dh-smart-route">
+                                    <span className="dh-smart-dot drop" />
+                                    <strong>{sugg.smartCard.destination}</strong>
+                                </div>
+                                <div className="dh-smart-reason">{sugg.smartCard.reason}</div>
+                                <button
+                                    className="dh-next-cta"
+                                    onClick={(e) => { e.stopPropagation(); startFind({ destination: sugg.smartCard.destination, destinationCoords: coordOrNull(sugg.smartCard.destCoords) }); }}
+                                >
+                                    Book this ride <Svg size={15}>{I.chevron}</Svg>
+                                </button>
+                            </div>
+                        </section>
+                    )}
+
+                    {/* ---------- Recent searches ---------- */}
+                    {sugg.recentSearches.length > 0 && (
+                        <section className="dh-section dh-rise">
+                            <div className="dh-section-head">
+                                <h2 className="dh-section-title">Recent Searches</h2>
+                                <button className="dh-link" onClick={handleClearRecent}>Clear all</button>
+                            </div>
+                            <div className="dh-recent-list">
+                                {sugg.recentSearches.map((r) => (
+                                    <div
+                                        key={r._id}
+                                        className="dh-recent-row"
+                                        role="button"
+                                        tabIndex={0}
+                                        onClick={() => startFind({ destination: r.destination?.label, destinationCoords: coordOrNull(r.destination), source: r.pickup?.label, sourceCoords: coordOrNull(r.pickup) })}
+                                    >
+                                        <span className="dh-recent-ic"><Svg size={15}>{I.search}</Svg></span>
+                                        <span className="dh-recent-text">{r.pickup?.label || "My location"} → {r.destination?.label || "—"}</span>
+                                        <button className="dh-recent-x" aria-label="Remove" onClick={(e) => { e.stopPropagation(); handleRemoveRecent(r._id); }}>×</button>
+                                    </div>
+                                ))}
+                            </div>
+                        </section>
+                    )}
+
+                    {/* ---------- Favorite places ---------- */}
+                    {sugg.favoritePlaces.length > 0 && (
+                        <section className="dh-section dh-rise">
+                            <h2 className="dh-section-title">Favorite Places</h2>
+                            <div className="dh-fav-list">
+                                {sugg.favoritePlaces.map((f) => (
+                                    <button
+                                        key={f._id}
+                                        className="dh-fav-chip"
+                                        onClick={() => startFind({ destination: f.label, destinationCoords: coordOrNull(f.coords) })}
+                                    >
+                                        <Svg size={14}>{I.pin}</Svg> <span>{f.label || "Saved place"}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        </section>
+                    )}
 
                     {/* ---------- Quick actions ---------- */}
                     <section className="dh-section">

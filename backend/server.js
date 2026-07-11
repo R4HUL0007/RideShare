@@ -236,6 +236,7 @@ app.use("/api/push", require("./routes/pushRoutes"));
 app.use("/api/recommendations", require("./routes/recommendationRoutes"));
 app.use("/api/sustainability", require("./routes/sustainabilityRoutes"));
 app.use("/api/recent-searches", require("./routes/recentSearchRoutes"));
+app.use("/api/suggestions", require("./routes/suggestionsRoutes"));
 
 // Start server
 const PORT = process.env.PORT || 5000;

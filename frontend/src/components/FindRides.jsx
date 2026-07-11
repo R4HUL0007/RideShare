@@ -11,6 +11,7 @@ import CurrentLocationButton from "./maps/CurrentLocationButton";
 import LiveRideMap from "./maps/LiveRideMap";
 import ThemedSelect from "./ThemedSelect";
 import { getPaymentConfig, payForRide } from "../services/paymentService";
+import { recordSearch } from "../services/suggestionsService";
 import { CheckoutModal, PaymentSuccess, PaymentFailure } from "./payments/PaymentDialogs";
 import ReceiptModal from "./payments/ReceiptModal";
 import "../styles/findRides.css";
@@ -413,7 +414,9 @@ function RideDetailsPage({ ride, nearbyKm, onClose, onBook, booking }) {
                                     <DriverRating driver={driver} />
                                     {memberSince ? ` · Member since ${memberSince}` : ""}
                                 </div>
-                                {driver.phoneNumber && <div className="fr-sheet-sub">{driver.phoneNumber}</div>}
+                                {driver.phoneNumber
+                                    ? <div className="fr-sheet-sub">{driver.phoneNumber}</div>
+                                    : <div className="fr-sheet-sub fr-contact-locked">🔒 Contact unlocks after you book</div>}
                             </div>
                         </div>
                     </div>
@@ -630,6 +633,28 @@ const FindRidesInner = ({ onOpenSidebar, onNavigate, user }) => {
         );
     }, []);
 
+    // One-tap prefill bridge from the homepage smart suggestions: prefill the
+    // search fields and auto-run the search once. Mirrors the CREATE_PREFILL_KEY
+    // pattern; purely additive.
+    const [autoSearch, setAutoSearch] = useState(false);
+    useEffect(() => {
+        try {
+            const raw = localStorage.getItem("rs_find_prefill");
+            if (!raw) return;
+            localStorage.removeItem("rs_find_prefill");
+            const p = JSON.parse(raw);
+            if (p.ts && Date.now() - p.ts > 5 * 60 * 1000) return;
+            setFilters((f) => ({
+                ...f,
+                destination: p.destination || f.destination,
+                destinationCoords: p.destinationCoords || f.destinationCoords,
+                source: p.source || f.source,
+                sourceCoords: p.sourceCoords || f.sourceCoords,
+            }));
+            if (p.destination) setAutoSearch(true);
+        } catch { /* ignore */ }
+    }, []);
+
     const doSearch = useCallback(async (e) => {
         if (e) e.preventDefault();
         if (!filters.destination.trim()) {
@@ -639,6 +664,11 @@ const FindRidesInner = ({ onOpenSidebar, onNavigate, user }) => {
         setLoading(true);
         setSearched(true);
         setSelectedRide(null);
+        // Record for Smart Suggestions (fire-and-forget; never blocks search).
+        recordSearch(
+            { label: filters.source || "", lat: filters.sourceCoords?.lat, lng: filters.sourceCoords?.lng },
+            { label: filters.destination || "", lat: filters.destinationCoords?.lat, lng: filters.destinationCoords?.lng }
+        );
         try {
             const params = { destination: filters.destination, gender_preference: filters.gender };
             if (filters.date) params.timing = filters.date;
@@ -669,6 +699,14 @@ const FindRidesInner = ({ onOpenSidebar, onNavigate, user }) => {
         }
     }, [filters.destination, filters.gender, filters.date, filters.sourceCoords, filters.destinationCoords]);
 
+    // Auto-run the search once when arriving via a homepage one-tap prefill.
+    useEffect(() => {
+        if (autoSearch && filters.destination) {
+            setAutoSearch(false);
+            doSearch();
+        }
+    }, [autoSearch, filters.destination, doSearch]);
+
     const handleUseCurrentLocation = ({ coords, address }) => {
         setUserLocation(coords);
         setFilters((f) => ({ ...f, source: address || f.source, sourceCoords: coords }));
@@ -696,6 +734,9 @@ const FindRidesInner = ({ onOpenSidebar, onNavigate, user }) => {
             // 402 = the user has a completed ride they haven't paid for yet.
             if (error.response?.status === 402) {
                 toast.error(error.response.data?.message || "Please pay for your last completed ride first.", { autoClose: 6000 });
+            } else if (error.response?.data?.code === "PHONE_VERIFICATION_REQUIRED") {
+                toast.info("Please verify your phone number to book a ride.", { autoClose: 5000 });
+                onNavigate?.("profile");
             } else {
                 toast.error(error.response?.data?.message || "Failed to book ride.");
             }

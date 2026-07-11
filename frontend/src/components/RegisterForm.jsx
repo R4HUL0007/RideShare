@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { registerUser } from '../services/authService';
+import { registerUser, getPublicConfig } from '../services/authService';
 import { clearAuthTokens } from '../utils/authToken';
 import VerifyOTP from './VerifyOTP';
+import PhoneVerifyStep from './PhoneVerifyStep';
 import ThemedSelect from './ThemedSelect';
 import GoogleSignupButton from './GoogleSignupButton';
 import {
@@ -149,6 +150,7 @@ const RegisterForm = ({ onSwitchToLogin }) => {
     const [errors, setErrors] = useState({});
     const [touched, setTouched] = useState({});
     const [showOTPVerification, setShowOTPVerification] = useState(false);
+    const [showPhoneVerify, setShowPhoneVerify] = useState(false);
     const [registeredEmail, setRegisteredEmail] = useState('');
     const [pendingToken, setPendingToken] = useState('');
     const [loading, setLoading] = useState(false);
@@ -310,11 +312,25 @@ const RegisterForm = ({ onSwitchToLogin }) => {
         }
     };
 
-    const handleOTPVerified = () => {
+    const handleOTPVerified = async () => {
         // verifyOTP issues the session (access + refresh cookies; dev also
-        // persists the token), so the user is already logged in — send them
-        // straight to the dashboard instead of back to the login page.
-        toast.success('Email verified! Welcome to RidexShare.');
+        // persists the token), so the user is already logged in.
+        toast.success('Email verified!');
+        // If phone verification is enforced, require the SMS OTP step before the
+        // dashboard (the account already has the phone number from signup).
+        try {
+            const { data } = await getPublicConfig();
+            if (data?.requirePhoneVerification) {
+                setShowOTPVerification(false);
+                setShowPhoneVerify(true);
+                return;
+            }
+        } catch { /* if config fails, don't block signup */ }
+        navigate('/dashboard');
+    };
+
+    const handlePhoneVerified = () => {
+        toast.success('Welcome to RidexShare!');
         navigate('/dashboard');
     };
 
@@ -331,6 +347,10 @@ const RegisterForm = ({ onSwitchToLogin }) => {
             navigate('/dashboard');
         }
     };
+
+    if (showPhoneVerify) {
+        return <PhoneVerifyStep phoneNumber={formData.phoneNumber} onVerified={handlePhoneVerified} />;
+    }
 
     if (showOTPVerification) {
         return <VerifyOTP email={registeredEmail} pendingToken={pendingToken} onVerified={handleOTPVerified} />;

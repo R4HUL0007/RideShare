@@ -196,3 +196,50 @@
   .ov-root .otp-input:focus,
   .ov-root .btn:hover { transform: none; }
 }
+
+
+/* =======================================================
+   Phone verification step (signup 2nd OTP / mandatory verify)
+   Self-contained, dark-glass card matching the app theme.
+   ======================================================= */
+.pv-step {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 60vh; padding: 1.5rem;
+}
+.pv-card {
+  width: 100%; max-width: 24rem; text-align: center;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 1rem; padding: 2rem 1.6rem;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+}
+.pv-icon {
+  width: 3rem; height: 3rem; margin: 0 auto 1rem;
+  display: flex; align-items: center; justify-content: center;
+  color: #34d399; background: rgba(52, 211, 153, 0.14);
+  border-radius: 50%;
+}
+.pv-title { font-size: 1.3rem; font-weight: 800; color: #f4f4f5; margin: 0 0 0.4rem; }
+.pv-subtitle { font-size: 0.85rem; color: #9ca3af; margin: 0 0 1.3rem; line-height: 1.5; }
+.pv-subtitle strong { color: #f4f4f5; font-weight: 700; }
+.pv-input {
+  width: 100%; text-align: center; letter-spacing: 0.4em; font-weight: 700;
+  font-size: 1.1rem; padding: 0.8rem 1rem; margin-bottom: 1rem;
+  background: rgba(255, 255, 255, 0.06); color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.18); border-radius: 0.6rem;
+}
+.pv-input:focus { outline: none; border-color: #fff; box-shadow: 0 0 0 3px rgba(255,255,255,0.12); }
+.pv-input:disabled { opacity: 0.55; cursor: not-allowed; }
+.pv-btn {
+  width: 100%; padding: 0.8rem 1rem; font-size: 0.9rem; font-weight: 700;
+  color: #052e16; background: #34d399; border: none; border-radius: 0.6rem;
+  cursor: pointer; transition: background 0.15s ease;
+}
+.pv-btn:hover:not(:disabled) { background: #6ee7b7; }
+.pv-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.pv-resend {
+  margin-top: 1rem; background: none; border: none; cursor: pointer;
+  color: #93c5fd; font-size: 0.8rem; font-weight: 600;
+}
+.pv-resend:hover:not(:disabled) { color: #bfdbfe; text-decoration: underline; }
+.pv-resend:disabled { color: #6b7280; cursor: default; }

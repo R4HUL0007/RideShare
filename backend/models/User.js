@@ -15,6 +15,20 @@ const UserSchema = new mongoose.Schema({
     authProvider: { type: String, enum: ["local", "google"], default: "local" },
     googleId: { type: String },
     phoneNumber: { type: String, required: true },
+    // Phone ownership verified via a WhatsApp OTP challenge. Distinct from simply
+    // having a number on file — only true after the user enters the code we sent.
+    // Reset to false whenever the phone number is changed.
+    phoneVerified: { type: Boolean, default: false },
+    // Transient phone-verification OTP (bcrypt hash), its expiry, and a wrong-
+    // guess counter. Used by the self-managed OTP provider (APITxT), where we
+    // generate + verify the code ourselves. Kept separate from the email `otp`
+    // fields so the two flows never collide. Cleared on success/too many attempts.
+    phoneOtp: { type: String },
+    phoneOtpExpiry: { type: Date },
+    phoneOtpAttempts: { type: Number, default: 0 },
+    // For provider-managed OTP (Message Central), we only store the provider's
+    // verificationId between send and validate — the OTP itself never touches us.
+    phoneVerificationId: { type: String },
     role: { type: String, enum: ["Student", "Faculty"], required: true },
     gender: { type: String, enum: ["Male", "Female"], required: true },
     // Profile picture URL (e.g. a Cloudinary secure_url). Optional.

@@ -8,6 +8,11 @@ export const registerUser = async (userData) => {
     return await axios.post(`${API_BASE_URL}/auth/register`, userData);
 };
 
+// Public runtime config (e.g. whether phone verification is enforced).
+export const getPublicConfig = async () => {
+    return await axios.get(`${API_BASE_URL}/auth/config`);
+};
+
 export const verifyOTP = async (email, otp) => {
     return await axios.post(`${API_BASE_URL}/auth/verify-otp`, { email, otp });
 };

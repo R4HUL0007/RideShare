@@ -4,6 +4,7 @@ const User = require("../models/User");
 const { createNotification } = require("../utils/notify");
 const { haversineKm, validPoint, pointToRoute, decodePolyline, straightLine } = require("../utils/geo");
 const { CONFIG, metersToDestination, validateManualCompletion, finalizeCompletion } = require("../utils/rideCompletion");
+const { maskRideContacts } = require("../utils/maskContacts");
 
 // Normalize an id-ish value (ObjectId | populated doc | string) to a string.
 const idStr = (v) => {
@@ -62,6 +63,9 @@ exports.getTracking = async (req, res) => {
         if (!isParticipant(ride, userId)) {
             return res.status(403).json({ message: "You are not part of this ride" });
         }
+
+        // Reveal the driver's contact only to booked participants (defense in depth).
+        maskRideContacts(ride, userId);
 
         res.status(200).json({
             rideId: ride._id,

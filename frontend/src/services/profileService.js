@@ -32,6 +32,16 @@ export const updateNotificationPrefs = async (prefs) => {
     return await axiosInstance.put(`${API_BASE_URL}/auth/notification-prefs`, prefs);
 };
 
+// Request a phone-verification OTP (delivered to the user's WhatsApp).
+export const sendPhoneOtp = async () => {
+    return await axiosInstance.post(`${API_BASE_URL}/auth/phone/send-otp`);
+};
+
+// Confirm the OTP the user entered; on success the backend flips phoneVerified.
+export const verifyPhone = async (otp) => {
+    return await axiosInstance.post(`${API_BASE_URL}/auth/phone/verify`, { otp });
+};
+
 /**
  * Upload an image to Cloudinary via an UNSIGNED preset (client-side).
  * Returns the hosted secure_url. Throws on failure.
