@@ -2,6 +2,15 @@
 
 RideShare is a full-stack carpooling and ride-sharing platform built for a university community. It lets students and faculty share rides going the same way — drivers post trips, riders book a seat, and everyone splits the cost. The goal is simple: make everyday travel cheaper, safer, greener, and more social than riding alone.
 
+## 🚀 Live Demo
+
+**Try it now → [ridexshare.online](https://ridexshare.online)**
+
+- **Web app:** https://ridexshare.online
+- **API:** https://api.ridexshare.online
+
+> Installable as a PWA — open the site on your phone and "Add to Home Screen" for a native-app experience.
+
 ## What it does
 
 People heading in the same direction rarely find each other. RideShare connects them. A driver creates a ride with their route, time, available seats, and price per seat. Riders search for trips going their way, book a seat, pay securely, and track the ride in real time. Payments are held safely until the trip is done, both sides rate each other, and built-in safety tools are there if anything goes wrong.
@@ -15,24 +24,36 @@ People heading in the same direction rarely find each other. RideShare connects 
 
 ## Main features
 
-- **Accounts** — university-email sign-up with OTP verification and Google Sign-In.
-- **Rides** — create, search, and book shared rides with smart route matching and seat management.
-- **Secure payments** — online payments with an escrow system that holds money until the ride is completed, plus driver earnings and withdrawals.
-- **Real-time experience** — live ride tracking, in-app chat, and instant notifications.
-- **Safety & trust** — driver/vehicle verification, ride check-in codes, no-show protection, SOS with emergency contacts, and reviews/ratings.
-- **Smart assistant** — an AI helper that answers questions and can search, book, and track rides through conversation.
-- **Recommendations** — personalized ride suggestions for riders and demand insights for drivers.
+- **Accounts** — university-email sign-up with email OTP verification, optional **phone verification via SMS OTP**, and Google Sign-In.
+- **Rides** — create, search, and book shared rides with smart route matching and seat management; plus on-demand **personal ride requests** (Uber-style) that alert nearby drivers.
+- **Secure payments** — online payments with an escrow system that holds money until the ride is completed, auto-release protection window, disputes, and driver earnings + withdrawals.
+- **Real-time experience** — live ride tracking, in-app chat, and instant notifications over Socket.IO.
+- **Safety & trust** — driver/vehicle verification, ride check-in codes, no-show protection, **SOS with emergency contacts + live trip sharing**, and reviews/ratings.
+- **Privacy & moderation** — **contact numbers are masked** until a booking is confirmed, and chat automatically blocks shared phone numbers and abusive/violent language.
+- **Smart assistant** — an AI helper that answers questions and can search, book, and track rides through conversation (with content safeguards).
+- **Recommendations** — personalized ride suggestions based on your location, time, and travel habits, plus recent searches and favourite places.
 - **Sustainability** — a carbon-footprint dashboard showing the impact of sharing rides.
-- **Admin panel** — full management of users, rides, payments, disputes, withdrawals, reviews, and analytics.
+- **Admin panel** — full management of users, rides, payments, disputes, withdrawals, reviews, audit logs, and analytics.
 - **Installable app (PWA)** — works on mobile like a native app, with offline support and push notifications.
 
 ## Tech stack
 
-- **Backend** — Node.js, Express, MongoDB, Socket.io, Redis
-- **Frontend** — React, Vite, Tailwind CSS
-- **Integrations** — Razorpay (payments), Google Maps, Google OAuth, Cloudinary
+- **Backend** — Node.js, Express, MongoDB (Mongoose), Socket.IO, Redis
+- **Frontend** — React 19, Vite, Tailwind CSS, Google Maps
+- **Integrations** — Razorpay (payments), Google Maps + OAuth, Cloudinary (media), Message Central / APITxT (SMS OTP)
+
+## Deployment
+
+- **Frontend** — Cloudflare Pages (auto-deploys from `main`)
+- **Backend** — Northflank (auto-deploys from `main`)
+- **Database** — MongoDB Atlas
 
 ## Project structure
 
 - `backend/` — the API server, real-time layer, database models, and AI assistant
 - `frontend/` — the React web app (also installable as a PWA)
+
+## Testing
+
+- **Backend** — `cd backend && npm test` (Vitest: unit + integration, incl. full money-path state verification)
+- **End-to-end** — `cd e2e && npx playwright test` (auth, rides, payments/escrow, notifications, chat, safety, admin, security, rate-limiting)
