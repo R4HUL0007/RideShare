@@ -202,6 +202,11 @@
 .ch-map-close { background: transparent; border: none; color: var(--ch-muted); cursor: pointer; display: inline-flex; padding: 0.25rem; border-radius: 0.4rem; flex-shrink: 0; }
 .ch-map-close:hover { color: var(--ch-text); background: rgba(255,255,255,0.08); }
 .ch-map-body { height: clamp(320px, 55vh, 480px); width: 100%; background: #0f0f10; }
+.ch-map-route { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 0.7rem 1.1rem; border-top: 1px solid var(--ch-border); flex-wrap: wrap; }
+.ch-map-route-info { font-size: 0.82rem; color: var(--ch-text); font-weight: 600; }
+.ch-map-route-info.muted { color: var(--ch-muted); font-weight: 500; }
+.ch-map-route-link { font-size: 0.8rem; font-weight: 700; color: #60a5fa; text-decoration: none; }
+.ch-map-route-link:hover { text-decoration: underline; }
 .ch-map-msg { display: flex; align-items: center; justify-content: center; gap: 0.6rem; height: 100%; color: var(--ch-muted); font-size: 0.9rem; }
 
 /* location bubble is now a button — reset native styling */

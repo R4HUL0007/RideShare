@@ -116,6 +116,36 @@ exports.triggerSos = async (req, res) => {
     const io = req.app.get("io");
     const users = req.app.get("users") || {};
     try {
+        // Dedup: if the user already has an ACTIVE SOS, don't raise a new one and
+        // re-spam contacts/admins on every tap — just refresh its location and
+        // return the existing alert. A fresh SOS starts only after cancel/resolve.
+        const activeSos = await SosEvent.findOne({ user_id: req.user._id, status: "active" }).sort({ createdAt: -1 });
+        if (activeSos) {
+            if (lat != null || lng != null || address) {
+                activeSos.location = {
+                    lat: lat ?? activeSos.location?.lat ?? null,
+                    lng: lng ?? activeSos.location?.lng ?? null,
+                    address: address || activeSos.location?.address || "",
+                };
+                await activeSos.save();
+                if (io) {
+                    const admins = await User.find({ isAdmin: true }).select("_id").lean();
+                    admins.forEach((a) => io.to(idStr(a._id)).emit("safety:sos", {
+                        id: idStr(activeSos._id), user: req.user.name, at: activeSos.createdAt, location: activeSos.location, update: true,
+                    }));
+                }
+            }
+            return res.status(200).json({
+                message: "An SOS is already active — your location was updated. For immediate danger, call 112.",
+                sos: {
+                    _id: activeSos._id,
+                    trackingLink: activeSos.trackingLink,
+                    notifiedCount: (activeSos.notifiedContacts || []).length,
+                    alreadyActive: true,
+                },
+            });
+        }
+
         // Build a ride snapshot if a ride is provided.
         let rideSnapshot = {};
         let trackingLink = "";

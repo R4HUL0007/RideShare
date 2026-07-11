@@ -3,6 +3,7 @@ const Message = require("../models/Message");
 const Ride = require("../models/Ride");
 const User = require("../models/User");
 const { createNotification } = require("../utils/notify");
+const { moderateMessage } = require("../utils/moderation");
 
 // Normalize an id-ish value (ObjectId | populated doc | string) to a string.
 const idStr = (v) => {
@@ -215,6 +216,15 @@ exports.sendMessage = async (req, res) => {
         return res.status(400).json({ message: "Message text is required" });
     }
 
+    // Moderate text messages: strip phone numbers (anti-circumvention of contact
+    // masking) and mask abuse/violence. Location labels are provider-geocoded.
+    const moderated = isLocation
+        ? { text: null, redactedPhone: false, profane: false }
+        : moderateMessage(text.trim());
+    const safeText = moderated.text;
+    const contactRedacted = moderated.redactedPhone;
+    const profane = moderated.profane;
+
     if (!mongoose.Types.ObjectId.isValid(rideId) || !mongoose.Types.ObjectId.isValid(counterpartId)) {
         return res.status(400).json({ message: "Invalid ride or user id" });
     }
@@ -236,7 +246,7 @@ exports.sendMessage = async (req, res) => {
             sender: userId,
             receiver: counterpartId,
             type: isLocation ? "location" : "text",
-            text: isLocation ? (location?.address?.trim() || "📍 Shared location") : text.trim(),
+            text: isLocation ? (location?.address?.trim() || "📍 Shared location") : safeText,
         };
         if (isLocation) {
             doc.location = {
@@ -269,7 +279,7 @@ exports.sendMessage = async (req, res) => {
             link: { tab: "chats" },
         });
 
-        res.status(201).json(payload);
+        res.status(201).json({ ...payload, contactRedacted, profane });
     } catch (error) {
         console.error("Error in sendMessage:", error);
         res.status(500).json({ message: "Server error", error: error.message });

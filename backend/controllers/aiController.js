@@ -10,6 +10,7 @@
 const ai = require("../ai");
 const analytics = require("../ai/analytics");
 const { ingestKnowledgeBase } = require("../ai/rag/ingest");
+const { containsAbuse } = require("../utils/moderation");
 
 /**
  * POST /api/ai/chat
@@ -23,6 +24,16 @@ exports.chat = async (req, res) => {
     }
     if (message.length > 1000) {
         return res.status(400).json({ message: "Message is too long." });
+    }
+    // Content restriction: refuse abusive/violent input instead of processing it.
+    if (containsAbuse(message)) {
+        return res.status(200).json({
+            reply: "Let's keep it respectful — I can't help with messages that contain abusive or violent language. How can I help with your rides, payments, or safety?",
+            actions: [],
+            suggestions: [],
+            cards: [],
+            moderated: true,
+        });
     }
     try {
         const result = await ai.chat(message.trim(), { user: req.user, sessionId: sessionId || "default" });

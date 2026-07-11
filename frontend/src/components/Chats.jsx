@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { GoogleMap, Marker } from "@react-google-maps/api";
+import { GoogleMap, Marker, DirectionsRenderer } from "@react-google-maps/api";
 import axiosInstance from "../utils/axiosConfig";
 import { toast } from "react-toastify";
 import { API_BASE_URL } from "../utils/constants";
@@ -53,11 +53,46 @@ const unreadLabel = (n) => (n > 5 ? "5+" : String(n));
 function LocationMapModal({ loc, title, onClose }) {
     const { isLoaded, loadError } = useMaps();
     const center = { lat: loc.lat, lng: loc.lng };
+    const [origin, setOrigin] = useState(null);        // viewer's current location
+    const [directions, setDirections] = useState(null);
+    const [routeInfo, setRouteInfo] = useState(null);  // { distance, duration }
+    const [routeHint, setRouteHint] = useState("");
+
     useEffect(() => {
         const onKey = (e) => e.key === "Escape" && onClose();
         document.addEventListener("keydown", onKey);
         return () => document.removeEventListener("keydown", onKey);
     }, [onClose]);
+
+    // Ask for the viewer's current location so we can draw a route to the pin.
+    useEffect(() => {
+        if (!isLoaded) return;
+        if (!("geolocation" in navigator)) { setRouteHint("Location unavailable on this device."); return; }
+        navigator.geolocation.getCurrentPosition(
+            (pos) => setOrigin({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+            () => setRouteHint("Enable location to see the route from where you are."),
+            { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
+        );
+    }, [isLoaded]);
+
+    // Compute driving directions from the viewer → the shared pin.
+    useEffect(() => {
+        if (!isLoaded || !origin || !window.google?.maps) return;
+        const svc = new window.google.maps.DirectionsService();
+        svc.route(
+            { origin, destination: { lat: loc.lat, lng: loc.lng }, travelMode: window.google.maps.TravelMode.DRIVING },
+            (result, status) => {
+                if (status === "OK" && result) {
+                    setDirections(result);
+                    const leg = result.routes?.[0]?.legs?.[0];
+                    if (leg) setRouteInfo({ distance: leg.distance?.text, duration: leg.duration?.text });
+                } else {
+                    setRouteHint("Couldn't compute a route to this location.");
+                }
+            }
+        );
+    }, [isLoaded, origin, loc.lat, loc.lng]);
+
     return (
         <div className="ch-map-overlay" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
             <div className="ch-map-modal" role="dialog" aria-modal="true" aria-label="Shared location">
@@ -86,7 +121,21 @@ function LocationMapModal({ loc, title, onClose }) {
                             options={{ styles: DARK_MAP_STYLE, backgroundColor: "#0f0f10", disableDefaultUI: false, zoomControl: true, mapTypeControl: false, streetViewControl: false, fullscreenControl: false, gestureHandling: "greedy", clickableIcons: false }}
                         >
                             <Marker position={center} icon={locDotIcon("#EF4444")} />
+                            {origin && <Marker position={origin} icon={locDotIcon("#3B82F6")} />}
+                            {directions && (
+                                <DirectionsRenderer
+                                    directions={directions}
+                                    options={{ suppressMarkers: true, polylineOptions: { strokeColor: "#22c55e", strokeWeight: 5, strokeOpacity: 0.9 } }}
+                                />
+                            )}
                         </GoogleMap>
+                    )}
+                </div>
+                <div className="ch-map-route">
+                    {routeInfo ? (
+                        <span className="ch-map-route-info">🧭 {routeInfo.distance} · {routeInfo.duration} from your location</span>
+                    ) : (
+                        <span className="ch-map-route-info muted">{routeHint || "Finding route from your location…"}</span>
                     )}
                 </div>
             </div>
@@ -193,6 +242,13 @@ function ChatWindow({ conv, userId, onBack, onThreadRead, onClear, onArchiveTogg
             const res = await axiosInstance.post(`${API_BASE_URL}/chat/${conv.rideId}/${cp._id}`, { text: body });
             // Socket echoes to sender too; de-dupe by id.
             setMessages((prev) => (prev.some((m) => idStr(m._id) === idStr(res.data._id)) ? prev : [...prev, res.data]));
+            // Server-side moderation feedback.
+            if (res.data?.contactRedacted) {
+                toast.info("For your safety, phone numbers can't be shared in chat.");
+            }
+            if (res.data?.profane) {
+                toast.info("Please keep the conversation respectful.");
+            }
         } catch (error) {
             toast.error(error.response?.data?.message || "Failed to send message.");
             setText(body);
