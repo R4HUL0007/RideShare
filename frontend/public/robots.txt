@@ -4,5 +4,6 @@ Disallow: /dashboard
 Disallow: /admin
 Disallow: /track
 Disallow: /api
+Disallow: /feedback
 
 Sitemap: https://ridexshare.online/sitemap.xml
