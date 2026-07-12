@@ -56,6 +56,17 @@ const Privacy = () => (
         </div>
 
         <div className="pub-section">
+            <h2>Analytics</h2>
+            <p>
+                We use Google Analytics to understand how visitors use our public
+                site (for example, which pages are viewed). This collects anonymous
+                usage data such as page views and general device information, and
+                helps us improve the service. You can opt out using Google's
+                browser add-on or your browser's privacy controls.
+            </p>
+        </div>
+
+        <div className="pub-section">
             <h2>Your choices</h2>
             <ul>
                 <li>Access or update your profile information from your account settings.</li>

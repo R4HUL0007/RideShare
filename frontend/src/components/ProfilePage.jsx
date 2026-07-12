@@ -181,6 +181,7 @@ const ProfilePage = ({ onOpenSidebar, onUserUpdated, onNavigate }) => {
     const [phoneVerifyStep, setPhoneVerifyStep] = useState("idle");
     const [phoneOtp, setPhoneOtp] = useState("");
     const [resendIn, setResendIn] = useState(0); // seconds until "Resend" re-enables
+    const [sendsLeft, setSendsLeft] = useState(null); // remaining OTP sends this cycle (null = unknown)
     const resendTimerRef = useRef(null);         // countdown interval
     // Inline phone-number editing (independent of the full-profile edit).
     const [editingPhone, setEditingPhone] = useState(false);
@@ -336,6 +337,7 @@ const ProfilePage = ({ onOpenSidebar, onUserUpdated, onNavigate }) => {
         setPhoneVerifyStep("idle");
         setPhoneOtp("");
         setResendIn(0);
+        setSendsLeft(null);
         clearInterval(resendTimerRef.current);
     };
 
@@ -360,10 +362,13 @@ const ProfilePage = ({ onOpenSidebar, onUserUpdated, onNavigate }) => {
             return false;
         }
         try {
-            await sendPhoneOtpApi();
+            const { data } = await sendPhoneOtpApi();
+            if (data && typeof data.sendsLeft === "number") setSendsLeft(data.sendsLeft);
             startResendCountdown(30);
             return true;
         } catch (error) {
+            // Per-user resend cap reached — stop offering resends this cycle.
+            if (error.response?.data?.code === "OTP_SEND_LIMIT") setSendsLeft(0);
             toast.error(error.response?.data?.message || "Couldn't send the code. Please try again.");
             return false;
         }
@@ -497,6 +502,9 @@ const ProfilePage = ({ onOpenSidebar, onUserUpdated, onNavigate }) => {
     // Verification + trust score (derived from existing profile data).
     const emailVerified = !!profile.isVerified;
     const phoneVerified = !!profile.phoneVerified;
+    // Phone change lock-in: a verified number can't be changed until this date.
+    const phoneUnlockAt = profile.phoneChangeUnlockAt ? new Date(profile.phoneChangeUnlockAt) : null;
+    const phoneLocked = phoneVerified && phoneUnlockAt && phoneUnlockAt.getTime() > Date.now();
     const universityVerified = /@paruluniversity\.ac\.in$/i.test(profile.email || "");
     const idVerified = !!profile.isDriverVerified;
     const verifs = [
@@ -683,12 +691,21 @@ const ProfilePage = ({ onOpenSidebar, onUserUpdated, onNavigate }) => {
                                                 Verify
                                             </button>
                                         )}
-                                        <button type="button" className="pf-phone-edit-btn" onClick={startEditPhone} title="Edit phone number" aria-label="Edit phone number">
-                                            <Svg size={14}>{I.edit}</Svg>
-                                        </button>
+                                        {!phoneLocked && (
+                                            <button type="button" className="pf-phone-edit-btn" onClick={startEditPhone} title="Edit phone number" aria-label="Edit phone number">
+                                                <Svg size={14}>{I.edit}</Svg>
+                                            </button>
+                                        )}
                                     </span>
                                 )}
                             </div>
+
+                            {/* Lock-in note: verified numbers are locked from change for a period. */}
+                            {!editing && phoneLocked && (
+                                <span className="pf-verify-hint" style={{ display: "block", marginTop: 4 }}>
+                                    🔒 Verified — you can change this number after {phoneUnlockAt.toLocaleDateString()}.
+                                </span>
+                            )}
 
                             {/* Inline OTP verification panel */}
                             {!editing && !phoneVerified && phoneVerifyStep !== "idle" && (
@@ -722,9 +739,18 @@ const ProfilePage = ({ onOpenSidebar, onUserUpdated, onNavigate }) => {
                                             </div>
                                             <button type="button" className="pf-verify-resend"
                                                 onClick={resendPhoneOtp}
-                                                disabled={resendIn > 0 || phoneVerifyStep === "verifying"}>
-                                                {resendIn > 0 ? `Resend code in ${resendIn}s` : "Resend code"}
+                                                disabled={resendIn > 0 || phoneVerifyStep === "verifying" || sendsLeft === 0}>
+                                                {sendsLeft === 0
+                                                    ? "Resend limit reached"
+                                                    : resendIn > 0
+                                                        ? `Resend code in ${resendIn}s`
+                                                        : "Resend code"}
                                             </button>
+                                            {typeof sendsLeft === "number" && sendsLeft > 0 && (
+                                                <span className="pf-verify-hint" style={{ display: "block", marginTop: 2 }}>
+                                                    {sendsLeft} resend{sendsLeft === 1 ? "" : "s"} left
+                                                </span>
+                                            )}
                                         </>
                                     )}
                                 </div>

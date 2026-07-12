@@ -35,6 +35,22 @@
     <meta name="twitter:title" content="RidexShare — University Ride Sharing" />
     <meta name="twitter:description" content="Share and find rides with verified members of your university — live tracking, secure payments and safety built in." />
     <meta name="twitter:image" content="https://ridexshare.online/icons/icon.svg" />
+    <!-- Google Analytics (GA4) — only initialised on the production domain so
+         local/Docker testing never pollutes the analytics data. -->
+    <script>
+      if (location.hostname === "ridexshare.online") {
+        var gaScript = document.createElement("script");
+        gaScript.async = true;
+        gaScript.src = "https://www.googletagmanager.com/gtag/js?id=G-LFCVK3V9DF";
+        document.head.appendChild(gaScript);
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        window.gtag = gtag;
+        gtag("js", new Date());
+        gtag("config", "G-LFCVK3V9DF");
+      }
+    </script>
+
     <!-- Google Maps API will be loaded by LoadScript component from @react-google-maps/api -->
   </head>
   <body>

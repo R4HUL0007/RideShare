@@ -7,7 +7,7 @@ const { sendOTPEmail } = require("../utils/emailService");
 const { isSafeHttpUrl } = require("../utils/sanitize");
 const { isApitxtEnabled, sendApitxtOtp } = require("../config/apitxt");
 const { isMessageCentralEnabled, sendMcOtp, validateMcOtp } = require("../config/messageCentral");
-const { phoneVerificationRequired } = require("../utils/phoneGate");
+const { phoneVerificationRequired, phoneChangeLockDays, phoneOtpMaxSends } = require("../utils/phoneGate");
 
 // Public runtime config for the client (no auth, no secrets).
 exports.getPublicConfig = (req, res) => {
@@ -667,6 +667,15 @@ exports.verifyGoogleSignup = async (req, res) => {
 };
 
 // Get current user
+// Compute when a verified phone number becomes changeable again (or null if it
+// isn't verified / the lock is disabled / already elapsed).
+const phoneChangeUnlockAt = (user) => {
+    const lockDays = phoneChangeLockDays();
+    if (!user.phoneVerified || !user.phoneVerifiedAt || lockDays <= 0) return null;
+    const unlock = new Date(new Date(user.phoneVerifiedAt).getTime() + lockDays * 24 * 60 * 60 * 1000);
+    return unlock.getTime() > Date.now() ? unlock : null;
+};
+
 exports.getCurrentUser = async (req, res) => {
     try {
         const user = await User.findById(req.user.id).select("-password");
@@ -677,6 +686,8 @@ exports.getCurrentUser = async (req, res) => {
             email: user.email,
             phoneNumber: user.phoneNumber,
             phoneVerified: user.phoneVerified || false,
+            phoneVerifiedAt: user.phoneVerifiedAt || null,
+            phoneChangeUnlockAt: phoneChangeUnlockAt(user),
             role: user.role,
             gender: user.gender,
             authProvider: user.authProvider,
@@ -703,6 +714,8 @@ const publicPhoneUser = (user) => ({
     email: user.email,
     phoneNumber: user.phoneNumber,
     phoneVerified: user.phoneVerified || false,
+    phoneVerifiedAt: user.phoneVerifiedAt || null,
+    phoneChangeUnlockAt: phoneChangeUnlockAt(user),
     role: user.role,
     gender: user.gender,
     authProvider: user.authProvider,
@@ -736,6 +749,17 @@ exports.sendPhoneOtp = async (req, res) => {
             return res.status(400).json({ message: "Add a valid 10-digit phone number first." });
         }
 
+        // Per-user resend cap for the current verification cycle (protects SMS
+        // credits from abuse; the IP rate limiter is the first layer). Reset on
+        // successful verification and on phone-number change.
+        const maxSends = phoneOtpMaxSends();
+        if ((user.phoneOtpSendCount || 0) >= maxSends) {
+            return res.status(429).json({
+                message: "You've reached the code request limit. Please try again later.",
+                code: "OTP_SEND_LIMIT",
+            });
+        }
+
         const expiryMin = Number(process.env.PHONE_OTP_EXPIRY_MINUTES) || 3;
         const expiry = new Date(Date.now() + expiryMin * 60 * 1000);
 
@@ -746,6 +770,7 @@ exports.sendPhoneOtp = async (req, res) => {
             user.phoneOtp = undefined;           // ensure only one provider's state is set
             user.phoneOtpAttempts = 0;
             user.phoneOtpExpiry = expiry;
+            user.phoneOtpSendCount = (user.phoneOtpSendCount || 0) + 1;
             await user.save();
         };
         // Self-managed send (we generate + hash the OTP; APITxT delivers it).
@@ -756,6 +781,7 @@ exports.sendPhoneOtp = async (req, res) => {
             user.phoneVerificationId = undefined; // ensure only one provider's state is set
             user.phoneOtpExpiry = expiry;
             user.phoneOtpAttempts = 0;
+            user.phoneOtpSendCount = (user.phoneOtpSendCount || 0) + 1;
             await user.save();
             await sendApitxtOtp(`91${digits}`, otp);
         };
@@ -788,7 +814,11 @@ exports.sendPhoneOtp = async (req, res) => {
             }
         }
 
-        return res.json({ message: "Verification code sent via SMS.", expiresInMin: expiryMin });
+        return res.json({
+            message: "Verification code sent via SMS.",
+            expiresInMin: expiryMin,
+            sendsLeft: Math.max(0, maxSends - (user.phoneOtpSendCount || 0)),
+        });
     } catch (error) {
         console.error("Error in sendPhoneOtp:", error?.message || error);
         return res.status(502).json({ message: "Couldn't send the code. Please try again." });
@@ -826,8 +856,10 @@ exports.verifyPhone = async (req, res) => {
                 return res.status(400).json({ message: "Invalid or expired code. Please try again." });
             }
             user.phoneVerified = true;
+            user.phoneVerifiedAt = new Date();
             user.phoneVerificationId = undefined;
             user.phoneOtpExpiry = undefined;
+            user.phoneOtpSendCount = 0;
             await user.save();
             return res.json({ message: "Phone number verified successfully!", user: publicPhoneUser(user) });
         }
@@ -856,9 +888,11 @@ exports.verifyPhone = async (req, res) => {
         }
 
         user.phoneVerified = true;
+        user.phoneVerifiedAt = new Date();
         user.phoneOtp = undefined;
         user.phoneOtpExpiry = undefined;
         user.phoneOtpAttempts = 0;
+        user.phoneOtpSendCount = 0;
         await user.save();
 
         return res.json({ message: "Phone number verified successfully!", user: publicPhoneUser(user) });
@@ -885,14 +919,30 @@ exports.updateProfile = async (req, res) => {
             if (!/^\d{10}$/.test(phoneNumber)) {
                 return res.status(400).json({ message: "Phone number must be 10 digits" });
             }
-            updates.phoneNumber = phoneNumber;
-            // Changing the number invalidates any prior phone verification — the
-            // new number hasn't been proven to belong to the user. Only reset when
-            // it actually differs so a no-op save (e.g. editing just the name)
-            // doesn't wipe an existing verification.
-            const current = await User.findById(req.user.id).select("phoneNumber");
-            if (current && current.phoneNumber !== phoneNumber) {
+            const current = await User.findById(req.user.id).select("phoneNumber phoneVerified phoneVerifiedAt");
+            const isChange = current && current.phoneNumber !== phoneNumber;
+
+            if (isChange) {
+                // Lock-in: a verified number can't be changed until the lock window
+                // has elapsed (anti OTP-spam: stops change→re-verify loops).
+                const lockDays = phoneChangeLockDays();
+                if (current.phoneVerified && current.phoneVerifiedAt && lockDays > 0) {
+                    const unlockAt = new Date(new Date(current.phoneVerifiedAt).getTime() + lockDays * 24 * 60 * 60 * 1000);
+                    if (Date.now() < unlockAt.getTime()) {
+                        return res.status(403).json({
+                            message: `Your verified phone number is locked. You can change it after ${unlockAt.toDateString()}.`,
+                            code: "PHONE_CHANGE_LOCKED",
+                            unlockAt,
+                        });
+                    }
+                }
+                updates.phoneNumber = phoneNumber;
+                // New number is unproven — reset verification state + resend counter.
                 updates.phoneVerified = false;
+                updates.phoneVerifiedAt = null;
+                updates.phoneOtpSendCount = 0;
+            } else {
+                updates.phoneNumber = phoneNumber; // no-op / same value
             }
         }
         if (gender !== undefined) {
@@ -919,6 +969,8 @@ exports.updateProfile = async (req, res) => {
                 email: user.email,
                 phoneNumber: user.phoneNumber,
                 phoneVerified: user.phoneVerified || false,
+                phoneVerifiedAt: user.phoneVerifiedAt || null,
+                phoneChangeUnlockAt: phoneChangeUnlockAt(user),
                 role: user.role,
                 gender: user.gender,
                 authProvider: user.authProvider,

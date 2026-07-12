@@ -5,4 +5,16 @@ function phoneVerificationRequired() {
     return String(process.env.REQUIRE_PHONE_VERIFICATION || "").toLowerCase() === "true";
 }
 
-module.exports = { phoneVerificationRequired };
+// Days a verified phone number is locked from being changed (anti OTP-spam).
+function phoneChangeLockDays() {
+    const n = Number(process.env.PHONE_CHANGE_LOCK_DAYS);
+    return Number.isFinite(n) && n >= 0 ? n : 15;
+}
+
+// Max OTP sends (send + resends) allowed per verification cycle.
+function phoneOtpMaxSends() {
+    const n = Number(process.env.PHONE_OTP_MAX_SENDS);
+    return Number.isFinite(n) && n > 0 ? n : 3;
+}
+
+module.exports = { phoneVerificationRequired, phoneChangeLockDays, phoneOtpMaxSends };

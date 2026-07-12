@@ -26,6 +26,14 @@ const UserSchema = new mongoose.Schema({
     phoneOtp: { type: String },
     phoneOtpExpiry: { type: Date },
     phoneOtpAttempts: { type: Number, default: 0 },
+    // Number of OTP sends in the CURRENT verification cycle (send + resends).
+    // Capped by PHONE_OTP_MAX_SENDS to protect SMS credits from abuse. Reset to
+    // 0 on successful verification and whenever the phone number changes.
+    phoneOtpSendCount: { type: Number, default: 0 },
+    // When the phone was last successfully verified. Powers the change lock-in:
+    // a verified number can't be changed until PHONE_CHANGE_LOCK_DAYS have passed
+    // (prevents change→re-verify OTP spam).
+    phoneVerifiedAt: { type: Date },
     // For provider-managed OTP (Message Central), we only store the provider's
     // verificationId between send and validate — the OTP itself never touches us.
     phoneVerificationId: { type: String },
