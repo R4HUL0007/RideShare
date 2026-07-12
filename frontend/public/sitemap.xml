@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <!-- Public landing page. The rest of the app is login-gated, so it's not
+       listed here. This can be regenerated dynamically later if public
+       marketing/content pages are added. -->
+  <url>
+    <loc>https://ridexshare.online/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+</urlset>

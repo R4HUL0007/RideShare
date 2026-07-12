@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /$
+Disallow: /dashboard
+Disallow: /admin
+Disallow: /track
+Disallow: /api
+
+Sitemap: https://ridexshare.online/sitemap.xml
