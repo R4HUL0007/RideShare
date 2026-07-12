@@ -4,6 +4,7 @@ import MapsProvider from "./maps/MapsProvider";
 import LocationSearchBox from "./maps/LocationSearchBox";
 import CurrentLocationButton from "./maps/CurrentLocationButton";
 import LiveRideMap from "./maps/LiveRideMap";
+import PhoneVerifyBanner from "./PhoneVerifyBanner";
 import {
     estimatePersonalRide, createPersonalRide, myActivePersonalRide,
     cancelPersonalRide, payPersonalRide, personalRideStats, confirmArrivalPersonal,
@@ -118,6 +119,10 @@ const PersonalRideInner = ({ onOpenSidebar, onNavigate }) => {
             toast.success(data.broadcastTo ? `Finding you a driver… ${data.broadcastTo} nearby alerted.` : "Request sent. Looking for nearby drivers…");
         } catch (e) {
             if (e.response?.status === 409 && e.response.data?.request) { setActive(e.response.data.request); }
+            else if (e.response?.data?.code === "PHONE_VERIFICATION_REQUIRED") {
+                toast.info("Please verify your phone number to request a ride.", { autoClose: 5000 });
+                onNavigate?.("profile");
+            }
             else toast.error(e.response?.data?.message || "Couldn't request the ride.");
         } finally { setBusy(false); }
     };
@@ -185,6 +190,9 @@ const PersonalRideInner = ({ onOpenSidebar, onNavigate }) => {
                     )}
                 </div>
             </div>
+
+            {/* Phone verification banner (only when enforced) */}
+            <PhoneVerifyBanner action="request a ride" onNavigate={onNavigate} />
 
             <div className="rrq-grid">
                 {/* LEFT — map */}

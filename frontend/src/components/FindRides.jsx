@@ -10,6 +10,7 @@ import LocationSearchBox from "./maps/LocationSearchBox";
 import CurrentLocationButton from "./maps/CurrentLocationButton";
 import LiveRideMap from "./maps/LiveRideMap";
 import ThemedSelect from "./ThemedSelect";
+import PhoneVerifyBanner from "./PhoneVerifyBanner";
 import { getPaymentConfig, payForRide } from "../services/paymentService";
 import { recordSearch } from "../services/suggestionsService";
 import { CheckoutModal, PaymentSuccess, PaymentFailure } from "./payments/PaymentDialogs";
@@ -970,6 +971,9 @@ const FindRidesInner = ({ onOpenSidebar, onNavigate, user }) => {
                     ))}
                 </div>
             </div>
+
+            {/* Phone verification banner (only when enforced) */}
+            <PhoneVerifyBanner action="book a ride" onNavigate={onNavigate} />
 
             {/* Search + filters */}
             <form className="fr-searchbar" onSubmit={doSearch}>

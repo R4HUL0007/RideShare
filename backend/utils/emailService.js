@@ -1,8 +1,8 @@
 const nodemailer = require("nodemailer");
 require("dotenv").config();
 
-// Create transporter
-const transporter = nodemailer.createTransport({
+// --- Gmail transporter (fallback / legacy default) -------------------------
+const gmailTransporter = nodemailer.createTransport({
     service: "gmail",
     auth: {
         user: process.env.EMAIL_USER,
@@ -10,47 +10,135 @@ const transporter = nodemailer.createTransport({
     },
 });
 
+// --- Resend transporter (preferred, sends from the verified domain) --------
+// Resend exposes a standard SMTP endpoint, so we reuse nodemailer instead of
+// pulling in another dependency. Only created when RESEND_API_KEY is set, so
+// the app runs unchanged in environments without it.
+const RESEND_API_KEY = process.env.RESEND_API_KEY;
+const resendTransporter = RESEND_API_KEY
+    ? nodemailer.createTransport({
+          host: "smtp.resend.com",
+          port: 465,
+          secure: true,
+          auth: { user: "resend", pass: RESEND_API_KEY },
+      })
+    : null;
+
+console.log(`📧 Email provider: ${resendTransporter ? "Resend (verified domain)" : "Gmail"}`);
+
+// Sender identity. With Resend we send from the verified domain (great inbox
+// placement); otherwise we fall back to the Gmail account. A named address
+// ("RidexShare <addr>") avoids a common spam-filter trigger.
+const DOMAIN_FROM = process.env.EMAIL_FROM || "RidexShare <hello@ridexshare.online>";
+const GMAIL_FROM = `RidexShare <${process.env.EMAIL_USER}>`;
+
+// Single delivery helper. Tries Resend first (if configured) and transparently
+// falls back to Gmail on failure, so a Resend outage never blocks OTPs/alerts.
+// The caller's `from` is ignored — we always use the correct identity per path.
+const deliver = async (options) => {
+    if (resendTransporter) {
+        try {
+            await resendTransporter.sendMail({ ...options, from: DOMAIN_FROM });
+            return true;
+        } catch (err) {
+            console.error("⚠️ Resend send failed, falling back to Gmail:", err.message);
+        }
+    }
+    await gmailTransporter.sendMail({ ...options, from: GMAIL_FROM });
+    return true;
+};
+
+const path = require("path");
+
+// Brand logo embedded inline (CID) so it renders in every client without
+// depending on an external URL. Generated from frontend/public/icons/icon.svg.
+const LOGO_PATH = path.join(__dirname, "..", "assets", "logo-email.png");
+const LOGO_CID = "ridexshare-logo";
+const logoAttachment = {
+    filename: "ridexshare.png",
+    path: LOGO_PATH,
+    cid: LOGO_CID,
+    contentType: "image/png",
+};
+
+// Branded, email-client-safe template (table + inline styles) used for OTP
+// mails. Dark header with logo, a clean code card, and a muted footer.
+const otpEmailTemplate = ({ heading, intro, otp }) => `
+<div style="margin:0; padding:0; background:#f2f3f5;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f2f3f5; padding:24px 0;">
+    <tr><td align="center">
+      <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="max-width:480px; width:100%; background:#ffffff; border-radius:16px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,0.08); font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">
+        <tr>
+          <td style="background:#0a0a0b; padding:28px 32px;" align="left">
+            <table role="presentation" cellpadding="0" cellspacing="0"><tr>
+              <td style="padding-right:12px;"><img src="cid:${LOGO_CID}" width="40" height="40" alt="RidexShare" style="display:block; border-radius:10px;" /></td>
+              <td style="color:#ffffff; font-size:20px; font-weight:700; letter-spacing:0.2px;">RidexShare</td>
+            </tr></table>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:32px 32px 8px 32px;">
+            <h1 style="margin:0 0 12px 0; font-size:22px; color:#111114;">${heading}</h1>
+            <p style="margin:0 0 24px 0; font-size:15px; line-height:1.6; color:#55565b;">${intro}</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:0 32px 8px 32px;" align="center">
+            <div style="background:#f2f3f5; border:1px solid #e6e7ea; border-radius:12px; padding:20px; text-align:center;">
+              <div style="font-size:12px; letter-spacing:1px; text-transform:uppercase; color:#8a8b90; margin-bottom:8px;">Your code</div>
+              <div style="font-size:36px; font-weight:800; letter-spacing:10px; color:#0a0a0b; font-family:'Courier New',monospace;">${otp}</div>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:20px 32px 4px 32px;">
+            <p style="margin:0 0 6px 0; font-size:13px; color:#8a8b90;">This code expires in 10 minutes.</p>
+            <p style="margin:0; font-size:13px; color:#8a8b90;">If you didn't request this, you can safely ignore this email.</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:24px 32px; border-top:1px solid #eeeef0; margin-top:16px;">
+            <p style="margin:0; font-size:12px; color:#a9aab0;">© RidexShare · University ride sharing</p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</div>`;
+
 // Send OTP email
 const sendOTPEmail = async (email, otp, purpose = "verification") => {
     try {
         const subject = purpose === "verification" 
-            ? "Verify Your Email - RidexShare" 
-            : "Reset Your Password - RidexShare";
-        
-        const htmlContent = purpose === "verification"
-            ? `
-                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                    <h2 style="color: #333;">Email Verification</h2>
-                    <p>Thank you for registering with RidexShare!</p>
-                    <p>Your verification code is:</p>
-                    <div style="background-color: #f4f4f4; padding: 20px; text-align: center; margin: 20px 0;">
-                        <h1 style="color: #007bff; font-size: 32px; margin: 0;">${otp}</h1>
-                    </div>
-                    <p>This code will expire in 10 minutes.</p>
-                    <p>If you didn't request this, please ignore this email.</p>
-                </div>
-            `
-            : `
-                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                    <h2 style="color: #333;">Password Reset</h2>
-                    <p>You requested to reset your password for RidexShare.</p>
-                    <p>Your verification code is:</p>
-                    <div style="background-color: #f4f4f4; padding: 20px; text-align: center; margin: 20px 0;">
-                        <h1 style="color: #007bff; font-size: 32px; margin: 0;">${otp}</h1>
-                    </div>
-                    <p>This code will expire in 10 minutes.</p>
-                    <p>If you didn't request this, please ignore this email.</p>
-                </div>
-            `;
+            ? "Your RidexShare verification code" 
+            : "Your RidexShare password reset code";
 
-        const mailOptions = {
-            from: process.env.EMAIL_USER,
+        // Plain-text alternative. HTML-only emails score much higher on spam
+        // filters, so we always send a matching text/plain part alongside HTML.
+        const textContent = purpose === "verification"
+            ? `Your RidexShare verification code is ${otp}\n\nThis code expires in 10 minutes.\nIf you didn't request this, you can safely ignore this email.\n\n— RidexShare`
+            : `Your RidexShare password reset code is ${otp}\n\nThis code expires in 10 minutes.\nIf you didn't request this, you can safely ignore this email.\n\n— RidexShare`;
+
+        const heading = purpose === "verification" ? "Verify your email" : "Reset your password";
+        const intro = purpose === "verification"
+            ? "Welcome to RidexShare! Use the code below to verify your email and finish setting up your account."
+            : "We received a request to reset your RidexShare password. Use the code below to continue.";
+        const htmlContent = otpEmailTemplate({ heading, intro, otp });
+
+        await deliver({
             to: email,
+            replyTo: process.env.EMAIL_USER,
             subject: subject,
+            text: textContent,
             html: htmlContent,
-        };
-
-        await transporter.sendMail(mailOptions);
+            attachments: [logoAttachment],
+            headers: {
+                // Signals a transactional/automated message and gives clients a
+                // no-op unsubscribe target — both improve inbox placement.
+                "List-Unsubscribe": `<mailto:${process.env.EMAIL_USER}?subject=unsubscribe>`,
+                "X-Entity-Ref-ID": "ridexshare-otp",
+            },
+        });
         console.log(`✅ OTP email sent to ${email}`);
         return true;
     } catch (error) {
@@ -82,8 +170,7 @@ const sendSupportTicketEmail = async ({ ticketId, name, email, topic, descriptio
     `;
 
     try {
-        await transporter.sendMail({
-            from: process.env.EMAIL_USER,
+        await deliver({
             to,
             replyTo: email || undefined,
             subject: `[Support] ${topic || "New ticket"}`,
@@ -113,8 +200,7 @@ const sendTicketReplyEmail = async ({ to, name, topic, agentName, text }) => {
         </div>
     `;
     try {
-        await transporter.sendMail({
-            from: process.env.EMAIL_USER,
+        await deliver({
             to,
             replyTo: supportInbox,
             subject: `Re: ${topic || "Your support request"}`,
@@ -160,8 +246,7 @@ const sendSosEmail = async ({ to, contactName, userName, userPhone, location, ri
         </div>
     `;
     try {
-        await transporter.sendMail({
-            from: process.env.EMAIL_USER,
+        await deliver({
             to,
             subject: `SOS Alert: ${userName} needs help`,
             html: htmlContent,
@@ -174,5 +259,33 @@ const sendSosEmail = async ({ to, contactName, userName, userPhone, location, ri
     }
 };
 
-module.exports = { sendOTPEmail, sendSupportTicketEmail, sendTicketReplyEmail, sendSosEmail };
+// Site feedback / suggestions. Delivered to the platform inbox (SUPPORT_EMAIL).
+// The recipient address lives only here on the server — it is never sent to or
+// exposed on the client. Degrades gracefully: a send failure is surfaced to the
+// caller so it can decide how to respond (but the address is never leaked).
+const sendFeedbackEmail = async ({ message, fromName, fromEmail, meta }) => {
+    const to = process.env.SUPPORT_EMAIL || process.env.EMAIL_USER;
+    if (!to) return false;
+    const safe = (s) => String(s || "").replace(/[<>]/g, (c) => (c === "<" ? "&lt;" : "&gt;"));
+    const htmlContent = `
+        <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto;">
+            <h2 style="color:#111;">New feedback from RidexShare</h2>
+            <table style="width:100%; border-collapse:collapse; margin:12px 0; font-size:14px;">
+                <tr><td style="padding:6px 0; color:#888; width:120px;">From</td><td style="padding:6px 0;">${safe(fromName) || "Anonymous"}${fromEmail ? ` &lt;${safe(fromEmail)}&gt;` : ""}</td></tr>
+                ${meta ? `<tr><td style="padding:6px 0; color:#888;">Context</td><td style="padding:6px 0;">${safe(meta)}</td></tr>` : ""}
+            </table>
+            <div style="background:#f4f4f4; padding:16px; border-radius:8px; white-space:pre-wrap; color:#222;">${safe(message)}</div>
+        </div>
+    `;
+    await deliver({
+        to,
+        replyTo: fromEmail || undefined,
+        subject: "RidexShare feedback",
+        text: `Feedback from ${fromName || "Anonymous"}${fromEmail ? ` <${fromEmail}>` : ""}:\n\n${message}`,
+        html: htmlContent,
+    });
+    return true;
+};
+
+module.exports = { sendOTPEmail, sendSupportTicketEmail, sendTicketReplyEmail, sendSosEmail, sendFeedbackEmail };
 

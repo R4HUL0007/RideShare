@@ -1,14 +1,30 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import LoginForm from './LoginForm';
 import RegisterForm from './RegisterForm';
+import Footer from './public/Footer';
 import carImg from '../assets/images/Car.png';
 import brandLogo from '../assets/images/RidexShare.svg';
 import '../styles/Home.css';
+import '../styles/public.css';
 
 const Home = () => {
     const [activeTab, setActiveTab] = useState('login');
 
     return (
+        <div className="landing">
+        <header className="landing-nav">
+            <Link to="/" className="pub-brand">
+                <img src={brandLogo} alt="RidexShare" />
+                <span>RidexShare</span>
+            </Link>
+            <nav className="landing-nav-links">
+                <a href="#how">How it works</a>
+                <Link to="/about" className="landing-nav-about">About</Link>
+                <Link to="/privacy">Privacy</Link>
+                <Link to="/terms">Terms</Link>
+            </nav>
+        </header>
         <div className="home-container">
             <div className="form-container">
                 <div className="logo-section">
@@ -104,6 +120,62 @@ const Home = () => {
                     </div>
                 </div>
             </div>
+        </div>
+
+        {/* Public info — shown to everyone (no login) so visitors understand
+            what RidexShare is before signing up. */}
+        <section className="landing-info" id="how">
+            <div className="landing-info-inner">
+                <p className="landing-eyebrow">How it works</p>
+                <h2>Share the ride, split the cost</h2>
+                <p className="landing-info-sub">
+                    RidexShare connects verified students and faculty travelling the
+                    same way — so getting to campus is cheaper, greener and safer.
+                </p>
+
+                <div className="landing-steps">
+                    <div className="landing-step">
+                        <div className="landing-step-num">1</div>
+                        <h3>Sign up &amp; verify</h3>
+                        <p>Join with your university email. Everyone on RidexShare is a verified member of your community.</p>
+                    </div>
+                    <div className="landing-step">
+                        <div className="landing-step-num">2</div>
+                        <h3>Find or offer a ride</h3>
+                        <p>Drivers post trips with seats and price. Passengers search, book, or request a ride along their route.</p>
+                    </div>
+                    <div className="landing-step">
+                        <div className="landing-step-num">3</div>
+                        <h3>Travel &amp; track</h3>
+                        <p>Follow the trip live on the map, share a boarding code, and pay securely — with SOS built in.</p>
+                    </div>
+                </div>
+
+                <div className="pub-cards">
+                    <div className="pub-card">
+                        <div className="pub-card-icon">🛡️</div>
+                        <h3>Verified community</h3>
+                        <p>University-email verification means you only ride with people from your own campus.</p>
+                    </div>
+                    <div className="pub-card">
+                        <div className="pub-card-icon">📍</div>
+                        <h3>Live tracking</h3>
+                        <p>Real-time location, ETA and route so you and your contacts always know where you are.</p>
+                    </div>
+                    <div className="pub-card">
+                        <div className="pub-card-icon">💳</div>
+                        <h3>Secure payments</h3>
+                        <p>Fares are handled through secure payments that protect both riders and drivers.</p>
+                    </div>
+                </div>
+
+                <div className="landing-cta-row">
+                    <Link to="/about" className="landing-cta-link">Learn more about RidexShare →</Link>
+                </div>
+            </div>
+        </section>
+
+        <Footer />
         </div>
     );
 };

@@ -5,6 +5,10 @@ const Home = lazy(() => import('../components/Home'));
 const Dashboard = lazy(() => import('../pages/Dashboard'));
 const AdminPanel = lazy(() => import('../pages/AdminPanel'));
 const SharedTrip = lazy(() => import('../pages/SharedTrip'));
+const About = lazy(() => import('../pages/About'));
+const Privacy = lazy(() => import('../pages/Privacy'));
+const Terms = lazy(() => import('../pages/Terms'));
+const Feedback = lazy(() => import('../pages/Feedback'));
 
 const Loading = () => <div style={{ minHeight: '100vh', background: '#0a0a0b' }} />;
 
@@ -50,6 +54,12 @@ const AppRouter = () => (
 
                 {/* Public shared trip tracking (no auth — secured by token) */}
                 <Route path="/track/:token" element={<SharedTrip />} />
+
+                {/* Public info pages (no auth) */}
+                <Route path="/about" element={<About />} />
+                <Route path="/privacy" element={<Privacy />} />
+                <Route path="/terms" element={<Terms />} />
+                <Route path="/feedback" element={<Feedback />} />
 
                 <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>

@@ -9,8 +9,8 @@
     min-height: 100dvh;
     background: radial-gradient(125% 125% at 100% 0%, #161618 0%, #0e0e10 45%, #0a0a0b 100%);
     position: relative;
-    overflow-x: hidden;
-    overflow-y: auto;
+    /* No inner scroll — the whole page scrolls as one (the .landing wrapper
+       clips horizontal overflow from the decorative circles). */
     padding: clamp(0.5rem, 1.5vw, 1rem);
 }
 

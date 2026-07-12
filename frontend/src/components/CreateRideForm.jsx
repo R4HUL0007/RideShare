@@ -3,6 +3,7 @@ import axiosInstance from "../utils/axiosConfig";
 import { toast } from "react-toastify";
 import { getUserVehicles } from "../services/vehicleService";
 import ThemedSelect from "./ThemedSelect";
+import PhoneVerifyBanner from "./PhoneVerifyBanner";
 import MapsProvider from "./maps/MapsProvider";
 import LocationSearchBox from "./maps/LocationSearchBox";
 import CurrentLocationButton from "./maps/CurrentLocationButton";
@@ -709,6 +710,9 @@ const CreateRideForm = ({ onSuccess, onOpenSidebar, onNavigate }) => {
         body = (
             <form onSubmit={handleSubmit} className="cr-layout">
                 {error && <div className="cr-alert cr-alert-error cr-span-2">{error}</div>}
+
+                {/* ---- Phone verification banner (only when enforced) ---- */}
+                <PhoneVerifyBanner action="publish rides" onNavigate={onNavigate} className="cr-span-2" />
 
                 {/* ---- Driver verification banner ---- */}
                 {!isVerified && (
