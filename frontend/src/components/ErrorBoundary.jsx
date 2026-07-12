@@ -1,4 +1,5 @@
 import React from "react";
+import { reportError } from "../utils/faro";
 
 // Detect the "stale deploy" class of errors: after a redeploy the HTML in an
 // open tab references hashed JS chunks that no longer exist on the server, so a
@@ -36,6 +37,9 @@ class ErrorBoundary extends React.Component {
         }
         // eslint-disable-next-line no-console
         console.error("[ErrorBoundary]", error);
+        // Report to Grafana Faro (prod-only; no-op otherwise) so we can see
+        // real user crashes with stack traces.
+        reportError(error, "ErrorBoundary");
     }
 
     render() {

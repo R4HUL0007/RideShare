@@ -4,7 +4,11 @@ import { GoogleOAuthProvider } from '@react-oauth/google';
 import App from './App';
 import { GOOGLE_CLIENT_ID } from './utils/constants';
 import { registerServiceWorker, initInstallPrompt } from './utils/pwa';
+import { initFaro } from './utils/faro';
 import './styles/index.css';
+
+// Grafana Faro — frontend error/observability (prod-only, guarded internally).
+initFaro();
 
 // Only mount the Google provider when a client ID is configured, so the app
 // runs cleanly in environments without Google OAuth set up.

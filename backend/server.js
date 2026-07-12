@@ -13,6 +13,8 @@ const { rateLimit } = require("./middleware/rateLimit");
 const { sanitizeRequest } = require("./middleware/sanitize");
 const User = require("./models/User");
 dotenv.config();
+const { logger } = require("./utils/logger");
+const pinoHttp = require("pino-http");
 
 // Last-resort safety net: a stray unhandled promise rejection (or a throw
 // outside any try/catch) would otherwise terminate the Node process on modern
@@ -20,12 +22,14 @@ dotenv.config();
 // container/restart policy is the backstop for truly fatal states.
 process.on("unhandledRejection", (reason) => {
     console.error("[unhandledRejection]", reason);
+    try { logger.error({ err: reason }, "unhandledRejection"); } catch { /* ignore */ }
 });
 process.on("uncaughtException", (err) => {
     // An uncaught exception leaves the process in an undefined/corrupted state.
     // Log it and exit so the container restart policy brings up a clean
     // instance, rather than continuing to serve from a half-broken process.
     console.error("[uncaughtException]", err);
+    try { logger.fatal({ err }, "uncaughtException"); } catch { /* ignore */ }
     process.exit(1);
 });
 
@@ -57,6 +61,21 @@ app.use(helmet({ contentSecurityPolicy: false, crossOriginResourcePolicy: false 
 app.use(express.json({ limit: "100kb" }));
 app.use(express.urlencoded({ extended: true, limit: "100kb" }));
 app.use(cookieParser());
+
+// Structured request logging → stdout (Northflank) + Grafana Loki (when configured).
+// Auto-logs method, path, status, and latency for every request; 5xx as errors.
+app.use(pinoHttp({
+    logger,
+    // Quieter health-check noise; everything else logs normally.
+    autoLogging: { ignore: (req) => req.url === "/" || req.url === "/health" },
+    customLogLevel: (req, res, err) => {
+        if (err || res.statusCode >= 500) return "error";
+        if (res.statusCode >= 400) return "warn";
+        return "info";
+    },
+    // Never log cookies/auth headers.
+    redact: ["req.headers.authorization", "req.headers.cookie", "res.headers['set-cookie']"],
+}));
 
 // Strip MongoDB operator keys ($..., dotted paths) from all request inputs to
 // neutralize NoSQL injection before any controller builds a query.

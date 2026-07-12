@@ -12,6 +12,8 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@grafana/faro-web-sdk": "^2.8.2",
+    "@grafana/faro-web-tracing": "^2.8.2",
     "@heroicons/react": "^2.2.0",
     "@react-google-maps/api": "^2.20.8",
     "@react-oauth/google": "^0.12.2",

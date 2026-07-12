@@ -22,6 +22,22 @@ People heading in the same direction rarely find each other. RideShare connects 
 - **Travel safely** — verified drivers, ride check-in with a boarding code, live tracking, SOS alerts, and a women-only ride option.
 - **Stay connected** — chat, live location, and a community of people from the same campus.
 
+## How it works
+
+**For riders**
+1. Sign up with your university email and verify it with a one-time code.
+2. Search for rides going your way (or post a request and let nearby drivers come to you).
+3. Book a seat and pay securely — your payment is held safely until the trip is done.
+4. Track the ride live on the map, verify boarding with a code, and rate your driver at the end.
+
+**For drivers**
+1. Sign up, add your vehicle, and complete driver verification.
+2. Create a ride with your route, time, seats, and price per seat.
+3. Accept bookings, pick up your riders (verified by a boarding code), and drive.
+4. Earnings are released after the trip and can be withdrawn to your bank/UPI.
+
+> Phone verification is required the first time you create or book a ride, so everyone on the platform is contactable and trusted.
+
 ## Main features
 
 - **Accounts** — university-email sign-up with email OTP verification, optional **phone verification via SMS OTP**, and Google Sign-In.
@@ -57,3 +73,20 @@ People heading in the same direction rarely find each other. RideShare connects 
 
 - **Backend** — `cd backend && npm test` (Vitest: unit + integration, incl. full money-path state verification)
 - **End-to-end** — `cd e2e && npx playwright test` (auth, rides, payments/escrow, notifications, chat, safety, admin, security, rate-limiting)
+
+## Learn more
+
+- **About** — https://ridexshare.online/about
+- **Privacy Policy** — https://ridexshare.online/privacy
+- **Terms of Service** — https://ridexshare.online/terms
+- **Feedback / contact** — https://ridexshare.online/feedback
+
+## FAQ
+
+**Who can use RideShare?** Verified members of the university community — everyone signs up with a university email.
+
+**How is it safe?** Verified drivers, boarding codes, live tracking, SOS with emergency contacts, masked contact numbers until a booking is confirmed, and moderated chat.
+
+**How are payments handled?** Securely online, with funds held in escrow until the ride is completed. Drivers withdraw their earnings to bank/UPI.
+
+**Is it free?** Yes to use — riders simply split the travel cost with the driver.

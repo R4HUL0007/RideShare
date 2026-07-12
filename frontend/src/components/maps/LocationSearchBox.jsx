@@ -13,8 +13,10 @@ const LocationSearchBox = ({
     // eslint-disable-next-line no-unused-vars
     isSource = false 
 }) => {
-    // Shared Google Maps SDK status — drives the load-failure message (Req 2.2).
-    const { loadError } = useMaps();
+    // Shared Google Maps SDK status — drives the load-failure message (Req 2.2)
+    // and gates any access to window.google.maps.places (which is undefined
+    // until the SDK + places library have fully loaded).
+    const { loadError, isLoaded } = useMaps();
 
     const inputRef = useRef(null);
     const sessionTokenRef = useRef(null);
@@ -72,12 +74,14 @@ const LocationSearchBox = ({
         clearRecent().catch(() => { /* swallow */ });
     };
 
-    // Initialize session token on mount
+    // Initialize session token once the SDK (with the places library) is ready.
+    // Optional chaining guards the brief window where window.google exists but
+    // window.google.maps is still undefined (would otherwise throw).
     useEffect(() => {
-        if (window.google && window.google.maps.places) {
+        if (isLoaded && window.google?.maps?.places) {
             sessionTokenRef.current = new window.google.maps.places.AutocompleteSessionToken();
         }
-    }, []);
+    }, [isLoaded]);
 
     // Recalculate dropdown position whenever focus state or value changes, and
     // keep it aligned while the page scrolls/resizes (the dropdown is a fixed,
@@ -98,9 +102,9 @@ const LocationSearchBox = ({
         };
     }, [isFocused, value]);
 
-    // Debounced autocomplete search — relies on parent LoadScript
+    // Debounced autocomplete search — relies on the shared MapsProvider SDK.
     useEffect(() => {
-        if (!value || !window.google) {
+        if (!value || !isLoaded || !window.google?.maps?.places) {
             setSuggestions([]);
             setIsLoading(false);
             return;
@@ -124,7 +128,7 @@ const LocationSearchBox = ({
         }, 300);
 
         return () => clearTimeout(timer);
-    }, [value]);
+    }, [value, isLoaded]);
 
     const handlePlaceSelect = (prediction) => {
         if (!prediction) return;
@@ -140,7 +144,7 @@ const LocationSearchBox = ({
         setIsFocused(false);
 
         // Guard against the SDK being unavailable (loadError or not yet loaded).
-        if (!window.google || !window.google.maps) {
+        if (!window.google?.maps) {
             setError('Please select a valid location from the dropdown');
             return;
         }
@@ -148,7 +152,7 @@ const LocationSearchBox = ({
         // Issue a fresh session token after a completed selection so the next
         // autocomplete sequence is clean, regardless of geocode outcome (Req 4.4).
         const issueNewToken = () => {
-            if (window.google && window.google.maps.places) {
+            if (window.google?.maps?.places) {
                 sessionTokenRef.current = new window.google.maps.places.AutocompleteSessionToken();
             }
         };
