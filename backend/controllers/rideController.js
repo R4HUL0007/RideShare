@@ -2,7 +2,7 @@ const Ride = require("../models/Ride");
 const User = require("../models/User");
 const Vehicle = require("../models/Vehicle");
 const mongoose = require("mongoose");
-const { createNotification, createNotificationsBulk } = require("../utils/notify");
+const { createNotification } = require("../utils/notify");
 const { normalizeCoords } = require("../utils/coords");
 const { rankRides, CFG } = require("../utils/routeMatch");
 const { haversineKm } = require("../utils/geo");
@@ -134,23 +134,17 @@ exports.createRide = async (req, res) => {
         // immediately, then fan out as a SINGLE bulk insert + online-only emits.
         res.status(201).json(ride);
 
+        // Smart targeted notifications: instead of spamming EVERY same-role
+        // user, only push to users whose own history (searches + past bookings
+        // for this destination) makes them highly likely to want this ride.
+        // Everyone else discovers it via the in-app "Recommended For You"
+        // section. Fire-and-forget — never blocks or breaks ride creation.
         setImmediate(async () => {
             try {
-                const recipients = await User.find({ role: user.role, _id: { $ne: userId } })
-                    .select("_id").lean();
-                if (recipients.length) {
-                    await createNotificationsBulk({
-                        io, users,
-                        userIds: recipients.map((u) => u._id),
-                        type: "ride",
-                        title: "New ride available",
-                        message: `New ride to ${destination} is available.`,
-                        rideId: ride._id,
-                        link: { tab: "findRides" },
-                    });
-                }
+                const { notifyRelevantUsers } = require("../utils/rideRecommendation");
+                await notifyRelevantUsers({ ride, io, users });
             } catch (e) {
-                console.error("createRide notification fan-out failed:", e.message);
+                console.error("createRide smart notify failed:", e.message);
             }
         });
         return;

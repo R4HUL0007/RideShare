@@ -7,6 +7,7 @@ import { getMyImpact } from "../services/sustainabilityService";
 import { logoutUser } from "../services/authService";
 import { getSuggestions, removeSearch, clearSearches } from "../services/suggestionsService";
 import { clearAuthTokens, clearAppCaches } from "../utils/authToken";
+import Recommendations from "./Recommendations";
 
 // One-shot bridge: DashboardHome writes a prefill FindRides reads on mount.
 const FIND_PREFILL_KEY = "rs_find_prefill";
@@ -330,6 +331,9 @@ const DashboardHome = ({ user, onNavigate, onOpenSidebar }) => {
                                 <button className="dh-menu-item" role="menuitem" onClick={() => { setMenuOpen(false); onNavigate("myVehicle"); }}>
                                     <Svg size={16}>{I.car}</Svg> My Vehicle
                                 </button>
+                                <button className="dh-menu-item" role="menuitem" onClick={() => { setMenuOpen(false); navigate("/feedback"); }}>
+                                    <Svg size={16}><><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></></Svg> Send Feedback
+                                </button>
                                 <button className="dh-menu-item danger" role="menuitem" onClick={handleLogout}>
                                     <Svg size={16}>{I.logout}</Svg> Logout
                                 </button>
@@ -394,6 +398,9 @@ const DashboardHome = ({ user, onNavigate, onOpenSidebar }) => {
                             </div>
                         </section>
                     )}
+
+                    {/* ---------- Recommended For You (personalized ride suggestions) ---------- */}
+                    <Recommendations onNavigate={onNavigate} />
 
                     {/* ---------- Recent searches ---------- */}
                     {sugg.recentSearches.length > 0 && (
