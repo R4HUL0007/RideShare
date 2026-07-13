@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { toast } from "react-toastify";
-import QRCode from "qrcode";
 import { getVerification, checkIn, verifyCode, reportNoShow } from "../services/checkinService";
 import "../styles/verifyride.css";
 
@@ -18,7 +17,6 @@ const RideVerificationPanel = ({ rideId, trackingState, isDriver, onVerifiedChan
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [code, setCode] = useState("");
-    const [qr, setQr] = useState("");
     const [busy, setBusy] = useState(false);
 
     // Keep the latest onVerifiedChange in a ref so `load` doesn't depend on it.
@@ -34,10 +32,6 @@ const RideVerificationPanel = ({ rideId, trackingState, isDriver, onVerifiedChan
             const { data } = await getVerification(rideId);
             setData(data);
             if (data.role === "driver") onVerifiedChangeRef.current?.(data.verifiedCount || 0, (data.passengers || []).length);
-            if (data.role === "passenger" && data.qrPayload) {
-                QRCode.toDataURL(data.qrPayload, { margin: 1, width: 220, color: { dark: "#0a0a0b", light: "#ffffff" } })
-                    .then(setQr).catch(() => setQr(""));
-            }
         } catch {
             /* not a participant / error — panel stays hidden */
         } finally { setLoading(false); }
@@ -102,13 +96,12 @@ const RideVerificationPanel = ({ rideId, trackingState, isDriver, onVerifiedChan
 
                 {!started && !data.boardingVerified && (
                     <>
-                        <p className="vr-hint">Show this code (or QR) to your driver before boarding.</p>
+                        <p className="vr-hint">Share this code with your driver before boarding.</p>
                         <div className="vr-code" aria-label={`Boarding code ${data.code}`}>
                             {String(data.code || "").split("").map((ch, i) => (
                                 <span key={i} className="vr-code-cell">{ch}</span>
                             ))}
                         </div>
-                        {qr && <img className="vr-qr" src={qr} alt="Boarding QR code" />}
                         {!data.checkedIn && (
                             <button className="vr-btn" onClick={doCheckIn} disabled={busy}>
                                 {busy ? "Checking in…" : "✅ Check In"}

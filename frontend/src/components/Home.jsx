@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import LoginForm from './LoginForm';
 import RegisterForm from './RegisterForm';
 import Footer from './public/Footer';
@@ -9,7 +9,11 @@ import '../styles/Home.css';
 import '../styles/public.css';
 
 const Home = () => {
-    const [activeTab, setActiveTab] = useState('login');
+    // Footer / deep links can request a specific tab via ?auth=login|register
+    // (e.g. the footer "Sign up" vs "Log in" links).
+    const [searchParams] = useSearchParams();
+    const initialTab = searchParams.get('auth') === 'register' ? 'register' : 'login';
+    const [activeTab, setActiveTab] = useState(initialTab);
 
     return (
         <div className="landing">

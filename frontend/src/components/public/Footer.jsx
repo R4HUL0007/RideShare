@@ -30,8 +30,8 @@ const Footer = () => {
                     </div>
                     <div className="pub-footer-col">
                         <h4>Get started</h4>
-                        <Link to="/">Log in</Link>
-                        <Link to="/">Sign up</Link>
+                        <Link to="/?auth=login">Log in</Link>
+                        <Link to="/?auth=register">Sign up</Link>
                     </div>
                 </div>
             </div>
