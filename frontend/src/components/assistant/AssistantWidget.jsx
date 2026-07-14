@@ -11,19 +11,17 @@ const Icon = {
     pin: <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 21s7-6.3 7-12a7 7 0 1 0-14 0c0 5.7 7 12 7 12z" /><circle cx="12" cy="9" r="2.5" /></svg>,
 };
 
-const QUICK_ACTIONS = [
-    { label: "🚗 Create Ride", tool: "navigate", args: { tab: "createRide" } },
-    { label: "🔍 Find Ride", tool: "navigate", args: { tab: "findRides" } },
-    { label: "📖 My Bookings", tool: "navigate", args: { tab: "myBookings" } },
-    { label: "🚘 My Vehicles", tool: "navigate", args: { tab: "myVehicle" } },
-    { label: "📍 Track Ride", tool: "openTracking", args: {} },
-    { label: "💳 Payments", tool: "navigate", args: { tab: "payments" } },
-    { label: "👤 Profile", tool: "navigate", args: { tab: "profile" } },
-];
-
+// Welcome-screen capability tiles. Each is now CLICKABLE: `action` runs a tool
+// directive (navigate/track), `ask` sends a text question to the assistant.
 const CAPABILITIES = [
-    "🚗 Create Rides", "🔍 Find Rides", "📖 Manage Bookings", "🚘 Manage Vehicles",
-    "💬 Chat Support", "💳 Payments", "📍 Live Tracking", "❓ FAQs",
+    { label: "🚗 Create Rides", action: { tool: "navigate", args: { tab: "createRide" } } },
+    { label: "🔍 Find Rides", action: { tool: "navigate", args: { tab: "findRides" } } },
+    { label: "📖 Manage Bookings", action: { tool: "navigate", args: { tab: "myBookings" } } },
+    { label: "🚘 Manage Vehicles", action: { tool: "navigate", args: { tab: "myVehicle" } } },
+    { label: "💳 Payments", action: { tool: "navigate", args: { tab: "payments" } } },
+    { label: "📍 Live Tracking", action: { tool: "openTracking", args: {} } },
+    { label: "💬 Chat Support", ask: "How do I contact support?" },
+    { label: "❓ What is RidexShare?", ask: "What is RidexShare and what problem does it solve?" },
 ];
 
 const fmtTime = (iso) => (iso ? new Date(iso).toLocaleString(undefined, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "");
@@ -97,7 +95,16 @@ const AssistantWidget = () => {
                                 <div className="ai-welcome-title">Welcome to RidexShare Assistant</div>
                                 <div className="ai-welcome-sub">{pageContext.hint} I can help you:</div>
                                 <div className="ai-cap-grid">
-                                    {CAPABILITIES.map((c) => <div className="ai-cap" key={c}>{c}</div>)}
+                                    {CAPABILITIES.map((c) => (
+                                        <button
+                                            type="button"
+                                            className="ai-cap ai-cap-btn"
+                                            key={c.label}
+                                            onClick={() => (c.action ? runAction(c.action) : send(c.ask))}
+                                        >
+                                            {c.label}
+                                        </button>
+                                    ))}
                                 </div>
                                 <div className="ai-suggestions">
                                     {pageContext.suggestions.map((s) => (
@@ -141,12 +148,14 @@ const AssistantWidget = () => {
                         )}
                     </div>
 
-                    {/* Quick actions */}
-                    <div className="ai-quick">
-                        {QUICK_ACTIONS.map((q) => (
-                            <button key={q.label} className="ai-quick-btn" onClick={() => runAction(q)}>{q.label}</button>
-                        ))}
-                    </div>
+                    {/* Clear chat (bottom) — quick, obvious reset, keeps the header trash too */}
+                    {messages.length > 0 && (
+                        <div className="ai-footerbar">
+                            <button type="button" className="ai-clear-btn" onClick={clear} title="Clear the whole conversation">
+                                {Icon.trash} Clear chat
+                            </button>
+                        </div>
+                    )}
 
                     {/* Composer */}
                     <form className="ai-composer" onSubmit={submit}>

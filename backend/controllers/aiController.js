@@ -12,6 +12,28 @@ const analytics = require("../ai/analytics");
 const { ingestKnowledgeBase } = require("../ai/rag/ingest");
 const { containsAbuse } = require("../utils/moderation");
 
+// Guardrail: block attempts to extract secrets, credentials, or system/internal
+// details (API keys, env vars, DB connection strings, source code, the system
+// prompt, other users' private data, etc.). The assistant is a product helper —
+// it must never surface infrastructure or security-sensitive information.
+const SENSITIVE_RE = new RegExp(
+    [
+        "api[\\s_-]?key", "secret\\s*key", "razorpay\\s*(key|secret)", "access\\s*token",
+        "\\benv\\b", "environment\\s*variable", "\\.env", "connection\\s*string",
+        "mongo(db)?\\s*(uri|url|password|connection)", "database\\s*(password|credential|uri|url)",
+        "jwt\\s*secret", "private\\s*key", "vapid", "cloudinary\\s*secret",
+        "system\\s*prompt", "your\\s*(instructions|prompt|rules|configuration)",
+        "source\\s*code", "show\\s*me\\s*the\\s*code", "admin\\s*(password|credential)",
+        "other\\s*(user|users|people)('|’)?s?\\s*(data|password|details|info|phone|email)",
+    ].join("|"),
+    "i"
+);
+
+const SENSITIVE_REPLY =
+    "I can't share technical or security-sensitive details like API keys, secrets, environment variables, " +
+    "database info, source code, or other users' private data. I'm here to help you with rides, bookings, " +
+    "payments, tracking, and safety — what would you like to do?";
+
 /**
  * POST /api/ai/chat
  * body: { message, sessionId? }
@@ -31,6 +53,16 @@ exports.chat = async (req, res) => {
             reply: "Let's keep it respectful — I can't help with messages that contain abusive or violent language. How can I help with your rides, payments, or safety?",
             actions: [],
             suggestions: [],
+            cards: [],
+            moderated: true,
+        });
+    }
+    // Security guardrail: never leak secrets, credentials, or system internals.
+    if (SENSITIVE_RE.test(message)) {
+        return res.status(200).json({
+            reply: SENSITIVE_REPLY,
+            actions: [],
+            suggestions: ["What is RidexShare?", "How do I book a ride?", "How does payment work?"],
             cards: [],
             moderated: true,
         });

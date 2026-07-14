@@ -10,6 +10,13 @@
 
 const KNOWLEDGE_SOURCES = [
     {
+        id: "doc_overview",
+        category: "overview",
+        title: "What is RidexShare and What Problem It Solves",
+        content:
+            "RidexShare is a community carpooling and ridesharing platform built for the Parul University community. The problem it solves: students and faculty often travel the same routes (to campus, home cities, stations and airports) at the same times, but book separate cabs or ride half-empty vehicles — which is expensive, wasteful and bad for the environment. RidexShare connects people going the same way so they can share a ride and split the cost. Drivers offer empty seats on trips they are already making and earn money; passengers find affordable rides along their route. Beyond simple carpooling, riders can also broadcast an on-demand Request a Ride to nearby verified drivers when no existing ride matches. The platform makes this safe and trustworthy with verified @paruluniversity.ac.in accounts, secure escrow-protected payments (money is released to the driver only after the ride), live GPS tracking limited to ride participants, ratings and reviews, a dispute system, and in-app chat. In short, RidexShare reduces travel cost, cuts traffic and carbon emissions, and turns everyday trips into shared, community-verified rides.",
+    },
+    {
         id: "doc_escrow",
         category: "payments",
         title: "How Escrow Works",
