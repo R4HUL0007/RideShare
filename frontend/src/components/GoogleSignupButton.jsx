@@ -463,7 +463,11 @@ const GoogleSignupButton = ({ onAuthenticated, onProfileModeChange }) => {
                     onError={() => toast.error('Google sign-in was cancelled or failed.')}
                     text="continue_with"
                     shape="pill"
-                    width="100%"
+                    /* GSI needs a numeric px width (200–400); "100%" is invalid and
+                       Google fell back to ~400px, overflowing narrow phones and
+                       pushing the form fields off-screen. 320 fits small screens
+                       and is centered by .rsr-google-btn. */
+                    width="320"
                     theme="filled_black"
                     logo_alignment="center"
                 />

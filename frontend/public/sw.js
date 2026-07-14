@@ -10,7 +10,7 @@
    - Background Sync: future-ready hooks (chat/notification/ride sync).
    ======================================================= */
 
-const VERSION = "v1.7.7";
+const VERSION = "v1.7.8";
 const STATIC_CACHE = `rs-static-${VERSION}`;
 const RUNTIME_CACHE = `rs-runtime-${VERSION}`;
 const IMAGE_CACHE = `rs-images-${VERSION}`;

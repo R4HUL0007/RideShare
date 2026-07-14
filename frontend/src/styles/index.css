@@ -640,6 +640,32 @@ html, body {
 }
 
 /* =======================================================
+   AUTH PAGE (login / register) — first-paint width guard.
+   On a COLD load the Google sign-in iframe (fixed ~400px) and font swaps can
+   render wider than a narrow viewport, pushing the form FIELDS off the right
+   edge. On a warm SPA re-render everything is cached so it fits. These rules
+   live in the EAGER global stylesheet so they apply on the very first paint,
+   hard-capping the auth card and every field to the viewport width regardless
+   of component-CSS load timing.
+   ======================================================= */
+.home-container { max-width: 100vw; overflow-x: hidden; }
+.form-container { max-width: 100%; box-sizing: border-box; }
+.form-container *,
+.rsl-root *,
+.rsr-root * { box-sizing: border-box; }
+.form-container input,
+.form-container textarea,
+.form-container .rsl-input,
+.form-container .rsr-input,
+.form-container .rsl-submit,
+.form-container .rsr-submit,
+.form-container .tab-buttons,
+.form-container .rsl-hero { max-width: 100%; }
+/* Google button: never let its fixed-width iframe widen/overflow the card. */
+.rsr-google,
+.rsr-google-btn { max-width: 100%; overflow: hidden; }
+
+/* =======================================================
    ThemedSelect — DARK variant (theme="dark")
    Self-contained so it works inside dark hosts (dashboard,
    profile, vehicle) that are NOT wrapped in `.rsr-root`.
