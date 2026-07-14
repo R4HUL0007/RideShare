@@ -5,7 +5,7 @@ import axiosInstance from "../utils/axiosConfig";
 import { getUserVehicles } from "../services/vehicleService";
 import { getMyImpact } from "../services/sustainabilityService";
 import { logoutUser } from "../services/authService";
-import { getSuggestions, removeSearch, clearSearches } from "../services/suggestionsService";
+import { getSuggestions } from "../services/suggestionsService";
 import { clearAuthTokens, clearAppCaches } from "../utils/authToken";
 import Recommendations from "./Recommendations";
 
@@ -142,14 +142,6 @@ const DashboardHome = ({ user, onNavigate, onOpenSidebar }) => {
         onNavigate("findRides");
     };
     const coordOrNull = (o) => (o && Number.isFinite(o.lat) && Number.isFinite(o.lng) ? { lat: o.lat, lng: o.lng } : null);
-    const handleRemoveRecent = async (id) => {
-        const listRes = await removeSearch(id);
-        setSugg((s) => ({ ...s, recentSearches: Array.isArray(listRes) ? listRes : s.recentSearches.filter((x) => x._id !== id) }));
-    };
-    const handleClearRecent = async () => {
-        setSugg((s) => ({ ...s, recentSearches: [] }));
-        await clearSearches();
-    };
     const greetingWord = (() => {
         const h = new Date().getHours();
         return h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
@@ -401,49 +393,6 @@ const DashboardHome = ({ user, onNavigate, onOpenSidebar }) => {
 
                     {/* ---------- Recommended For You (personalized ride suggestions) ---------- */}
                     <Recommendations onNavigate={onNavigate} />
-
-                    {/* ---------- Recent searches ---------- */}
-                    {sugg.recentSearches.length > 0 && (
-                        <section className="dh-section dh-rise">
-                            <div className="dh-section-head">
-                                <h2 className="dh-section-title">Recent Searches</h2>
-                                <button className="dh-link" onClick={handleClearRecent}>Clear all</button>
-                            </div>
-                            <div className="dh-recent-list">
-                                {sugg.recentSearches.map((r) => (
-                                    <div
-                                        key={r._id}
-                                        className="dh-recent-row"
-                                        role="button"
-                                        tabIndex={0}
-                                        onClick={() => startFind({ destination: r.destination?.label, destinationCoords: coordOrNull(r.destination), source: r.pickup?.label, sourceCoords: coordOrNull(r.pickup) })}
-                                    >
-                                        <span className="dh-recent-ic"><Svg size={15}>{I.search}</Svg></span>
-                                        <span className="dh-recent-text">{r.pickup?.label || "My location"} → {r.destination?.label || "—"}</span>
-                                        <button className="dh-recent-x" aria-label="Remove" onClick={(e) => { e.stopPropagation(); handleRemoveRecent(r._id); }}>×</button>
-                                    </div>
-                                ))}
-                            </div>
-                        </section>
-                    )}
-
-                    {/* ---------- Favorite places ---------- */}
-                    {sugg.favoritePlaces.length > 0 && (
-                        <section className="dh-section dh-rise">
-                            <h2 className="dh-section-title">Favorite Places</h2>
-                            <div className="dh-fav-list">
-                                {sugg.favoritePlaces.map((f) => (
-                                    <button
-                                        key={f._id}
-                                        className="dh-fav-chip"
-                                        onClick={() => startFind({ destination: f.label, destinationCoords: coordOrNull(f.coords) })}
-                                    >
-                                        <Svg size={14}>{I.pin}</Svg> <span>{f.label || "Saved place"}</span>
-                                    </button>
-                                ))}
-                            </div>
-                        </section>
-                    )}
 
                     {/* ---------- Quick actions ---------- */}
                     <section className="dh-section">
