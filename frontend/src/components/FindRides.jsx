@@ -46,6 +46,14 @@ const userDot = () => {
 
 const hasCoords = (c) => c && typeof c.lat === "number" && typeof c.lng === "number";
 
+// Short relative label for the availability pill's "Updated …" hint.
+const relAvail = (ts) => {
+    const s = Math.floor((Date.now() - ts) / 1000);
+    if (s < 45) return "just now";
+    const m = Math.floor(s / 60);
+    return m < 60 ? `${m}m ago` : `${Math.floor(m / 60)}h ago`;
+};
+
 // Effective per-seat price for a ride: the distance-based SEGMENT fare when the
 // passenger is dropping partway along the route (server-computed, in `_fare`),
 // otherwise the driver's flat full-route price.
@@ -615,6 +623,9 @@ const FindRidesInner = ({ onOpenSidebar, onNavigate, user }) => {
     // first-time users on mobile (where the form fills the screen) don't miss
     // the results sitting below the fold.
     const resultsRef = useRef(null);
+    // Live availability pill — tells the user rides exist BEFORE they search,
+    // and re-counts within a radius as they change their source.
+    const [avail, setAvail] = useState({ count: null, scoped: false, radiusKm: null, updatedAt: null, loading: true });
 
     // Phone-verification gate — disables the Book/Confirm buttons in the UI when
     // enforced and the user hasn't verified their phone (backend still enforces).
@@ -650,6 +661,29 @@ const FindRidesInner = ({ onOpenSidebar, onNavigate, user }) => {
             .catch(() => { if (active) setPayConfig({ enabled: false }); });
         return () => { active = false; };
     }, []);
+
+    // Live "rides available" count. Fetches on mount and whenever the source
+    // coords change (so it re-scopes to a radius), plus a periodic refresh so
+    // "Updated just now" stays honest. Never blocks the page.
+    const srcLat = filters.sourceCoords?.lat ?? null;
+    const srcLng = filters.sourceCoords?.lng ?? null;
+    const fetchAvail = useCallback(async () => {
+        try {
+            const params = {};
+            if (srcLat != null && srcLng != null) { params.sourceLat = srcLat; params.sourceLng = srcLng; params.radiusKm = 10; }
+            const { data } = await axiosInstance.get(`${API_BASE_URL}/rides/available-count`, { params });
+            setAvail({ count: data?.count ?? 0, scoped: Boolean(data?.scoped), radiusKm: data?.radiusKm ?? null, updatedAt: Date.now(), loading: false });
+        } catch {
+            setAvail((a) => ({ ...a, loading: false }));
+        }
+    }, [srcLat, srcLng]);
+
+    useEffect(() => {
+        // Debounce so typing/selecting a source doesn't spam the endpoint.
+        const t = setTimeout(fetchAvail, 300);
+        const iv = setInterval(fetchAvail, 60000);
+        return () => { clearTimeout(t); clearInterval(iv); };
+    }, [fetchAvail]);
 
     // Center the map on the user's real location on load (best-effort). Without
     // this the map falls back to a fixed Vadodara center; with it, the map opens
@@ -1045,6 +1079,25 @@ const FindRidesInner = ({ onOpenSidebar, onNavigate, user }) => {
                         />
                     </div>
                 </div>
+
+                {/* Live availability — reassures the user rides exist before they
+                    search, and re-scopes to 10 km once they pick a source. */}
+                {!avail.loading && avail.count != null && (
+                    <div className={`fr-avail${avail.count > 0 ? " has" : " none"}`} aria-live="polite">
+                        <span className="fr-avail-main">
+                            {avail.count > 0 ? (
+                                <>
+                                    <span className="fr-avail-dot" />
+                                    {avail.count} ride{avail.count !== 1 ? "s" : ""} available
+                                    {avail.scoped ? ` within ${avail.radiusKm} km` : " now"}
+                                </>
+                            ) : (
+                                <>🚗 No rides {avail.scoped ? `within ${avail.radiusKm} km` : "available"} right now</>
+                            )}
+                        </span>
+                        {avail.updatedAt && <span className="fr-avail-time">Updated {relAvail(avail.updatedAt)}</span>}
+                    </div>
+                )}
 
                 <div className="fr-filter-row">
                     <div className="fr-filter">

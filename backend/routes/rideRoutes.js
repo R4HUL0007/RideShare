@@ -1,5 +1,5 @@
 const express = require("express");
-const { createRide, findRides, cancelRide, bookRide, completeRide, getRideHistory , getUserRides, deleteRide, getMyBookings, removePassenger} = require("../controllers/rideController");
+const { createRide, findRides, cancelRide, bookRide, completeRide, getRideHistory , getUserRides, deleteRide, getMyBookings, removePassenger, availableCount} = require("../controllers/rideController");
 const { getTracking, startTracking, endTracking, updateLocation, confirmArrival } = require("../controllers/trackingController");
 const { getVerification, checkIn, verifyCode, reportNoShow, getTimeline, resendOtp } = require("../controllers/checkinController");
 const { protect } = require("../middleware/authMiddleware");
@@ -14,6 +14,7 @@ const searchLimiter = rateLimit({ key: "ride-search", windowMs: 60 * 1000, max: 
 
 router.post("/", protect, createLimiter, createRide); // Create a ride (Host)
 router.get("/", protect, searchLimiter, findRides); // Find matching rides (Rider)
+router.get("/available-count", protect, availableCount); // Live count of available rides (pill)
 router.get("/user-rides", protect, getUserRides); // Get rides created by the user (Host)
 router.get("/my-bookings", protect, getMyBookings); // Get rides booked by the user (Rider)
 // --- Live tracking (participants only; enforced in controller) ---

@@ -158,6 +158,45 @@ exports.createRide = async (req, res) => {
 };
 
 
+// ✅ Live count of available rides for the current user (no search needed).
+// Powers the "N rides available now / within X km" pill on Find Rides so a
+// first-time user knows rides exist before they search. Cheap: a single
+// countDocuments with the same role + women's-safety filters as findRides,
+// optionally bounded to a lat/lng box around the passenger's source.
+exports.availableCount = async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id).select("role gender").lean();
+        if (!user) return res.status(404).json({ message: "User not found" });
+
+        const query = {
+            role: user.role,
+            status: "Available",
+            user_id: { $ne: req.user.id },
+        };
+        // Women's-safety rule mirrors findRides: male passengers never see
+        // female-only rides in the count.
+        if (user.gender === "Male") query.gender_preference = { $ne: "Female" };
+
+        const num = (v) => (v != null && Number.isFinite(Number(v)) ? Number(v) : null);
+        const lat = num(req.query.sourceLat);
+        const lng = num(req.query.sourceLng);
+        const radiusKm = num(req.query.radiusKm) || 10;
+        const scoped = lat != null && lng != null;
+        if (scoped) {
+            const dLat = radiusKm / 111;
+            const dLng = radiusKm / (111 * Math.cos((lat * Math.PI) / 180) || 1);
+            query["sourceCoords.lat"] = { $gte: lat - dLat, $lte: lat + dLat };
+            query["sourceCoords.lng"] = { $gte: lng - dLng, $lte: lng + dLng };
+        }
+
+        const count = await Ride.countDocuments(query);
+        return res.status(200).json({ count, scoped, radiusKm: scoped ? radiusKm : null });
+    } catch (error) {
+        // Never break the page over a count — return a soft zero.
+        return res.status(200).json({ count: 0, scoped: false, radiusKm: null });
+    }
+};
+
 // ✅ 2. Find Matching Rides (Rider Looking for a Ride)
 // Supports BOTH classic exact-destination search (backward compatible) AND
 // Smart Route Matching (route overlap, intermediate stops, nearby destinations)

@@ -266,7 +266,10 @@
 /* ---------------- responsive ---------------- */
 @media (max-width: 1024px) {
   .fr-body.view-split { grid-template-columns: 1fr; }
-  .fr-body.view-split .fr-mapcol { position: relative; top: 0; }
+  /* Mobile: list gets priority (shown right after the search), map drops below.
+     Desktop keeps the side-by-side split above this breakpoint. */
+  .fr-body.view-split .fr-results { order: 1; }
+  .fr-body.view-split .fr-mapcol { order: 2; position: relative; top: 0; }
   .fr-body.view-split .fr-map { position: relative; top: 0; height: 360px; min-height: 360px; }
   .fr-body.view-split .fr-card-list { max-height: none; }
 }
@@ -473,3 +476,45 @@
     text-decoration: underline;
 }
 .fr-linkbtn:hover { color: #93c5fd; }
+
+/* Live availability pill — sits above the Search button so first-time users
+   know rides exist before searching. Compact, single line. */
+.fr-avail {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    margin: 0.1rem 0 0.2rem;
+    padding: 0.5rem 0.8rem;
+    border: 1px solid rgba(52, 211, 153, 0.25);
+    border-radius: 0.6rem;
+    background: rgba(16, 185, 129, 0.08);
+}
+.fr-avail.none {
+    border-color: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.03);
+}
+.fr-avail-main {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-size: 0.84rem;
+    font-weight: 700;
+    color: #d1fae5;
+}
+.fr-avail.none .fr-avail-main { color: #9ca3af; font-weight: 600; }
+.fr-avail-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #34d399;
+    box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.6);
+    animation: fr-avail-pulse 1.8s ease-out infinite;
+}
+@keyframes fr-avail-pulse {
+    0% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.55); }
+    70% { box-shadow: 0 0 0 7px rgba(52, 211, 153, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0); }
+}
+.fr-avail-time { font-size: 0.72rem; color: #8b8b93; font-weight: 500; }
