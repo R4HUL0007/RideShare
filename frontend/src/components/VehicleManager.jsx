@@ -300,13 +300,18 @@ export default VehicleManager;
 /* ---------------- Vehicle card ---------------- */
 function VehicleCard({ vehicle, isDefault, onView, onEdit, onDelete, onSetDefault }) {
     const img = photoOf(vehicle);
+    // Fall back to the clean placeholder if the photo URL is missing/broken
+    // (e.g. an old or seeded vehicle with an unreachable image) instead of
+    // showing the browser's broken-image glyph.
+    const [imgBroken, setImgBroken] = useState(false);
+    const showImg = img && !imgBroken;
     return (
         <article className={`dv-card dv-rise${isDefault ? " is-default" : ""}`}>
             <div className="dv-card-media" onClick={onView} role="button" tabIndex={0}
                 onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && onView()}
                 aria-label={`View ${vehicle.make} ${vehicle.model} details`}>
-                {img
-                    ? <img src={img} alt={`${vehicle.make} ${vehicle.model}`} loading="lazy" />
+                {showImg
+                    ? <img src={img} alt={`${vehicle.make} ${vehicle.model}`} loading="lazy" onError={() => setImgBroken(true)} />
                     : <span className="dv-card-media-placeholder"><Svg size={42}>{I.car}</Svg></span>}
                 {isDefault && <span className="dv-default-badge"><Svg size={11}>{I.star}</Svg> Default</span>}
                 {vehicle.vehicleType && <span className="dv-type-badge">{vehicle.vehicleType}</span>}

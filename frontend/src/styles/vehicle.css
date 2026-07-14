@@ -286,6 +286,16 @@
   .dv-hamburger { display: inline-flex; }
   .dv-hero { grid-template-columns: 1fr; }
   .dv-hero-art { order: -1; }
+  /* Keep the header text clear of the floating notification bell (top-right),
+     and drop the "Add Vehicle" button onto its own full-width row so it's
+     never clipped by the bell. */
+  .dv-topbar { flex-wrap: wrap; padding-right: 2.75rem; }
+  .dv-topbar > .dv-btn {
+    flex-basis: 100%;
+    order: 5;
+    justify-content: center;
+    margin-top: 0.5rem;
+  }
 }
 @media (max-width: 560px) {
   .dv-stats { grid-template-columns: 1fr; }
