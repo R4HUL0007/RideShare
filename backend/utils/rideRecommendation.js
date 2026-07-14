@@ -231,7 +231,13 @@ async function notifyRelevantUsers({ ride, io, users = {} }) {
                     title,
                     message: t.reason ? `${message} (${t.reason})` : message,
                     rideId: ride._id,
-                    link: { tab: "findRides" },
+                    link: {
+                        tab: "findRides",
+                        rideId: String(ride._id),
+                        destination: ride.destination || null,
+                        destLat: ride.destinationCoords?.lat ?? null,
+                        destLng: ride.destinationCoords?.lng ?? null,
+                    },
                 });
                 sent += 1;
             } catch { /* skip one bad recipient */ }

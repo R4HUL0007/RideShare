@@ -98,6 +98,33 @@ const tabMatches = (type, tab) => {
     return true;
 };
 
+// Sensible default destination tab per notification type, used when a
+// notification has no explicit deep-link so clicking still goes somewhere.
+const defaultTabForType = (type) => ({
+    ride: "myBookings",
+    payment: "payments",
+    escrow: "earnings",
+    chat: "chats",
+    safety: "safety",
+    verification: "verification",
+    system: null,
+}[type] || null);
+
+// When a notification carries a destination (ride recommendations), stash a
+// one-shot prefill so the Find Rides page opens pre-filled + auto-searches,
+// landing the user on the relevant ride instead of a blank search.
+const stashFindPrefill = (link) => {
+    if (!link || link.tab !== "findRides" || !link.destination) return;
+    try {
+        localStorage.setItem("rs_find_prefill", JSON.stringify({
+            destination: link.destination,
+            destinationCoords: (link.destLat != null && link.destLng != null)
+                ? { lat: link.destLat, lng: link.destLng } : null,
+            ts: Date.now(),
+        }));
+    } catch { /* ignore quota/private-mode errors */ }
+};
+
 /* ---------------- component ---------------- */
 const NotificationBell = ({ user, onNavigate, onTrack, className = "" }) => {
     const [open, setOpen] = useState(false);
@@ -156,11 +183,14 @@ const NotificationBell = ({ user, onNavigate, onTrack, className = "" }) => {
     }, []);
 
     // Open a notification's linked destination (used by card body + fallback actions).
+    // Falls back to a sensible tab derived from the notification type when a
+    // notification has no explicit link (e.g. legacy notifications).
     const openLink = useCallback((n) => {
         markRead(n);
         const link = n.link || {};
-        if (link.tab === "track" && link.rideId && onTrack) onTrack(link.rideId);
-        else if (link.tab && onNavigate) onNavigate(link.tab);
+        if (link.tab === "track" && link.rideId && onTrack) { onTrack(link.rideId); closeCenter(); return; }
+        const tab = link.tab || defaultTabForType(normType(n));
+        if (tab && onNavigate) { stashFindPrefill(link); onNavigate(tab); }
         closeCenter();
     }, [markRead, onNavigate, onTrack]);
 
@@ -168,7 +198,7 @@ const NotificationBell = ({ user, onNavigate, onTrack, className = "" }) => {
     const deriveAction = useCallback((n, type) => {
         const link = n.link || {};
         const m = `${n.title || ""} ${n.message || ""}`.toLowerCase();
-        const go = (tabName) => () => { markRead(n); onNavigate?.(tabName); closeCenter(); };
+        const go = (tabName) => () => { markRead(n); stashFindPrefill(link); onNavigate?.(tabName); closeCenter(); };
         const track = () => { markRead(n); onTrack?.(link.rideId); closeCenter(); };
 
         if (link.tab === "track" && link.rideId && onTrack) return { label: "Track Live", run: track };

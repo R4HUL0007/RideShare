@@ -20,9 +20,15 @@ const NotificationSchema = new mongoose.Schema({
     ride_id: { type: mongoose.Schema.Types.ObjectId, ref: "Ride" },
     // Deep-link metadata so the client can route to the relevant module.
     // e.g. { tab: "myBookings" } or { tab: "track", rideId: "..." }.
+    // Optional prefill fields let a notification open Find Rides pre-filled with
+    // a destination + coords (used by ride recommendations) so "View" lands on
+    // the relevant ride instead of a blank search.
     link: {
         tab: { type: String, default: null },
         rideId: { type: String, default: null },
+        destination: { type: String, default: null },
+        destLat: { type: Number, default: null },
+        destLng: { type: Number, default: null },
     },
     read: { type: Boolean, default: false },
     createdAt: { type: Date, default: Date.now },
