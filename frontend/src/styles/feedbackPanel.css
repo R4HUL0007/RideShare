@@ -3,9 +3,14 @@
    the other dashboard panels (Support / Safety etc.).
    ======================================================= */
 .fbp-root {
+    /* Full-bleed dark surface so it matches the rest of the app (other panels
+       do the same). Content is centered via a max-width on the inner blocks. */
+    min-height: 100vh;
+    min-height: 100dvh;
+    background: #0a0a0b;
+    color: #f4f4f5;
+    font-family: 'Inter', system-ui, sans-serif;
     padding: clamp(0.9rem, 2vw, 1.5rem);
-    max-width: 760px;
-    margin: 0 auto;
     width: 100%;
     box-sizing: border-box;
 }
@@ -14,7 +19,9 @@
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    margin-bottom: 1.2rem;
+    margin: 0 auto 1.2rem;
+    max-width: 760px;
+    width: 100%;
 }
 
 .fbp-hamburger {
@@ -44,6 +51,7 @@
     color: #f4f4f5;
 }
 
+.fbp-body { max-width: 760px; margin: 0 auto; width: 100%; }
 .fbp-heading { min-width: 0; }
 .fbp-title { font-size: 1.4rem; font-weight: 800; margin: 0; color: #f4f4f5; }
 .fbp-subtitle { font-size: 0.82rem; color: #9ca3af; margin: 0.15rem 0 0; }
