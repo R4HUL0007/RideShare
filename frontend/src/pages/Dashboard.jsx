@@ -3,6 +3,9 @@ import { useNavigate, useLocation } from "react-router-dom";
 import axiosInstance from "../utils/axiosConfig";
 import { toast } from "react-toastify";
 import Sidebar from "../components/Sidebar";
+// Eagerly bundled (not lazy) so the in-app Feedback tab renders instantly on
+// click with no separate chunk fetch that could fail on a stale deploy.
+import FeedbackPanel from "../components/FeedbackPanel";
 import NotificationBell from "../components/NotificationBell";
 import { API_BASE_URL } from "../utils/constants";
 import { fetchPendingReviews } from "../services/reviewService";
@@ -30,7 +33,6 @@ const Earnings = lazy(() => import("../components/Earnings"));
 const DriverVerification = lazy(() => import("../components/DriverVerification"));
 const SafetyCenter = lazy(() => import("../components/SafetyCenter"));
 const Support = lazy(() => import("../components/Support"));const Sustainability = lazy(() => import("../components/Sustainability"));
-const FeedbackPanel = lazy(() => import("../components/FeedbackPanel"));
 const AssistantWidget = lazy(() => import("../components/assistant/AssistantWidget"));
 
 // Cancellation Timer Component
