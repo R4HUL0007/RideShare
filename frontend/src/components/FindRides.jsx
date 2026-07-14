@@ -749,8 +749,8 @@ const FindRidesInner = ({ onOpenSidebar, onNavigate, user }) => {
             if (error.response?.status === 402) {
                 toast.error(error.response.data?.message || "Please pay for your last completed ride first.", { autoClose: 6000 });
             } else if (error.response?.data?.code === "PHONE_VERIFICATION_REQUIRED") {
-                toast.info("Please verify your phone number to book a ride.", { autoClose: 5000 });
-                onNavigate?.("profile");
+                toast.info("📱 Please verify your phone number to book a ride.", { autoClose: 5000 });
+                setTimeout(() => onNavigate?.("profile"), 1400);
             } else {
                 toast.error(error.response?.data?.message || "Failed to book ride.");
             }

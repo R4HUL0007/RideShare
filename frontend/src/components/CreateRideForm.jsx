@@ -293,8 +293,8 @@ const CreateRideForm = ({ onSuccess, onOpenSidebar, onNavigate }) => {
             if (error.response?.data?.code === "PHONE_VERIFICATION_REQUIRED") {
                 const msg = error.response.data.message || "Please verify your phone number before creating rides.";
                 setError(msg);
-                toast.info(msg, { autoClose: 5000 });
-                if (onNavigate) onNavigate("profile");
+                toast.info(`📱 ${msg}`, { autoClose: 5000 });
+                setTimeout(() => { if (onNavigate) onNavigate("profile"); }, 1400);
                 return;
             }
 

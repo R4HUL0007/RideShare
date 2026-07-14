@@ -140,8 +140,9 @@ const PersonalRideInner = ({ onOpenSidebar, onNavigate }) => {
         } catch (e) {
             if (e.response?.status === 409 && e.response.data?.request) { setActive(e.response.data.request); }
             else if (e.response?.data?.code === "PHONE_VERIFICATION_REQUIRED") {
-                toast.info("Please verify your phone number to request a ride.", { autoClose: 5000 });
-                onNavigate?.("profile");
+                toast.info("📱 Please verify your phone number to request a ride.", { autoClose: 5000 });
+                // Give the toast a moment to be seen before switching to Profile.
+                setTimeout(() => onNavigate?.("profile"), 1400);
             }
             else toast.error(e.response?.data?.message || "Couldn't request the ride.");
         } finally { setBusy(false); }

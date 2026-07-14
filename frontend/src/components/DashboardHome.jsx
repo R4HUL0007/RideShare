@@ -5,12 +5,8 @@ import axiosInstance from "../utils/axiosConfig";
 import { getUserVehicles } from "../services/vehicleService";
 import { getMyImpact } from "../services/sustainabilityService";
 import { logoutUser } from "../services/authService";
-import { getSuggestions } from "../services/suggestionsService";
 import { clearAuthTokens, clearAppCaches } from "../utils/authToken";
 import Recommendations from "./Recommendations";
-
-// One-shot bridge: DashboardHome writes a prefill FindRides reads on mount.
-const FIND_PREFILL_KEY = "rs_find_prefill";
 import { API_BASE_URL } from "../utils/constants";
 import carImg from "../assets/images/Car.png";
 import "../styles/dashboardHome.css";
@@ -110,42 +106,6 @@ const DashboardHome = ({ user, onNavigate, onOpenSidebar }) => {
     const [menuOpen, setMenuOpen] = useState(false);
     const menuRef = useRef(null);
     const navigate = useNavigate();
-
-    // ---- Smart Ride Suggestions (rule-based; additive, degrades gracefully) ----
-    const [sugg, setSugg] = useState({ smartCard: null, favoritePlaces: [], frequentDestinations: [], recentSearches: [] });
-
-    useEffect(() => {
-        let active = true;
-        const load = (coords) => {
-            const now = new Date();
-            getSuggestions({ lat: coords?.lat, lng: coords?.lng, hour: now.getHours(), day: now.getDay() })
-                .then((d) => { if (active) setSugg(d); })
-                .catch(() => { /* swallow */ });
-        };
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                (pos) => load({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-                () => load(null),
-                { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
-            );
-        } else {
-            load(null);
-        }
-        return () => { active = false; };
-    }, []);
-
-    // One-tap: prefill FindRides with a destination (+ optional pickup) and go.
-    const startFind = ({ destination, destinationCoords, source, sourceCoords }) => {
-        try {
-            localStorage.setItem(FIND_PREFILL_KEY, JSON.stringify({ destination, destinationCoords, source, sourceCoords, ts: Date.now() }));
-        } catch { /* ignore */ }
-        onNavigate("findRides");
-    };
-    const coordOrNull = (o) => (o && Number.isFinite(o.lat) && Number.isFinite(o.lng) ? { lat: o.lat, lng: o.lng } : null);
-    const greetingWord = (() => {
-        const h = new Date().getHours();
-        return h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
-    })();
 
     useEffect(() => {
         let active = true;
@@ -360,36 +320,6 @@ const DashboardHome = ({ user, onNavigate, onOpenSidebar }) => {
                         </div>
                     </section>
 
-                    {/* ---------- Smart suggestion card (rule-based) ---------- */}
-                    {sugg.smartCard && (
-                        <section className="dh-section dh-rise">
-                            <div
-                                className="dh-card dh-smart"
-                                role="button"
-                                tabIndex={0}
-                                onClick={() => startFind({ destination: sugg.smartCard.destination, destinationCoords: coordOrNull(sugg.smartCard.destCoords), source: sugg.smartCard.origin, sourceCoords: coordOrNull(sugg.smartCard.srcCoords) })}
-                            >
-                                <div className="dh-smart-greet">{greetingWord}, {firstName} 👋</div>
-                                <div className="dh-smart-label">Suggested ride</div>
-                                <div className="dh-smart-route">
-                                    <span className="dh-smart-dot pickup" />
-                                    <strong>{sugg.smartCard.origin || "Your location"}</strong>
-                                </div>
-                                <div className="dh-smart-conn" />
-                                <div className="dh-smart-route">
-                                    <span className="dh-smart-dot drop" />
-                                    <strong>{sugg.smartCard.destination}</strong>
-                                </div>
-                                <div className="dh-smart-reason">{sugg.smartCard.reason}</div>
-                                <button
-                                    className="dh-next-cta"
-                                    onClick={(e) => { e.stopPropagation(); startFind({ destination: sugg.smartCard.destination, destinationCoords: coordOrNull(sugg.smartCard.destCoords), source: sugg.smartCard.origin, sourceCoords: coordOrNull(sugg.smartCard.srcCoords) }); }}
-                                >
-                                    Book this ride <Svg size={15}>{I.chevron}</Svg>
-                                </button>
-                            </div>
-                        </section>
-                    )}
 
                     {/* ---------- Recommended For You (personalized ride suggestions) ---------- */}
                     <Recommendations onNavigate={onNavigate} />
