@@ -611,6 +611,10 @@ const FindRidesInner = ({ onOpenSidebar, onNavigate, user }) => {
     const [paySuccess, setPaySuccess] = useState(null); // { payment, ride }
     const [payFailure, setPayFailure] = useState(null);  // { reason, ride, seats }
     const [receiptId, setReceiptId] = useState(null);
+    // Results anchor — lets us bring the rides into view after a search so
+    // first-time users on mobile (where the form fills the screen) don't miss
+    // the results sitting below the fold.
+    const resultsRef = useRef(null);
 
     // Phone-verification gate — disables the Book/Confirm buttons in the UI when
     // enforced and the user hasn't verified their phone (backend still enforces).
@@ -714,6 +718,15 @@ const FindRidesInner = ({ onOpenSidebar, onNavigate, user }) => {
             setRides(list);
             // If the backend returned smart-match metadata, sort by best match.
             if (list.some((r) => r._match)) setSortBy("match");
+            // Let the user know rides exist (they may be below the fold), then
+            // bring them into view on narrow screens where the form fills the
+            // viewport. No-op on desktop split view (results already visible).
+            if (list.length > 0) {
+                toast.success(`${list.length} ride${list.length !== 1 ? "s" : ""} available on this route`, { autoClose: 3000 });
+                if (typeof window !== "undefined" && window.innerWidth <= 900) {
+                    setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 150);
+                }
+            }
         } catch (error) {
             if (error.response?.status === 404) {
                 setRides([]);
@@ -859,7 +872,7 @@ const FindRidesInner = ({ onOpenSidebar, onNavigate, user }) => {
     ];
 
     const resultsPanel = (
-        <div className="fr-results">
+        <div className="fr-results" ref={resultsRef}>
             <div className="fr-results-head">
                 <span className="fr-results-title">Available Rides</span>
                 <div className="fr-results-right">
