@@ -1,7 +1,12 @@
 import React, { lazy, Suspense } from "react";
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
+// Home is the landing + login/register page — the first thing every visitor
+// sees. Import it EAGERLY (not lazy) so its CSS is part of the main bundle and
+// applied on the very first paint. Lazy-loading it shipped a separate CSS chunk
+// that arrived after render, causing a misaligned flash on a cold first visit
+// (it looked fine after logout because the chunk was already cached).
+import Home from '../components/Home';
 
-const Home = lazy(() => import('../components/Home'));
 const Dashboard = lazy(() => import('../pages/Dashboard'));
 const AdminPanel = lazy(() => import('../pages/AdminPanel'));
 const SharedTrip = lazy(() => import('../pages/SharedTrip'));
