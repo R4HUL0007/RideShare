@@ -74,6 +74,9 @@ function RidesMap({ rides, userLocation, selectedRide, onSelectRide, onLocate })
     const { isLoaded, loadError } = useMapsCtx();
     const mapRef = useRef(null);
     const [route, setRoute] = useState(null);
+    // Leg from the user's current location → the selected ride's pickup, so the
+    // passenger sees exactly how to reach the pickup + how far it is.
+    const [toPickup, setToPickup] = useState(null); // { path, distanceText, durationText }
     const [locating, setLocating] = useState(false);
 
     // "My location" button — pan to the user's live position (like Google Maps).
@@ -102,6 +105,8 @@ function RidesMap({ rides, userLocation, selectedRide, onSelectRide, onLocate })
         if (selectedRide && hasCoords(selectedRide.sourceCoords) && hasCoords(selectedRide.destinationCoords)) {
             bounds.extend(selectedRide.sourceCoords);
             bounds.extend(selectedRide.destinationCoords);
+            // Include the user so the "you → pickup" leg is in view too.
+            if (hasCoords(userLocation)) { bounds.extend(userLocation); }
             added = 2;
         } else {
             rides.forEach((r) => {
@@ -151,6 +156,49 @@ function RidesMap({ rides, userLocation, selectedRide, onSelectRide, onLocate })
             }
         );
     }, [isLoaded, selectedRide]);
+
+    // Build the "you → pickup" leg (how the passenger reaches the pickup point)
+    // + its distance/time. Falls back to a straight dashed line if directions
+    // aren't available.
+    useEffect(() => {
+        if (!isLoaded || !window.google || !selectedRide ||
+            !hasCoords(userLocation) || !hasCoords(selectedRide.sourceCoords)) {
+            setToPickup(null);
+            return;
+        }
+        const km = haversineKm(userLocation, selectedRide.sourceCoords);
+        const fallback = {
+            path: [userLocation, selectedRide.sourceCoords],
+            distanceText: `${km.toFixed(km < 10 ? 1 : 0)} km`,
+            durationText: null,
+        };
+        const svc = new window.google.maps.DirectionsService();
+        svc.route(
+            {
+                origin: userLocation,
+                destination: selectedRide.sourceCoords,
+                travelMode: window.google.maps.TravelMode.DRIVING,
+            },
+            (result, status) => {
+                if (status === window.google.maps.DirectionsStatus.OK && result?.routes?.[0]) {
+                    const r = result.routes[0];
+                    const leg = r.legs?.[0];
+                    const path = Array.isArray(r.overview_path) && r.overview_path.length
+                        ? r.overview_path
+                        : (r.overview_polyline?.points && window.google.maps.geometry?.encoding
+                            ? window.google.maps.geometry.encoding.decodePath(r.overview_polyline.points)
+                            : fallback.path);
+                    setToPickup({
+                        path,
+                        distanceText: leg?.distance?.text || fallback.distanceText,
+                        durationText: leg?.duration?.text || null,
+                    });
+                } else {
+                    setToPickup(fallback);
+                }
+            }
+        );
+    }, [isLoaded, selectedRide, userLocation]);
 
     if (loadError) {
         return <div className="fr-map-msg">Map could not be loaded.</div>;
@@ -220,7 +268,40 @@ function RidesMap({ rides, userLocation, selectedRide, onSelectRide, onLocate })
                     <Polyline path={route} options={{ strokeColor: "#ffffff", strokeOpacity: 0.98, strokeWeight: 5, zIndex: 2 }} />
                 </>
             )}
+
+            {/* You → pickup leg (dashed blue), shown when a ride is selected. */}
+            {toPickup?.path && window.google?.maps && (
+                <Polyline
+                    path={toPickup.path}
+                    options={{
+                        strokeColor: "#3B82F6",
+                        strokeOpacity: 0,
+                        zIndex: 3,
+                        icons: [{
+                            icon: { path: "M 0,-1 0,1", strokeOpacity: 0.95, strokeWeight: 3, scale: 3 },
+                            offset: "0", repeat: "14px",
+                        }],
+                    }}
+                />
+            )}
         </GoogleMap>
+
+        {/* Distance-to-pickup chip (top-left) when a ride is selected. */}
+        {toPickup && (
+            <div
+                style={{
+                    position: "absolute", left: "12px", top: "12px", zIndex: 6,
+                    display: "inline-flex", alignItems: "center", gap: "0.4rem",
+                    padding: "0.4rem 0.7rem", borderRadius: "999px",
+                    background: "rgba(20,20,22,0.94)", border: "1px solid rgba(59,130,246,0.5)",
+                    color: "#dbeafe", fontSize: "0.8rem", fontWeight: 700,
+                    boxShadow: "0 6px 18px rgba(0,0,0,0.5)",
+                }}
+            >
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#3B82F6" }} />
+                {toPickup.distanceText} to pickup{toPickup.durationText ? ` · ${toPickup.durationText}` : ""}
+            </div>
+        )}
         {/* "My location" FAB (Google-Maps style, bottom-right) */}
         <button
             type="button"
