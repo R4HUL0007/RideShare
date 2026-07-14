@@ -10,7 +10,7 @@
    - Background Sync: future-ready hooks (chat/notification/ride sync).
    ======================================================= */
 
-const VERSION = "v1.7.3";
+const VERSION = "v1.7.4";
 const STATIC_CACHE = `rs-static-${VERSION}`;
 const RUNTIME_CACHE = `rs-runtime-${VERSION}`;
 const IMAGE_CACHE = `rs-images-${VERSION}`;
@@ -108,7 +108,16 @@ async function cacheFirst(request, cacheName) {
     if (cached) return cached;
     try {
         const res = await fetch(request);
-        if (res && res.ok) cache.put(request, res.clone());
+        // Guard against SPA-fallback poisoning: after a redeploy a missing
+        // hashed asset makes the host return index.html (200, text/html). We
+        // must NEVER cache that under a JS/CSS URL — it would permanently break
+        // module scripts (MIME mismatch) and trap the app in a reload loop.
+        // Let the response through so the app's stale-chunk recovery can reload
+        // to fresh HTML, but don't persist the bad body.
+        const type = (res && res.headers.get("content-type")) || "";
+        const isJsCss = /\.(?:js|css)$/.test(new URL(request.url).pathname);
+        const htmlFallback = isJsCss && type.includes("text/html");
+        if (res && res.ok && !htmlFallback) cache.put(request, res.clone());
         return res;
     } catch {
         return cached || Response.error();
@@ -132,7 +141,11 @@ async function networkFirst(request, cacheName) {
 
 async function networkFirstNavigation(request) {
     try {
-        const res = await fetch(request);
+        // Always fetch the freshest HTML (bypass the HTTP cache for the
+        // navigation document) so a new deploy's asset hashes are picked up
+        // immediately — otherwise a reload can re-serve stale index.html that
+        // still points at deleted chunks, causing an endless reload loop.
+        const res = await fetch(request, { cache: "no-store" });
         return res;
     } catch {
         const cache = await caches.open(STATIC_CACHE);
