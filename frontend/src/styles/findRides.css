@@ -379,9 +379,11 @@
   .fr-booking-card { position: relative; top: 0; }
 }
 @media (max-width: 560px) {
+  /* Keep the vehicle image a compact thumbnail next to its details instead of
+     a full-width banner (a placeholder/logo looked oversized before). */
   .fr-detail-stats { grid-template-columns: 1fr 1fr; }
-  .fr-vehicle-row { flex-direction: column; }
-  .fr-vehicle-img { width: 100%; height: 140px; }
+  .fr-vehicle-row { flex-direction: row; align-items: flex-start; }
+  .fr-vehicle-img { width: 104px; height: 78px; }
   .fr-success-actions { flex-direction: column; }
 }
 

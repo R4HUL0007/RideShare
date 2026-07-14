@@ -175,19 +175,24 @@
 .rrq-map > * { width: 100%; height: 100%; }
 .rrq-map-ph { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.7rem; text-align: center; color: #9ca3af; padding: 2rem; }
 .rrq-map-ph p { font-size: 0.84rem; max-width: 22rem; }
-.rrq-map-summary { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.9rem 1.1rem; border-top: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.02); flex-wrap: wrap; }
-.rrq-route { flex: 1; min-width: 0; }
+/* Stack the route (pickup/drop) on top and the distance/time/nearby stats
+   BELOW it, so nothing gets squeezed onto one congested line. */
+.rrq-map-summary { display: flex; flex-direction: column; align-items: stretch; gap: 0.7rem; padding: 0.9rem 1.1rem; border-top: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.02); }
+.rrq-route { min-width: 0; }
 .rrq-route-line { display: flex; align-items: flex-start; gap: 0.6rem; }
 /* Let the text column shrink so long addresses truncate instead of collapsing
    to a 1-character-per-line column. */
 .rrq-route-line > div { flex: 1; min-width: 0; }
 .rrq-route-line label { display: block; font-size: 0.64rem; text-transform: uppercase; letter-spacing: 0.04em; color: #6b7280; }
-.rrq-route-line strong { font-size: 0.82rem; font-weight: 600; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+/* Address wraps onto a second line when long (then clamps), instead of the
+   1-char-per-line collapse or a hard single-line truncation. */
+.rrq-route-line strong { font-size: 0.82rem; font-weight: 600; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; white-space: normal; overflow-wrap: anywhere; line-height: 1.3; }
 .rrq-route-conn { width: 2px; height: 12px; margin-left: 4px; background: rgba(255,255,255,0.18); }
 .rrq-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; margin-top: 4px; }
 .rrq-dot.pickup { background: #34d399; }
 .rrq-dot.drop { background: #fb7185; }
-.rrq-summary-meta { display: flex; gap: 1rem; font-size: 0.78rem; color: #b6b6bd; }
+.rrq-summary-meta { display: flex; gap: 0.75rem 1rem; font-size: 0.78rem; color: #b6b6bd; flex-wrap: wrap; padding-top: 0.6rem; border-top: 1px solid rgba(255,255,255,0.06); }
+.rrq-summary-meta span { display: inline-flex; align-items: center; gap: 0.3rem; white-space: nowrap; }
 
 /* Nearby drivers */
 .rrq-nearby { border: 1px solid rgba(255,255,255,0.08); border-radius: 1.1rem; background: rgba(255,255,255,0.02); padding: 1.1rem; }

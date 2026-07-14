@@ -158,42 +158,63 @@ exports.createRide = async (req, res) => {
 };
 
 
-// ✅ Live count of available rides for the current user (no search needed).
-// Powers the "N rides available now / within X km" pill on Find Rides so a
-// first-time user knows rides exist before they search. Cheap: a single
-// countDocuments with the same role + women's-safety filters as findRides,
-// optionally bounded to a lat/lng box around the passenger's source.
+// ✅ Live count of rides that actually match the user's ROUTE (no search yet).
+// Powers the "N rides available on this route" pill on Find Rides. It uses the
+// SAME matching as findRides — exact-destination for text-only, smart route
+// matching (source proximity + destination/route overlap) when coordinates are
+// supplied — so the pill can never disagree with the search results (e.g.
+// Vadodara→Mumbai correctly shows 0 even though a Vadodara→Parul ride departs
+// nearby). Without a destination there's nothing meaningful to count, so we
+// tell the client to hide the pill rather than count unrelated routes.
 exports.availableCount = async (req, res) => {
     try {
         const user = await User.findById(req.user.id).select("role gender").lean();
         if (!user) return res.status(404).json({ message: "User not found" });
 
-        const query = {
-            role: user.role,
-            status: "Available",
-            user_id: { $ne: req.user.id },
-        };
-        // Women's-safety rule mirrors findRides: male passengers never see
-        // female-only rides in the count.
-        if (user.gender === "Male") query.gender_preference = { $ne: "Female" };
-
         const num = (v) => (v != null && Number.isFinite(Number(v)) ? Number(v) : null);
-        const lat = num(req.query.sourceLat);
-        const lng = num(req.query.sourceLng);
-        const radiusKm = num(req.query.radiusKm) || 10;
-        const scoped = lat != null && lng != null;
-        if (scoped) {
-            const dLat = radiusKm / 111;
-            const dLng = radiusKm / (111 * Math.cos((lat * Math.PI) / 180) || 1);
-            query["sourceCoords.lat"] = { $gte: lat - dLat, $lte: lat + dLat };
-            query["sourceCoords.lng"] = { $gte: lng - dLng, $lte: lng + dLng };
+        const destination = req.query.destination == null ? "" : String(req.query.destination);
+        const pDst = (num(req.query.destLat) != null && num(req.query.destLng) != null)
+            ? { lat: num(req.query.destLat), lng: num(req.query.destLng) } : null;
+        const pSrc = (num(req.query.sourceLat) != null && num(req.query.sourceLng) != null)
+            ? { lat: num(req.query.sourceLat), lng: num(req.query.sourceLng) } : null;
+
+        // No destination → the count would be about unrelated routes. Hide it.
+        if (!pDst && !destination.trim()) {
+            return res.status(200).json({ count: null, needsRoute: true });
         }
 
-        const count = await Ride.countDocuments(query);
-        return res.status(200).json({ count, scoped, radiusKm: scoped ? radiusKm : null });
+        // Base query mirrors findRides (role + women's-safety + exclude own).
+        const query = { role: user.role, status: "Available", user_id: { $ne: req.user.id } };
+        if (user.gender === "Male") query.gender_preference = { $ne: "Female" };
+
+        const radiusKm = num(req.query.radiusKm) || CFG.sourceRadiusKm;
+
+        // Classic exact-destination match (no destination coordinates supplied).
+        if (!pDst) {
+            query.destination = destination;
+            const count = await Ride.countDocuments(query);
+            return res.status(200).json({ count });
+        }
+
+        // Smart route matching (identical to findRides): bound candidates by
+        // source proximity, then rank and count only the rides whose route
+        // actually connects the passenger's source → destination.
+        if (pSrc) {
+            const dLat = radiusKm / 111;
+            const dLng = radiusKm / (111 * Math.cos((pSrc.lat * Math.PI) / 180) || 1);
+            query["sourceCoords.lat"] = { $gte: pSrc.lat - dLat, $lte: pSrc.lat + dLat };
+            query["sourceCoords.lng"] = { $gte: pSrc.lng - dLng, $lte: pSrc.lng + dLng };
+        }
+        const candidates = await Ride.find(query).limit(300).lean();
+        const ranked = rankRides(
+            { sourceCoords: pSrc, destinationCoords: pDst },
+            candidates,
+            { sourceRadiusKm: radiusKm }
+        );
+        return res.status(200).json({ count: ranked.length });
     } catch (error) {
         // Never break the page over a count — return a soft zero.
-        return res.status(200).json({ count: 0, scoped: false, radiusKm: null });
+        return res.status(200).json({ count: 0 });
     }
 };
 

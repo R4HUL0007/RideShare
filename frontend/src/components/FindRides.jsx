@@ -623,9 +623,9 @@ const FindRidesInner = ({ onOpenSidebar, onNavigate, user }) => {
     // first-time users on mobile (where the form fills the screen) don't miss
     // the results sitting below the fold.
     const resultsRef = useRef(null);
-    // Live availability pill — tells the user rides exist BEFORE they search,
-    // and re-counts within a radius as they change their source.
-    const [avail, setAvail] = useState({ count: null, scoped: false, radiusKm: null, updatedAt: null, loading: true });
+    // Live availability pill — shows how many rides actually match the user's
+    // ROUTE (same logic as search). Hidden until a destination is entered.
+    const [avail, setAvail] = useState({ count: null, needsRoute: true, updatedAt: null, loading: true });
 
     // Phone-verification gate — disables the Book/Confirm buttons in the UI when
     // enforced and the user hasn't verified their phone (backend still enforces).
@@ -662,25 +662,39 @@ const FindRidesInner = ({ onOpenSidebar, onNavigate, user }) => {
         return () => { active = false; };
     }, []);
 
-    // Live "rides available" count. Fetches on mount and whenever the source
-    // coords change (so it re-scopes to a radius), plus a periodic refresh so
-    // "Updated just now" stays honest. Never blocks the page.
+    // Live route-match count. Runs only once a destination is entered, using
+    // the same matching as search, so it can never contradict the results.
+    // Refreshes on route change (debounced) + every 60s. Never blocks the page.
     const srcLat = filters.sourceCoords?.lat ?? null;
     const srcLng = filters.sourceCoords?.lng ?? null;
+    const dstLat = filters.destinationCoords?.lat ?? null;
+    const dstLng = filters.destinationCoords?.lng ?? null;
+    const destText = (filters.destination || "").trim();
     const fetchAvail = useCallback(async () => {
+        // No destination yet → nothing meaningful to count; hide the pill.
+        if (dstLat == null && !destText) {
+            setAvail({ count: null, needsRoute: true, updatedAt: null, loading: false });
+            return;
+        }
         try {
             const params = {};
-            if (srcLat != null && srcLng != null) { params.sourceLat = srcLat; params.sourceLng = srcLng; params.radiusKm = 10; }
+            if (srcLat != null && srcLng != null) { params.sourceLat = srcLat; params.sourceLng = srcLng; }
+            if (dstLat != null && dstLng != null) { params.destLat = dstLat; params.destLng = dstLng; }
+            if (destText) params.destination = destText;
             const { data } = await axiosInstance.get(`${API_BASE_URL}/rides/available-count`, { params });
-            setAvail({ count: data?.count ?? 0, scoped: Boolean(data?.scoped), radiusKm: data?.radiusKm ?? null, updatedAt: Date.now(), loading: false });
+            if (data?.needsRoute) {
+                setAvail({ count: null, needsRoute: true, updatedAt: null, loading: false });
+                return;
+            }
+            setAvail({ count: data?.count ?? 0, needsRoute: false, updatedAt: Date.now(), loading: false });
         } catch {
             setAvail((a) => ({ ...a, loading: false }));
         }
-    }, [srcLat, srcLng]);
+    }, [srcLat, srcLng, dstLat, dstLng, destText]);
 
     useEffect(() => {
-        // Debounce so typing/selecting a source doesn't spam the endpoint.
-        const t = setTimeout(fetchAvail, 300);
+        // Debounce so typing a destination doesn't spam the endpoint.
+        const t = setTimeout(fetchAvail, 350);
         const iv = setInterval(fetchAvail, 60000);
         return () => { clearTimeout(t); clearInterval(iv); };
     }, [fetchAvail]);
@@ -1080,19 +1094,19 @@ const FindRidesInner = ({ onOpenSidebar, onNavigate, user }) => {
                     </div>
                 </div>
 
-                {/* Live availability — reassures the user rides exist before they
-                    search, and re-scopes to 10 km once they pick a source. */}
-                {!avail.loading && avail.count != null && (
+                {/* Live availability for the entered ROUTE (same logic as search).
+                    Hidden until a destination is given so it never shows a
+                    misleading count for an unrelated route. */}
+                {!avail.loading && !avail.needsRoute && avail.count != null && (
                     <div className={`fr-avail${avail.count > 0 ? " has" : " none"}`} aria-live="polite">
                         <span className="fr-avail-main">
                             {avail.count > 0 ? (
                                 <>
                                     <span className="fr-avail-dot" />
-                                    {avail.count} ride{avail.count !== 1 ? "s" : ""} available
-                                    {avail.scoped ? ` within ${avail.radiusKm} km` : " now"}
+                                    {avail.count} ride{avail.count !== 1 ? "s" : ""} available on this route
                                 </>
                             ) : (
-                                <>🚗 No rides {avail.scoped ? `within ${avail.radiusKm} km` : "available"} right now</>
+                                <>🚗 No rides on this route yet</>
                             )}
                         </span>
                         {avail.updatedAt && <span className="fr-avail-time">Updated {relAvail(avail.updatedAt)}</span>}
