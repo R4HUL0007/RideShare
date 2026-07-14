@@ -1,7 +1,4 @@
-import { useEffect, useState } from "react";
-import axiosInstance from "../utils/axiosConfig";
-import { API_BASE_URL } from "../utils/constants";
-import { getPublicConfig } from "../services/authService";
+import usePhoneGate from "../utils/usePhoneGate";
 import "../styles/phoneVerifyBanner.css";
 
 // Compact inline banner shown ONLY on the ride-action pages (create / find /
@@ -10,25 +7,9 @@ import "../styles/phoneVerifyBanner.css";
 // `action` customises the sentence (e.g. "book a ride"). `onNavigate` routes
 // the user to their Profile to verify.
 const PhoneVerifyBanner = ({ action = "continue", onNavigate, className = "" }) => {
-    const [show, setShow] = useState(false);
+    const { blocked } = usePhoneGate();
 
-    useEffect(() => {
-        let active = true;
-        (async () => {
-            try {
-                const [cfg, me] = await Promise.all([
-                    getPublicConfig().catch(() => ({ data: {} })),
-                    axiosInstance.get(`${API_BASE_URL}/auth/me`).catch(() => ({ data: {} })),
-                ]);
-                const required = Boolean(cfg?.data?.requirePhoneVerification);
-                const verified = Boolean(me?.data?.phoneVerified);
-                if (active) setShow(required && !verified);
-            } catch { /* stay hidden on error — never block the page */ }
-        })();
-        return () => { active = false; };
-    }, []);
-
-    if (!show) return null;
+    if (!blocked) return null;
 
     return (
         <div className={`pvb-banner ${className}`.trim()}>

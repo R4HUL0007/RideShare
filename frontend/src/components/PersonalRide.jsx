@@ -5,6 +5,7 @@ import LocationSearchBox from "./maps/LocationSearchBox";
 import CurrentLocationButton from "./maps/CurrentLocationButton";
 import LiveRideMap from "./maps/LiveRideMap";
 import PhoneVerifyBanner from "./PhoneVerifyBanner";
+import usePhoneGate from "../utils/usePhoneGate";
 import {
     estimatePersonalRide, createPersonalRide, myActivePersonalRide,
     cancelPersonalRide, payPersonalRide, personalRideStats, confirmArrivalPersonal,
@@ -31,6 +32,10 @@ const PersonalRideInner = ({ onOpenSidebar, onNavigate }) => {
     const [driverLoc, setDriverLoc] = useState(null);
     const activeId = active?._id;
     const pollRef = useRef(null);
+
+    // Phone-verification gate — disables the "Request Ride" button when enforced
+    // and the user hasn't verified their phone (backend still enforces too).
+    const { blocked: phoneBlocked } = usePhoneGate();
 
     const setF = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -308,9 +313,20 @@ const PersonalRideInner = ({ onOpenSidebar, onNavigate }) => {
                                 <textarea className="pr-notes-input" placeholder="e.g. I'm near the main gate, 2 bags" value={form.notes} maxLength={300} onChange={(e) => setF("notes", e.target.value)} />
                             </div>
 
-                            <button className="rrq-broadcast" onClick={submit} disabled={busy}>
-                                <span className="rrq-broadcast-main">{busy ? "Requesting…" : "Request Ride"}{selectedFare != null ? ` · ₹${selectedFare}` : ""}</span>
-                                <span className="rrq-broadcast-sub">A nearby verified driver will pick you up</span>
+                            <button
+                                className="rrq-broadcast"
+                                onClick={phoneBlocked ? () => onNavigate?.("profile") : submit}
+                                disabled={busy}
+                                title={phoneBlocked ? "Verify your phone number to request a ride" : undefined}
+                            >
+                                <span className="rrq-broadcast-main">
+                                    {phoneBlocked
+                                        ? "📱 Verify phone to request"
+                                        : `${busy ? "Requesting…" : "Request Ride"}${selectedFare != null ? ` · ₹${selectedFare}` : ""}`}
+                                </span>
+                                <span className="rrq-broadcast-sub">
+                                    {phoneBlocked ? "Tap to verify your number in Profile" : "A nearby verified driver will pick you up"}
+                                </span>
                             </button>
                         </>
                     ) : status === "SEARCHING" ? (

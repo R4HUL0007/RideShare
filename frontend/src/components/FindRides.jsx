@@ -11,6 +11,7 @@ import CurrentLocationButton from "./maps/CurrentLocationButton";
 import LiveRideMap from "./maps/LiveRideMap";
 import ThemedSelect from "./ThemedSelect";
 import PhoneVerifyBanner from "./PhoneVerifyBanner";
+import usePhoneGate from "../utils/usePhoneGate";
 import { getPaymentConfig, payForRide } from "../services/paymentService";
 import { recordSearch } from "../services/suggestionsService";
 import { CheckoutModal, PaymentSuccess, PaymentFailure } from "./payments/PaymentDialogs";
@@ -339,7 +340,7 @@ function RideCard({ ride, nearbyKm, selected, onSelect, onView }) {
 }
 
 /* ---------------- Ride Details (dedicated full page) ---------------- */
-function RideDetailsPage({ ride, nearbyKm, onClose, onBook, booking }) {
+function RideDetailsPage({ ride, nearbyKm, onClose, onBook, booking, phoneBlocked = false, onVerifyPhone }) {
     const driver = ride.user_id || {};
     const v = ride.vehicle_id || {};
     const nearby = formatNearby(nearbyKm);
@@ -496,14 +497,22 @@ function RideDetailsPage({ ride, nearbyKm, onClose, onBook, booking }) {
 
                             <button
                                 className="fr-book-btn full"
-                                disabled={booking || seats < 1 || seats > ride.seatsAvailable}
+                                disabled={booking || phoneBlocked || seats < 1 || seats > ride.seatsAvailable}
                                 onClick={() => setConfirming(true)}
+                                title={phoneBlocked ? "Verify your phone number to book a ride" : undefined}
                             >
-                                {booking ? <><span className="fr-spin" /> Booking…</> : "Book Ride"}
+                                {booking ? <><span className="fr-spin" /> Booking…</> : phoneBlocked ? "Verify phone to book" : "Book Ride"}
                             </button>
-                            <p className="fr-confirm-note" style={{ textAlign: "center", marginTop: "0.6rem", marginBottom: 0 }}>
-                                No payment now — you pay after the ride is completed. Free cancellation within 3 minutes.
-                            </p>
+                            {phoneBlocked ? (
+                                <p className="fr-confirm-note" style={{ textAlign: "center", marginTop: "0.6rem", marginBottom: 0 }}>
+                                    📱 Verify your phone number to book.{" "}
+                                    <button type="button" className="fr-linkbtn" onClick={() => onVerifyPhone?.()}>Verify now</button>
+                                </p>
+                            ) : (
+                                <p className="fr-confirm-note" style={{ textAlign: "center", marginTop: "0.6rem", marginBottom: 0 }}>
+                                    No payment now — you pay after the ride is completed. Free cancellation within 3 minutes.
+                                </p>
+                            )}
                         </>
                     ) : (
                         <div className="fr-booking-full">
@@ -534,7 +543,7 @@ function RideDetailsPage({ ride, nearbyKm, onClose, onBook, booking }) {
                         </div>
                         <div className="fr-confirm-actions">
                             <button className="fr-btn ghost" onClick={() => setConfirming(false)} disabled={booking}>Cancel</button>
-                            <button className="fr-book-btn" onClick={() => onBook(ride, seats)} disabled={booking}>
+                            <button className="fr-book-btn" onClick={() => onBook(ride, seats)} disabled={booking || phoneBlocked}>
                                 {booking ? <><span className="fr-spin" /> Booking…</> : "Confirm Booking"}
                             </button>
                         </div>
@@ -602,6 +611,10 @@ const FindRidesInner = ({ onOpenSidebar, onNavigate, user }) => {
     const [paySuccess, setPaySuccess] = useState(null); // { payment, ride }
     const [payFailure, setPayFailure] = useState(null);  // { reason, ride, seats }
     const [receiptId, setReceiptId] = useState(null);
+
+    // Phone-verification gate — disables the Book/Confirm buttons in the UI when
+    // enforced and the user hasn't verified their phone (backend still enforces).
+    const { blocked: phoneBlocked } = usePhoneGate();
 
     const setF = (k, v) => setFilters((f) => ({ ...f, [k]: v }));
 
@@ -921,6 +934,8 @@ const FindRidesInner = ({ onOpenSidebar, onNavigate, user }) => {
                     onClose={() => setDetailsRide(null)}
                     onBook={bookRide}
                     booking={bookingId === detailsRide._id}
+                    phoneBlocked={phoneBlocked}
+                    onVerifyPhone={() => onNavigate?.("profile")}
                 />
                 {success && (
                     <BookingSuccess
