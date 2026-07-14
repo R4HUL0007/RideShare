@@ -612,6 +612,19 @@ const FindRidesInner = ({ onOpenSidebar, onNavigate, user }) => {
         sourceCoords: f.destinationCoords, destinationCoords: f.sourceCoords,
     }));
 
+    // No rides found → hand the user's entered pickup/drop over to the Request
+    // Ride page so they don't have to re-type them (PersonalRide reads this).
+    const goRequestRide = () => {
+        try {
+            localStorage.setItem("rs_request_prefill", JSON.stringify({
+                source: filters.source, sourceCoords: filters.sourceCoords,
+                destination: filters.destination, destinationCoords: filters.destinationCoords,
+                ts: Date.now(),
+            }));
+        } catch { /* ignore */ }
+        onNavigate?.("requestRide");
+    };
+
     // Load payment config once (whether online payments are enabled).
     useEffect(() => {
         let active = true;
@@ -865,7 +878,7 @@ const FindRidesInner = ({ onOpenSidebar, onNavigate, user }) => {
                     <p className="fr-empty-title">No rides found</p>
                     <p className="fr-empty-sub">No rides match this route yet. Request a ride and we'll alert nearby drivers to create one for you.</p>
                     <div className="fr-empty-actions">
-                        <button className="fr-req-cta" onClick={() => onNavigate?.("requestRide")}>🚗 Request a Ride</button>
+                        <button className="fr-req-cta" onClick={goRequestRide}>🚗 Request a Ride</button>
                     </div>
                     <div className="fr-empty-actions" style={{ marginTop: "0.5rem" }}>
                         <button className="fr-btn ghost" onClick={clearFilters}>Clear Filters</button>

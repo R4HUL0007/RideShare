@@ -46,6 +46,26 @@ const PersonalRideInner = ({ onOpenSidebar, onNavigate }) => {
         return () => { on = false; };
     }, []);
 
+    // Prefill pickup/drop handed over from Find Rides ("no rides → Request a
+    // ride"), so the user doesn't re-enter what they already typed.
+    useEffect(() => {
+        try {
+            const raw = localStorage.getItem("rs_request_prefill");
+            if (!raw) return;
+            localStorage.removeItem("rs_request_prefill");
+            const p = JSON.parse(raw);
+            if (p.ts && Date.now() - p.ts > 5 * 60 * 1000) return;
+            const okCoords = (c) => c && Number.isFinite(c.lat) && Number.isFinite(c.lng);
+            setForm((f) => ({
+                ...f,
+                source: p.source || f.source,
+                sourceCoords: okCoords(p.sourceCoords) ? p.sourceCoords : f.sourceCoords,
+                destination: p.destination || f.destination,
+                destinationCoords: okCoords(p.destinationCoords) ? p.destinationCoords : f.destinationCoords,
+            }));
+        } catch { /* ignore */ }
+    }, []);
+
     // Live availability stats for the header + nearby-drivers panel.
     useEffect(() => {
         let on = true;

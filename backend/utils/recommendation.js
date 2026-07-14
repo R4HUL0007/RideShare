@@ -34,13 +34,14 @@ async function buildProfile(userId) {
     ]);
 
     // Weighted route frequency: a booking counts more than a search.
-    const routes = new Map(); // key -> { source, destination, destCoords, count, lastAt, weekdays:Set }
-    const bump = (s, d, destCoords, at, weight) => {
+    const routes = new Map(); // key -> { source, destination, destCoords, srcCoords, count, lastAt, weekdays:Set }
+    const bump = (s, d, destCoords, srcCoords, at, weight) => {
         const key = routeKey(s, d);
         if (!d) return;
-        const e = routes.get(key) || { source: s, destination: d, destCoords: null, count: 0, lastAt: 0, hours: {}, weekdays: {} };
+        const e = routes.get(key) || { source: s, destination: d, destCoords: null, srcCoords: null, count: 0, lastAt: 0, hours: {}, weekdays: {} };
         e.count += weight;
         if (destCoords?.lat != null && !e.destCoords) e.destCoords = destCoords;
+        if (srcCoords?.lat != null && !e.srcCoords) e.srcCoords = srcCoords;
         const t = at ? new Date(at).getTime() : 0;
         if (t > e.lastAt) e.lastAt = t;
         if (at) {
@@ -51,8 +52,8 @@ async function buildProfile(userId) {
         routes.set(key, e);
     };
 
-    for (const r of booked) bump(r.source, r.destination, r.destinationCoords, pickBookingTime(r, userId), 3);
-    for (const s of searches) bump(s.source, s.destination, s.destinationCoords, s.createdAt, 1);
+    for (const r of booked) bump(r.source, r.destination, r.destinationCoords, r.sourceCoords, pickBookingTime(r, userId), 3);
+    for (const s of searches) bump(s.source, s.destination, s.destinationCoords, s.sourceCoords, s.createdAt, 1);
 
     const ranked = [...routes.values()].sort((a, b) => b.count - a.count || b.lastAt - a.lastAt);
 
@@ -63,7 +64,7 @@ async function buildProfile(userId) {
 
     return {
         favoriteRoutes: ranked.slice(0, 5).map((r) => ({
-            source: r.source, destination: r.destination, destCoords: r.destCoords, count: r.count,
+            source: r.source, destination: r.destination, destCoords: r.destCoords, srcCoords: r.srcCoords, count: r.count,
             lastAt: r.lastAt || null,
             topWeekday: topKey(r.weekdays),
         })),

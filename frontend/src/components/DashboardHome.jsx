@@ -367,7 +367,7 @@ const DashboardHome = ({ user, onNavigate, onOpenSidebar }) => {
                                 className="dh-card dh-smart"
                                 role="button"
                                 tabIndex={0}
-                                onClick={() => startFind({ destination: sugg.smartCard.destination, destinationCoords: coordOrNull(sugg.smartCard.destCoords) })}
+                                onClick={() => startFind({ destination: sugg.smartCard.destination, destinationCoords: coordOrNull(sugg.smartCard.destCoords), source: sugg.smartCard.origin, sourceCoords: coordOrNull(sugg.smartCard.srcCoords) })}
                             >
                                 <div className="dh-smart-greet">{greetingWord}, {firstName} 👋</div>
                                 <div className="dh-smart-label">Suggested ride</div>
@@ -383,7 +383,7 @@ const DashboardHome = ({ user, onNavigate, onOpenSidebar }) => {
                                 <div className="dh-smart-reason">{sugg.smartCard.reason}</div>
                                 <button
                                     className="dh-next-cta"
-                                    onClick={(e) => { e.stopPropagation(); startFind({ destination: sugg.smartCard.destination, destinationCoords: coordOrNull(sugg.smartCard.destCoords) }); }}
+                                    onClick={(e) => { e.stopPropagation(); startFind({ destination: sugg.smartCard.destination, destinationCoords: coordOrNull(sugg.smartCard.destCoords), source: sugg.smartCard.origin, sourceCoords: coordOrNull(sugg.smartCard.srcCoords) }); }}
                                 >
                                     Book this ride <Svg size={15}>{I.chevron}</Svg>
                                 </button>

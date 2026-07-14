@@ -88,6 +88,7 @@ async function buildSmartSuggestion(userId, opts = {}) {
         origin: best.route.source || (currentPlace ? currentPlace.label : ""),
         destination: best.route.destination,
         destCoords: best.route.destCoords || null,
+        srcCoords: best.route.srcCoords || (currentPlace ? currentPlace.coords : null) || null,
         reason: best.reason,
     } : null;
 
