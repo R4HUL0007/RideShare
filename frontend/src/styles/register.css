@@ -651,7 +651,13 @@
 .rsr-google-btn {
   display: flex;
   justify-content: center;
+  align-items: center;
   width: 100%;
+  /* Reserve the button's height up front. Google's sign-in iframe loads
+     asynchronously; without a reserved box it expands from 0 on a cold visit
+     and pushes the layout around (the "misaligned on first load, fine after
+     re-login" bug). Holding the space keeps the layout stable while GSI loads. */
+  min-height: 44px;
 }
 
 .rsr-google-btn.is-loading {

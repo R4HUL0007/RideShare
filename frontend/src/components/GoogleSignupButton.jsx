@@ -7,6 +7,12 @@ import { getToken, persistAuthTokens } from '../utils/authToken';
 import ThemedSelect from './ThemedSelect';
 import VerifyOTP from './VerifyOTP';
 import { validateField } from '../utils/registerValidation';
+// This component uses the `rsr-*` classes (Google button, divider, profile
+// step). Import their stylesheet directly so the styles are guaranteed to be
+// present wherever the button renders — including the LOGIN tab, where the
+// register form may never mount. Prevents an unstyled/mis-sized button (and the
+// resulting layout shift) on a cold first load.
+import '../styles/register.css';
 
 /**
  * GoogleSignupButton — "Continue with Google" for the registration page.
