@@ -1,0 +1,120 @@
+/* =======================================================
+   In-app Feedback panel (dashboard tab). Dark theme, matches
+   the other dashboard panels (Support / Safety etc.).
+   ======================================================= */
+.fbp-root {
+    padding: clamp(0.9rem, 2vw, 1.5rem);
+    max-width: 760px;
+    margin: 0 auto;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.fbp-topbar {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.2rem;
+}
+
+.fbp-hamburger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    border-radius: 0.6rem;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #f4f4f5;
+    cursor: pointer;
+}
+
+.fbp-title-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+    border-radius: 0.8rem;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #f4f4f5;
+}
+
+.fbp-heading { min-width: 0; }
+.fbp-title { font-size: 1.4rem; font-weight: 800; margin: 0; color: #f4f4f5; }
+.fbp-subtitle { font-size: 0.82rem; color: #9ca3af; margin: 0.15rem 0 0; }
+
+.fbp-card {
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 1.1rem;
+    background: rgba(255, 255, 255, 0.02);
+    padding: clamp(1rem, 2.5vw, 1.6rem);
+}
+
+.fbp-form { display: flex; flex-direction: column; gap: 0.9rem; }
+
+.fbp-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.9rem;
+}
+@media (max-width: 560px) {
+    .fbp-row { grid-template-columns: 1fr; }
+}
+
+.fbp-field { display: flex; flex-direction: column; gap: 0.4rem; min-width: 0; }
+.fbp-label { font-size: 0.8rem; font-weight: 600; color: #e4e4e7; }
+.fbp-optional { color: #6b7280; font-weight: 500; }
+
+.fbp-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.7rem 0.85rem;
+    font-size: 0.9rem;
+    font-family: inherit;
+    color: #f4f4f5;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1.5px solid rgba(255, 255, 255, 0.12);
+    border-radius: 0.6rem;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+.fbp-input::placeholder { color: #6b7280; }
+.fbp-input:focus {
+    outline: none;
+    border-color: rgba(255, 255, 255, 0.35);
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.06);
+}
+.fbp-textarea { resize: vertical; min-height: 130px; line-height: 1.5; }
+
+.fbp-submit {
+    align-self: flex-start;
+    padding: 0.7rem 1.4rem;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #0a0a0b;
+    background: #f4f4f5;
+    border: none;
+    border-radius: 0.65rem;
+    cursor: pointer;
+    transition: transform 0.15s ease, opacity 0.15s ease;
+}
+.fbp-submit:hover:not(:disabled) { transform: translateY(-1px); }
+.fbp-submit:disabled { opacity: 0.65; cursor: not-allowed; }
+
+.fbp-success { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+.fbp-success-icon { font-size: 1.8rem; }
+.fbp-success h3 { margin: 0; font-size: 1.05rem; color: #f4f4f5; }
+.fbp-success p { margin: 0.2rem 0 0; font-size: 0.85rem; color: #9ca3af; }
+.fbp-link {
+    background: none;
+    border: none;
+    color: #60a5fa;
+    font-weight: 700;
+    cursor: pointer;
+    text-decoration: underline;
+    padding: 0;
+}

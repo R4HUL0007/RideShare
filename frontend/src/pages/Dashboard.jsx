@@ -30,6 +30,7 @@ const Earnings = lazy(() => import("../components/Earnings"));
 const DriverVerification = lazy(() => import("../components/DriverVerification"));
 const SafetyCenter = lazy(() => import("../components/SafetyCenter"));
 const Support = lazy(() => import("../components/Support"));const Sustainability = lazy(() => import("../components/Sustainability"));
+const FeedbackPanel = lazy(() => import("../components/FeedbackPanel"));
 const AssistantWidget = lazy(() => import("../components/assistant/AssistantWidget"));
 
 // Cancellation Timer Component
@@ -792,6 +793,12 @@ const Dashboard = () => {
                 <div className="main-content">
                     <Suspense fallback={<div style={{ minHeight: '100vh', background: '#0a0a0b' }} />}>
                         <Sustainability onOpenSidebar={() => setSidebarOpen(true)} />
+                    </Suspense>
+                </div>
+            ) : activeTab === 'feedback' ? (
+                <div className="main-content">
+                    <Suspense fallback={<div style={{ minHeight: '100vh', background: '#0a0a0b' }} />}>
+                        <FeedbackPanel user={user} onOpenSidebar={() => setSidebarOpen(true)} />
                     </Suspense>
                 </div>
             ) : (
