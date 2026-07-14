@@ -37,6 +37,9 @@ const TAB_ROUTES = [
     { path: "sustainability", tab: "sustainability" },
     { path: "profile", tab: "profile" },
     { path: "search-results", tab: "searchResults" },
+    // In-app feedback tab. Uses a distinct path so it doesn't collide with the
+    // PUBLIC "/feedback" page (which renders the standalone public form).
+    { path: "share-feedback", tab: "feedback" },
 ];
 
 const AppRouter = () => (
