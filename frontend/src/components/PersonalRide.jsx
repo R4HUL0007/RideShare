@@ -239,12 +239,12 @@ const PersonalRideInner = ({ onOpenSidebar, onNavigate }) => {
                                 <div className="rrq-route">
                                     <div className="rrq-route-line">
                                         <span className="rrq-dot pickup" />
-                                        <div><label>Pickup</label><strong>{form.source || "My location"}</strong></div>
+                                        <div><label>Pickup</label><strong title={form.source || "My location"}>{form.source || "My location"}</strong></div>
                                     </div>
                                     <div className="rrq-route-conn" />
                                     <div className="rrq-route-line">
                                         <span className="rrq-dot drop" />
-                                        <div><label>Drop</label><strong>{form.destination || "—"}</strong></div>
+                                        <div><label>Drop</label><strong title={form.destination || "—"}>{form.destination || "—"}</strong></div>
                                     </div>
                                 </div>
                                 <div className="rrq-summary-meta">
