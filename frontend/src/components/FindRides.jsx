@@ -852,7 +852,11 @@ const FindRidesInner = ({ onOpenSidebar, onNavigate, user }) => {
             // viewport. No-op on desktop split view (results already visible).
             if (list.length > 0) {
                 toast.success(`${list.length} ride${list.length !== 1 ? "s" : ""} available on this route`, { autoClose: 3000 });
-                if (typeof window !== "undefined" && window.innerWidth <= 900) {
+                // Bring the RESULTS LIST into view after a search. Previously this
+                // only ran on narrow screens, and on stacked layouts the map sits
+                // between the form and the list — so users landed on the map
+                // instead of the rides. Always scroll to the results list.
+                if (typeof window !== "undefined") {
                     setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 150);
                 }
             }

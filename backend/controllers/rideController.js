@@ -672,7 +672,10 @@ exports.completeRide = async (req, res) => {
             ride.tracking = ride.tracking || {};
             ride.tracking.driverLocation = { lat: fix.lat, lng: fix.lng, updatedAt: new Date() };
         }
-        const check = validateManualCompletion(ride, fix);
+        // Driver override (force) bypasses the GPS proximity gates after an
+        // explicit client-side confirmation — see validateManualCompletion.
+        const force = Boolean(req.body?.force);
+        const check = validateManualCompletion(ride, fix, { force });
         if (!check.ok) {
             return res.status(400).json({ message: check.message, code: check.code });
         }

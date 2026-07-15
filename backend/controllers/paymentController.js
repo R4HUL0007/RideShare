@@ -209,6 +209,92 @@ exports.verifyPayment = async (req, res) => {
 };
 
 /**
+ * POST /api/payments/cash/:rideId
+ * Passenger chooses to settle their completed-ride fare in CASH (paid directly
+ * to the driver). We record a Successful cash Payment for history + clear the
+ * unpaid-guard, but keep escrowStatus "none" so it is NEVER added to the
+ * driver's withdrawable balance — they collect the cash in person.
+ */
+exports.payCash = async (req, res) => {
+    const userId = req.user.id;
+    const { rideId } = req.params;
+    const io = req.app.get("io");
+    const users = req.app.get("users") || {};
+
+    if (!mongoose.Types.ObjectId.isValid(rideId)) {
+        return res.status(400).json({ message: "Invalid ride id" });
+    }
+    try {
+        const ride = await Ride.findById(rideId);
+        if (!ride) return res.status(404).json({ message: "Ride not found" });
+
+        const booking = (ride.passengers || []).find((p) => idStr(p.user_id) === userId);
+        if (!booking) return res.status(400).json({ message: "You haven't booked this ride." });
+        if (ride.status !== "Completed") {
+            return res.status(400).json({ message: "You can pay once the ride is completed." });
+        }
+        if (booking.paymentStatus === "paid") {
+            return res.status(400).json({ message: "This ride is already paid." });
+        }
+        const total = Number(booking.fareAmount) || 0;
+        if (total <= 0) {
+            return res.status(400).json({ message: "This ride is free — no payment needed." });
+        }
+        const existingPaid = await Payment.findOne({ ride_id: ride._id, user_id: userId, status: "Successful" }).lean();
+        if (existingPaid) {
+            return res.status(400).json({ message: "This ride is already paid." });
+        }
+
+        const seats = booking.seats || 1;
+        const commissionPct = getCommissionPercent();
+        const platformFee = Math.round((total * commissionPct) / 100);
+        const driverEarnings = Math.max(0, total - platformFee);
+        const now = new Date();
+
+        // Cash record: Successful (so history + guard treat it as paid) but
+        // escrowStatus "none" so it never enters the withdrawable balance.
+        const payment = await Payment.create({
+            user_id: userId,
+            driver_id: ride.user_id,
+            ride_id: ride._id,
+            seats,
+            order_id: `cash_${ride._id}_${userId}_${now.getTime()}`.slice(0, 60),
+            amount: total,
+            currency: "INR",
+            amountBreakdown: { fare: total, platformFee, tax: 0 },
+            driverEarnings,
+            method: "cash",
+            status: "Successful",
+            escrowStatus: "none",
+            paidAt: now,
+            routeSnapshot: { source: ride.source, destination: ride.destination, timing: ride.timing },
+        });
+
+        await Ride.updateOne(
+            { _id: ride._id, "passengers.user_id": userId },
+            { $set: { "passengers.$.paymentStatus": "paid", "passengers.$.paymentMethod": "cash", "passengers.$.payment_id": payment._id } }
+        );
+
+        const dest = ride.destination || "your destination";
+        await createNotification({
+            io, users, userId, type: "system", title: "Cash payment selected",
+            message: `Please hand ₹${total} in cash to your driver for the ride to ${dest}.`,
+            rideId: ride._id, link: { tab: "myBookings" },
+        });
+        await createNotification({
+            io, users, userId: idStr(ride.user_id), type: "system", title: "Cash payment 💵",
+            message: `Your passenger chose to pay ₹${total} in cash for the ride to ${dest}. Please collect it directly.`,
+            rideId: ride._id, link: { tab: "myRides" },
+        });
+
+        res.status(200).json({ message: "Marked as paid by cash", payment });
+    } catch (error) {
+        console.error("Error in payCash:", error);
+        res.status(500).json({ message: "Server error", error: error.message });
+    }
+};
+
+/**
  * POST /api/payments/failed
  * Record a cancelled/failed checkout (user dismissed Razorpay, or it errored).
  * Never reserves seats. Body: { orderId, reason }

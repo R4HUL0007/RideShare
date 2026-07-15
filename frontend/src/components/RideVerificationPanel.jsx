@@ -96,12 +96,18 @@ const RideVerificationPanel = ({ rideId, trackingState, isDriver, onVerifiedChan
 
                 {!started && !data.boardingVerified && (
                     <>
-                        <p className="vr-hint">Share this code with your driver before boarding.</p>
+                        <p className="vr-hint">
+                            {data.checkedIn
+                                ? "You're checked in. Read out this code to your driver — they'll enter it to confirm you've boarded."
+                                : "Tap Check In when your driver arrives, then share the code below so they can confirm your boarding."}
+                        </p>
+                        <div className="vr-code-label">Your boarding OTP</div>
                         <div className="vr-code" aria-label={`Boarding code ${data.code}`}>
                             {String(data.code || "").split("").map((ch, i) => (
                                 <span key={i} className="vr-code-cell">{ch}</span>
                             ))}
                         </div>
+                        <p className="vr-hint vr-hint-sub">🔒 Only share this code with your driver in person. Never share it over chat or calls.</p>
                         {!data.checkedIn && (
                             <button className="vr-btn" onClick={doCheckIn} disabled={busy}>
                                 {busy ? "Checking in…" : "✅ Check In"}

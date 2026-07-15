@@ -19,11 +19,16 @@
 
 .vr-hint { font-size: 0.78rem; color: #9ca3af; margin: 0; text-align: center; }
 .vr-hint.warn { color: #fcd34d; }
+.vr-hint-sub { font-size: 0.72rem; color: #7c8390; margin-top: 0.35rem; }
 
 /* Passenger code + QR */
+.vr-code-label {
+  text-align: center; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.08em;
+  text-transform: uppercase; color: #8b8b93; margin-top: 0.55rem;
+}
 .vr-code {
   display: flex; justify-content: center; flex-wrap: wrap; gap: 0.4rem;
-  margin: 0.2rem auto 0.1rem;
+  margin: 0.35rem auto 0.1rem;
 }
 .vr-code-cell {
   width: 2.5rem; height: 3rem;

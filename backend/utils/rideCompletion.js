@@ -48,15 +48,26 @@ function tripDurationMin(ride) {
  * `loc` is the driver's current/last location. When destination coords are
  * absent (legacy rides), the radius check is skipped (GPS fallback) but the
  * distance/duration minimums still apply.
+ *
+ * `opts.force` (driver override): the driver is the authority on whether the
+ * trip actually ended — device GPS is often inaccurate or static (e.g. on a
+ * laptop), which would otherwise strand the driver forever. When force is set
+ * (after an explicit "Complete anyway?" confirmation on the client) the
+ * proximity / distance / duration gates are bypassed. The hard invariants
+ * (not cancelled, not already completed, ride actually started) still hold.
  */
-function validateManualCompletion(ride, loc) {
+function validateManualCompletion(ride, loc, opts = {}) {
     const cfg = CONFIG();
+    const force = Boolean(opts.force);
     if (!ride) return { ok: false, code: "NOT_FOUND", message: "Ride not found." };
     if (ride.status === "Cancelled") return { ok: false, code: "CANCELLED", message: "A cancelled ride can't be completed." };
     if (ride.status === "Completed") return { ok: false, code: "ALREADY", message: "This ride is already completed." };
     if (ride.tracking?.state !== "in_progress") {
         return { ok: false, code: "NOT_STARTED", message: "Start the ride before completing it." };
     }
+
+    // A forced (driver-confirmed) completion skips the GPS-based gates below.
+    if (force) return { ok: true, forced: true };
 
     const driverLoc = loc || ride.tracking?.driverLocation;
     const distM = metersToDestination(ride, driverLoc);
@@ -146,12 +157,14 @@ async function finalizeCompletion(ride, { method, endLocation, actorId, io, user
     }
 
     // Notify passengers — those who owe a fare get a pay prompt.
+    let pendingPay = 0;
     try {
         const { createNotification } = require("./notify");
         for (const p of (claimed.passengers || [])) {
             const pid = p && p.user_id ? (p.user_id._id ? p.user_id._id.toString() : p.user_id.toString()) : null;
             if (!pid) continue;
             const owes = (p.fareAmount || 0) > 0 && p.paymentStatus !== "paid";
+            if (owes) pendingPay += Number(p.fareAmount) || 0;
             await createNotification({
                 io, users, userId: pid,
                 type: owes ? "booking" : "ride",
@@ -164,6 +177,28 @@ async function finalizeCompletion(ride, { method, endLocation, actorId, io, user
         }
     } catch (e) {
         console.error("completion notify failed:", e.message);
+    }
+
+    // Notify the driver too. On the pay-after-completion flow the driver is NOT
+    // paid instantly — passengers pay after the ride and the money is held in
+    // escrow, then released to the driver. Make that explicit so "no payment
+    // yet" never looks like a bug.
+    try {
+        const { createNotification } = require("./notify");
+        const driverId = claimed.user_id ? (claimed.user_id._id ? claimed.user_id._id.toString() : claimed.user_id.toString()) : null;
+        if (driverId) {
+            await createNotification({
+                io, users, userId: driverId,
+                type: "ride",
+                title: "Ride completed",
+                message: pendingPay > 0
+                    ? `Ride to ${claimed.destination} completed. ₹${pendingPay} is pending from passengers — it'll be held in escrow and released to your earnings.`
+                    : `Your ride to ${claimed.destination} has been completed.`,
+                rideId: claimed._id, link: { tab: "myRides" },
+            });
+        }
+    } catch (e) {
+        console.error("driver completion notify failed:", e.message);
     }
 
     return { durationMin };

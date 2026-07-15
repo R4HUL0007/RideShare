@@ -10,6 +10,7 @@ import MapsProvider, { useMaps } from "./maps/MapsProvider";
 import SosButton from "./safety/SosButton";
 import RideVerificationPanel from "./RideVerificationPanel";
 import { shareTrip } from "../services/safetyService";
+import { payForRide, payRideCash } from "../services/paymentService";
 import "../styles/rideTracking.css";
 
 const hasCoords = (c) => c && typeof c.lat === "number" && typeof c.lng === "number" && Number.isFinite(c.lat) && Number.isFinite(c.lng);
@@ -130,6 +131,10 @@ function RideTrackingInner({ rideId, user, onClose }) {
     const [durationMin, setDurationMin] = useState(null);
     // Boarding verification: count of passengers verified + total roster size.
     const [verify, setVerify] = useState({ count: 0, total: 0 });
+    // Post-completion settlement (fare/earnings) + local pay state so the
+    // completion screen becomes the "pay + rate" moment (Uber-style).
+    const [payState, setPayState] = useState(null); // null | "paying" | "paid"
+    const settledRef = useRef(false);
     const watchIdRef = useRef(null);
     const userId = user?.id || user?._id;
 
@@ -153,6 +158,56 @@ function RideTrackingInner({ rideId, user, onClose }) {
 
     const isDriver = snapshot?.isDriver;
 
+    // Refresh only the fare/settlement block (no loading flicker) — used when the
+    // ride completes and after a payment so the completion screen stays accurate.
+    const refreshSettlement = useCallback(async () => {
+        try {
+            const res = await axiosInstance.get(`${API_BASE_URL}/rides/${rideId}/tracking`);
+            setSnapshot((prev) => (prev ? { ...prev, settlement: res.data.settlement } : prev));
+        } catch { /* non-fatal */ }
+    }, [rideId]);
+
+    // When the ride flips to completed, pull the final settlement once.
+    useEffect(() => {
+        if (state === "completed" && !settledRef.current) {
+            settledRef.current = true;
+            refreshSettlement();
+        }
+    }, [state, refreshSettlement]);
+
+    const settlement = snapshot?.settlement || {};
+    const passengerOwes = !isDriver && settlement.role === "passenger"
+        && settlement.paymentStatus !== "paid" && (settlement.fareAmount || 0) > 0
+        && payState !== "paid";
+
+    // Passenger: pay the completed-ride fare online (Razorpay), then rate/close.
+    const payOnline = async () => {
+        setPayState("paying");
+        try {
+            await payForRide({ rideId, seats: settlement.seats || 1, user });
+            setPayState("paid");
+            toast.success("Payment successful — thank you!");
+            refreshSettlement();
+        } catch (err) {
+            setPayState(null);
+            if (err?.code !== "dismissed") toast.error(err?.message || "Payment couldn't be completed.");
+        }
+    };
+
+    // Passenger: settle in cash (paid in person to the driver).
+    const payCash = async () => {
+        setPayState("paying");
+        try {
+            await payRideCash(rideId);
+            setPayState("paid");
+            toast.success(`Please pay ₹${settlement.fareAmount} to your driver in cash.`);
+            refreshSettlement();
+        } catch (err) {
+            setPayState(null);
+            toast.error(err.response?.data?.message || "Couldn't mark cash payment.");
+        }
+    };
+
     // Passenger: subscribe to live location + status events.
     useEffect(() => {
         if (!snapshot || isDriver) return;
@@ -174,6 +229,27 @@ function RideTrackingInner({ rideId, user, onClose }) {
         socket.on("ride:location", onLoc);
         socket.on("ride:status", onStatus);
         return () => { socket.off("ride:location", onLoc); socket.off("ride:status", onStatus); };
+    }, [snapshot, isDriver, rideId]);
+
+    // Driver: subscribe to STATUS changes too. If the passenger confirms arrival
+    // (or auto-GPS completes) while the driver is still on this screen, the
+    // driver must see the ride flip to "completed" instead of staying stuck on
+    // "in progress" with a Complete button that now errors.
+    useEffect(() => {
+        if (!snapshot || !isDriver) return;
+        const socket = getSocket();
+        const onStatus = (p) => {
+            if (idStr(p.rideId) !== idStr(rideId)) return;
+            if (p.durationMin != null) setDurationMin(p.durationMin);
+            if (p.state) setState(p.state);
+            if (p.state === "completed") {
+                stopSharing();
+                toast.success("This ride has been completed.");
+            }
+        };
+        socket.on("ride:status", onStatus);
+        return () => socket.off("ride:status", onStatus);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [snapshot, isDriver, rideId]);
 
     // Recompute the route + ETA/distance whenever the driver position or the
@@ -228,11 +304,14 @@ function RideTrackingInner({ rideId, user, onClose }) {
         } finally { setBusy(false); }
     };
 
-    const endRide = async () => {
+    const endRide = async (force = false) => {
         setBusy(true);
         try {
             // Send a fresh fix so the backend can validate destination proximity.
             const body = hasCoords(driverLoc) ? { lat: driverLoc.lat, lng: driverLoc.lng } : {};
+            // Driver override: when GPS says the driver is far from the drop but
+            // the driver confirms the trip has ended, bypass the proximity gate.
+            if (force) body.force = true;
             const res = await axiosInstance.post(`${API_BASE_URL}/rides/${rideId}/tracking/end`, body);
             setState("completed");
             setDurationMin(res.data?.durationMin ?? null);
@@ -242,6 +321,17 @@ function RideTrackingInner({ rideId, user, onClose }) {
             // Backend enforces destination/distance/duration — surface its message.
             toast.error(err.response?.data?.message || "Failed to end ride.");
         } finally { setBusy(false); }
+    };
+
+    // Driver taps Complete. If GPS says we're at the drop, complete normally;
+    // otherwise ask for an explicit confirmation and force the completion so the
+    // driver is never permanently stranded by an inaccurate/static GPS fix.
+    const handleCompleteClick = () => {
+        if (driverAtDest) { endRide(false); return; }
+        const msg = destKm != null
+            ? `You don't appear to be at the destination (about ${destKm.toFixed(1)} km away). Complete the ride anyway?`
+            : "You don't appear to be at the destination. Complete the ride anyway?";
+        if (window.confirm(msg)) endRide(true);
     };
 
     // Passenger GPS-fallback completion: confirm arrival → completes the ride.
@@ -384,7 +474,45 @@ function RideTrackingInner({ rideId, user, onClose }) {
                             {distance && <div className="rt-cr"><span>Distance</span><span>{distance}</span></div>}
                             {durationMin != null && <div className="rt-cr"><span>Duration</span><span>{durationMin} min</span></div>}
                         </div>
-                        <button className="rt-btn" onClick={onClose}>Done</button>
+
+                        {/* Passenger — pay right here (Uber-style trip-end payment) */}
+                        {passengerOwes && (
+                            <div className="rt-pay">
+                                <div className="rt-pay-amount">Amount to pay <strong>₹{settlement.fareAmount}</strong></div>
+                                <div className="rt-pay-break">Fare ₹{settlement.fareAmount} · platform fee ₹{settlement.platformFee} included</div>
+                                <button className="rt-btn success" onClick={payOnline} disabled={payState === "paying"}>
+                                    {payState === "paying" ? <span className="rt-spin" /> : "💳"} Pay ₹{settlement.fareAmount} online
+                                </button>
+                                <button className="rt-btn" onClick={payCash} disabled={payState === "paying"}>💵 Pay with cash</button>
+                                <p className="rt-hint" style={{ marginTop: "0.35rem" }}>Please settle the fare to finish — choose online or cash above.</p>
+                            </div>
+                        )}
+
+                        {/* Passenger — already settled */}
+                        {!isDriver && settlement.role === "passenger" && !passengerOwes && (
+                            (payState === "paid" || settlement.paymentStatus === "paid") ? (
+                                <p className="rt-pay-done">✅ Payment complete{settlement.paymentMethod === "cash" ? " (cash)" : ""}. Thanks for riding!</p>
+                            ) : (
+                                <p className="rt-pay-done">✅ This was a free ride. Thanks for riding!</p>
+                            )
+                        )}
+
+                        {/* Driver — earnings summary (info only; drivers receive money) */}
+                        {isDriver && settlement.role === "driver" && (settlement.gross || 0) > 0 && (
+                            <div className="rt-earn">
+                                <div className="rt-earn-amount">You earned <strong>₹{settlement.driverEarnings}</strong></div>
+                                <div className="rt-pay-break">From ₹{settlement.gross} fare · after {settlement.commissionPercent}% platform fee</div>
+                                <p className="rt-hint" style={{ marginTop: "0.35rem" }}>
+                                    {(settlement.pendingAmount || 0) > 0
+                                        ? `₹${settlement.pendingAmount} is still pending from passengers — once they pay (online → escrow, or cash in person) it's added to your earnings.`
+                                        : "All passenger payments are in. Track payouts in Earnings."}
+                                </p>
+                            </div>
+                        )}
+
+                        {/* Done is only offered once there's nothing left to pay —
+                            removing the "pay later" escape so fares get settled. */}
+                        {!passengerOwes && <button className="rt-btn" onClick={onClose}>Done</button>}
                     </div>
                 ) : (
                     <>
@@ -429,14 +557,14 @@ function RideTrackingInner({ rideId, user, onClose }) {
                                     </button>
                                 ) : (
                                     <>
-                                        <button className="rt-btn danger" onClick={endRide} disabled={busy || !driverAtDest}>
+                                        <button className="rt-btn danger" onClick={handleCompleteClick} disabled={busy}>
                                             {busy ? <span className="rt-spin" /> : "⏹"} Complete Ride
                                         </button>
                                         {!driverAtDest && (
                                             <p className="rt-hint" style={{ marginTop: "0.5rem" }}>
                                                 {destKm != null
-                                                    ? `Drive to the destination to complete the ride (${destKm.toFixed(1)} km away).`
-                                                    : "You are too far from the destination to complete this ride."}
+                                                    ? `You're about ${destKm.toFixed(1)} km from the destination. Complete once you arrive — or tap Complete and confirm if you've already dropped off.`
+                                                    : "Tap Complete when you've reached the destination."}
                                             </p>
                                         )}
                                     </>
@@ -447,12 +575,18 @@ function RideTrackingInner({ rideId, user, onClose }) {
                                 <p className="rt-hint" style={{ margin: 0, fontWeight: 700, color: atDestination ? "#34d399" : undefined }}>
                                     {atDestination ? "You've reached your destination." : "Your ride is on the way to the destination."}
                                 </p>
-                                <p className="rt-hint" style={{ margin: 0 }}>Have you reached your destination?</p>
-                                <div style={{ display: "flex", gap: "0.6rem" }}>
-                                    <button className="rt-btn success" onClick={confirmArrival} disabled={busy} style={{ flex: 1 }}>
-                                        {busy ? <span className="rt-spin" /> : "✓"} Yes, I've arrived
-                                    </button>
-                                </div>
+                                {atDestination ? (
+                                    <>
+                                        <p className="rt-hint" style={{ margin: 0 }}>Confirm your drop-off to complete the ride.</p>
+                                        <div style={{ display: "flex", gap: "0.6rem" }}>
+                                            <button className="rt-btn success" onClick={confirmArrival} disabled={busy} style={{ flex: 1 }}>
+                                                {busy ? <span className="rt-spin" /> : "✓"} Yes, I've arrived
+                                            </button>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <p className="rt-hint" style={{ margin: 0 }}>You'll be able to confirm arrival once you reach the destination. The driver ends the ride on their side.</p>
+                                )}
                             </div>
                         ) : (
                             <p className="rt-hint">

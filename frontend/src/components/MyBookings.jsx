@@ -8,7 +8,7 @@ import MapsProvider, { useMaps } from "./maps/MapsProvider";
 import LiveRideMap from "./maps/LiveRideMap";
 import ThemedSelect from "./ThemedSelect";
 import { getMyImpact } from "../services/sustainabilityService";
-import { payForRide } from "../services/paymentService";
+import { payForRide, payRideCash } from "../services/paymentService";
 import "../styles/myBookings.css";
 
 const RideTracking = lazy(() => import("./RideTracking"));
@@ -128,7 +128,7 @@ function StatusBadge({ status }) {
 }
 
 /* ---------------- booking card ---------------- */
-function BookingCard({ ride, status, seats, onView, onViewRoute, onTrack, onCancel, canCancel, onRate, onPay, unpaidFare, paying }) {
+function BookingCard({ ride, status, seats, onView, onViewRoute, onTrack, onCancel, canCancel, onRate, onPay, onPayCash, unpaidFare, paying }) {
     const driver = ride.user_id || {};
     const v = ride.vehicle_id || {};
     const trackable = status === "Confirmed" && hasCoords(ride.sourceCoords) && hasCoords(ride.destinationCoords);
@@ -168,9 +168,14 @@ function BookingCard({ ride, status, seats, onView, onViewRoute, onTrack, onCanc
 
                 <div className="mb-card-actions">
                     {status === "Completed" && unpaidFare > 0 && (
-                        <button className="mb-act track" onClick={() => onPay(ride)} disabled={paying} style={{ fontWeight: 800 }}>
-                            {paying ? <><span className="mb-spin" /> Paying…</> : `Pay ₹${unpaidFare}`}
-                        </button>
+                        <>
+                            <button className="mb-act track" onClick={() => onPay(ride)} disabled={paying} style={{ fontWeight: 800 }}>
+                                {paying ? <><span className="mb-spin" /> Paying…</> : `Pay ₹${unpaidFare}`}
+                            </button>
+                            <button className="mb-act" onClick={() => onPayCash(ride)} disabled={paying} title="Settle in cash with your driver">
+                                💵 Pay cash
+                            </button>
+                        </>
                     )}
                     <button className="mb-act" onClick={() => onView(ride)}>View Details</button>
                     {trackable && (
@@ -363,6 +368,20 @@ const MyBookingsInner = ({ user, onOpenSidebar, onNavigate }) => {
         } catch (err) {
             if (err?.code === "dismissed") toast.info("Payment cancelled.");
             else toast.error(err?.message || "Payment failed. Please try again.");
+        } finally {
+            setPayingId(null);
+        }
+    };
+
+    // Settle a completed-ride fare in cash (paid in person to the driver).
+    const payCashForBooking = async (ride) => {
+        setPayingId(ride._id);
+        try {
+            await payRideCash(ride._id);
+            toast.success("Marked as cash — please pay your driver in person.");
+            load();
+        } catch (err) {
+            toast.error(err.response?.data?.message || "Couldn't mark cash payment.");
         } finally {
             setPayingId(null);
         }
@@ -581,6 +600,7 @@ const MyBookingsInner = ({ user, onOpenSidebar, onNavigate }) => {
                                     unpaidFare={e.unpaidFare}
                                     paying={payingId === e.ride._id}
                                     onPay={payForBooking}
+                                    onPayCash={payCashForBooking}
                                     onView={() => setDetailsEntry(e)}
                                     onViewRoute={(r) => setRouteRide(r)}
                                     onTrack={(r) => setTrackRide(r)}

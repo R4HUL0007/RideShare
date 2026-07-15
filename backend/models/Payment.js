@@ -36,6 +36,17 @@ const PaymentSchema = new mongoose.Schema(
         // Net amount the driver earns from this payment (fare - platformFee).
         driverEarnings: { type: Number, default: 0 },
 
+        // How the passenger paid. "online" = Razorpay (escrow-protected payout).
+        // "cash" = settled in person with the driver; recorded for history but
+        // kept OUT of the withdrawable escrow balance (escrowStatus stays "none")
+        // so the driver is never paid twice for money they already collected.
+        method: {
+            type: String,
+            enum: ["online", "cash"],
+            default: "online",
+            index: true,
+        },
+
         status: {
             type: String,
             // Tracks the Razorpay PAYMENT lifecycle (did the passenger pay?).

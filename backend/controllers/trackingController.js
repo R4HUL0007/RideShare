@@ -5,6 +5,37 @@ const { createNotification } = require("../utils/notify");
 const { haversineKm, validPoint, pointToRoute, decodePolyline, straightLine } = require("../utils/geo");
 const { CONFIG, metersToDestination, validateManualCompletion, finalizeCompletion } = require("../utils/rideCompletion");
 const { maskRideContacts } = require("../utils/maskContacts");
+const { getCommissionPercent } = require("../config/razorpay");
+
+// Build the fare/earnings settlement summary shown on the completion screen —
+// the passenger sees what they owe (and how they can pay); the driver sees the
+// fare/earnings and how much is still pending from passengers.
+function buildSettlement(ride, userId) {
+    const commissionPercent = getCommissionPercent();
+    if (idStr(ride.user_id) === userId) {
+        let gross = 0, driverEarnings = 0, pendingAmount = 0;
+        for (const p of (ride.passengers || [])) {
+            const fare = Number(p.fareAmount) || 0;
+            if (fare <= 0) continue;
+            gross += fare;
+            driverEarnings += Math.max(0, fare - Math.round((fare * commissionPercent) / 100));
+            if (p.paymentStatus !== "paid") pendingAmount += fare;
+        }
+        return { role: "driver", gross, driverEarnings, pendingAmount, commissionPercent, passengerCount: (ride.passengers || []).length };
+    }
+    const b = (ride.passengers || []).find((p) => idStr(p.user_id) === userId) || {};
+    const fareAmount = Number(b.fareAmount) || 0;
+    const platformFee = Math.round((fareAmount * commissionPercent) / 100);
+    return {
+        role: "passenger",
+        fareAmount,
+        platformFee,
+        seats: b.seats || 1,
+        paymentStatus: b.paymentStatus || "unpaid",
+        paymentMethod: b.paymentMethod || null,
+        commissionPercent,
+    };
+}
 
 // Normalize an id-ish value (ObjectId | populated doc | string) to a string.
 const idStr = (v) => {
@@ -78,6 +109,7 @@ exports.getTracking = async (req, res) => {
             timing: ride.timing,
             isDriver: isDriver(ride, userId),
             tracking: ride.tracking || { state: "scheduled", driverLocation: { lat: null, lng: null } },
+            settlement: buildSettlement(ride, userId),
         });
     } catch (error) {
         console.error("Error in getTracking:", error);
@@ -192,8 +224,12 @@ exports.endTracking = async (req, res) => {
             ride.tracking.driverLocation = { lat: fix.lat, lng: fix.lng, updatedAt: new Date() };
         }
 
-        // Backend-enforced destination + distance + duration validation.
-        const check = validateManualCompletion(ride, fix);
+        // Backend-enforced destination + distance + duration validation. The
+        // driver may override the GPS gates (force) after an explicit "Complete
+        // anyway?" confirmation — device GPS is often inaccurate/static and must
+        // never permanently strand the driver who knows the trip has ended.
+        const force = Boolean(req.body?.force);
+        const check = validateManualCompletion(ride, fix, { force });
         if (!check.ok) {
             return res.status(400).json({ message: check.message, code: check.code });
         }
@@ -242,6 +278,17 @@ exports.confirmArrival = async (req, res) => {
         }
         if (ride.tracking?.state !== "in_progress") {
             return res.status(400).json({ message: "The ride hasn't started yet." });
+        }
+        // A passenger can only confirm arrival once the ride has ACTUALLY
+        // reached the destination area (the driver's GPS entered the dest
+        // radius). This blocks premature "I've arrived" completions while the
+        // vehicle is still en route. If GPS never registers arrival, the driver
+        // remains the authority and can complete via the tracking screen.
+        if (!ride.tracking?.atDestination) {
+            return res.status(400).json({
+                message: "You can confirm arrival once the ride reaches the destination.",
+                code: "NOT_AT_DESTINATION",
+            });
         }
 
         const { durationMin } = await finalizeCompletion(ride, {

@@ -200,9 +200,10 @@ function RideCard({ ride, status, onView, onViewRoute, onComplete, onCancel, onT
                     {hasCoords(ride.sourceCoords) && hasCoords(ride.destinationCoords) && (
                         <button className="mr-act" onClick={() => onViewRoute(ride)}>View Route</button>
                     )}
-                    {status === "Active" && (
-                        <button className="mr-act success" onClick={() => onComplete(ride)}>Complete (Live)</button>
-                    )}
+                    {/* Completion happens inside live tracking (Start / Track →
+                        Complete Ride), where the trip is GPS-validated. A separate
+                        "Complete" here just errored out of context and confused
+                        drivers, so it's intentionally removed. */}
                     {status !== "Completed" && status !== "Cancelled" && (
                         <button className="mr-act danger" onClick={() => onCancel(ride)}>Cancel</button>
                     )}

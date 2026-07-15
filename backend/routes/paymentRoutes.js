@@ -3,6 +3,7 @@ const {
     getConfig,
     createOrder,
     verifyPayment,
+    payCash,
     markFailed,
     getMyPayments,
     getEarnings,
@@ -38,6 +39,7 @@ router.get("/disputes", protect, getMyDisputes);
 router.get("/withdrawals", protect, getMyWithdrawals);
 router.post("/order/:rideId", protect, orderLimiter, createOrder);
 router.post("/verify", protect, verifyLimiter, verifyPayment);
+router.post("/cash/:rideId", protect, orderLimiter, payCash);
 router.post("/failed", protect, verifyLimiter, markFailed);
 router.put("/payout-details", protect, updatePayoutDetails);
 router.post("/withdraw", protect, withdrawLimiter, requestWithdrawal);

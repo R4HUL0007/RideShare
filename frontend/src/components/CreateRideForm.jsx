@@ -264,7 +264,7 @@ const CreateRideForm = ({ onSuccess, onOpenSidebar, onNavigate }) => {
                 submitData
             );
 
-            toast.success("Ride created successfully!");
+            toast.success("🎉 Ride published! You can see and manage it in My Rides.", { autoClose: 4000 });
             setFormData({
                 source: "",
                 destination: "",
@@ -276,7 +276,9 @@ const CreateRideForm = ({ onSuccess, onOpenSidebar, onNavigate }) => {
                 sourceCoords: null,
                 destinationCoords: null
             });
-            onSuccess(); // Trigger reload or update UI
+            // Small delay so the success toast is clearly seen on this page
+            // before the parent switches away (e.g. to My Rides / reloads).
+            setTimeout(() => onSuccess(), 700); // Trigger reload or update UI
         } catch (error) {
             console.error("Error creating ride:", error);
 

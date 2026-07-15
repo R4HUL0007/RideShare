@@ -96,6 +96,8 @@ const RideSchema = new mongoose.Schema({
         //   unpaid  → booked, not yet paid (ride may be upcoming or completed)
         //   paid    → paid after completion; a Payment doc holds the escrow
         paymentStatus: { type: String, enum: ["unpaid", "paid"], default: "unpaid" },
+        // How this passenger settled: online (Razorpay/escrow) or cash (in person).
+        paymentMethod: { type: String, enum: [null, "online", "cash"], default: null },
         payment_id: { type: mongoose.Schema.Types.ObjectId, ref: "Payment", default: null }
     }],
     vehicle_id: {

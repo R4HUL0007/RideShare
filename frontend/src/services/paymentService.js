@@ -19,6 +19,11 @@ export const createOrder = (rideId, seats = 1, dropCoords = null) =>
 export const verifyPayment = (payload) =>
     axiosInstance.post(`${API_BASE_URL}/payments/verify`, payload);
 
+// Settle a completed-ride fare in CASH (paid in person to the driver). Records
+// a cash payment + clears the unpaid-guard; no Razorpay, no escrow payout.
+export const payRideCash = (rideId) =>
+    axiosInstance.post(`${API_BASE_URL}/payments/cash/${rideId}`);
+
 // Record a cancelled/failed checkout (no seats reserved).
 export const markPaymentFailed = (orderId, reason) =>
     axiosInstance.post(`${API_BASE_URL}/payments/failed`, { orderId, reason });
