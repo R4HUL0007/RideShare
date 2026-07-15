@@ -264,7 +264,7 @@ const CreateRideForm = ({ onSuccess, onOpenSidebar, onNavigate }) => {
                 submitData
             );
 
-            toast.success("🎉 Ride published! You can see and manage it in My Rides.", { autoClose: 4000 });
+            toast.success("🎉 Ride published! Taking you to My Rides…", { autoClose: 4000 });
             setFormData({
                 source: "",
                 destination: "",
@@ -276,9 +276,11 @@ const CreateRideForm = ({ onSuccess, onOpenSidebar, onNavigate }) => {
                 sourceCoords: null,
                 destinationCoords: null
             });
-            // Small delay so the success toast is clearly seen on this page
-            // before the parent switches away (e.g. to My Rides / reloads).
-            setTimeout(() => onSuccess(), 700); // Trigger reload or update UI
+            // Reload the rides list, then send the driver straight to My Rides so
+            // they immediately see the ride they just published. The toast lives
+            // at the app root, so it stays visible across the tab switch.
+            onSuccess();
+            if (onNavigate) onNavigate("myRides");
         } catch (error) {
             console.error("Error creating ride:", error);
 
