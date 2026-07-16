@@ -1,6 +1,6 @@
-# RideShare
+# RidexShare
 
-RideShare is a full-stack carpooling and ride-sharing platform built for a university community. It lets students and faculty share rides going the same way — drivers post trips, riders book a seat, and everyone splits the cost. The goal is simple: make everyday travel cheaper, safer, greener, and more social than riding alone.
+RidexShare is a full-stack carpooling and ride-sharing platform built for a university community. It lets students and faculty share rides going the same way — drivers post trips, riders book a seat, and everyone splits the cost. The goal is simple: make everyday travel cheaper, safer, greener, and more social than riding alone.
 
 ## 🚀 Live Demo
 
@@ -13,7 +13,7 @@ RideShare is a full-stack carpooling and ride-sharing platform built for a unive
 
 ## What it does
 
-People heading in the same direction rarely find each other. RideShare connects them. A driver creates a ride with their route, time, available seats, and price per seat. Riders search for trips going their way, book a seat, pay securely, and track the ride in real time. Payments are held safely until the trip is done, both sides rate each other, and built-in safety tools are there if anything goes wrong.
+People heading in the same direction rarely find each other. RidexShare connects them. A driver creates a ride with their route, time, available seats, and price per seat. Riders search for trips going their way, book a seat, pay securely, and track the ride in real time. Payments are collected when the trip is done, both sides rate each other, and built-in safety tools are there if anything goes wrong.
 
 ## Why it exists
 
@@ -27,24 +27,24 @@ People heading in the same direction rarely find each other. RideShare connects 
 **For riders**
 1. Sign up with your university email and verify it with a one-time code.
 2. Search for rides going your way (or post a request and let nearby drivers come to you).
-3. Book a seat and pay securely — your payment is held safely until the trip is done.
-4. Track the ride live on the map, verify boarding with a code, and rate your driver at the end.
+3. Book a seat, ride, and track it live on the map.
+4. When the driver ends the trip, **pay online or in cash** and rate your driver.
 
 **For drivers**
 1. Sign up, add your vehicle, and complete driver verification.
-2. Create a ride with your route, time, seats, and price per seat.
-3. Accept bookings, pick up your riders (verified by a boarding code), and drive.
-4. Earnings are released after the trip and can be withdrawn to your bank/UPI.
+2. Create a ride with your route, time, seats, and price per seat — or accept on-demand requests as they pop up.
+3. Pick up your riders (verified by a boarding code) and drive.
+4. **You end the ride** at the destination; earnings are released after the trip and withdrawn to your bank/UPI.
 
 > Phone verification is required the first time you create or book a ride, so everyone on the platform is contactable and trusted.
 
 ## Main features
 
 - **Accounts** — university-email sign-up with email OTP verification, optional **phone verification via SMS OTP**, and Google Sign-In.
-- **Rides** — create, search, and book shared rides with smart route matching and seat management; plus on-demand **personal ride requests** (Uber-style) that alert nearby drivers.
-- **Secure payments** — online payments with an escrow system that holds money until the ride is completed, auto-release protection window, disputes, and driver earnings + withdrawals.
+- **Rides** — create, search, and book shared rides with smart route matching and seat management; plus on-demand **personal ride requests** (Uber-style) that alert nearby drivers with a real-time popup.
+- **Pay online or cash** — online payments with an escrow system that holds money until the ride is completed (auto-release protection window, disputes, driver earnings + withdrawals), or settle in cash with the driver.
 - **Real-time experience** — live ride tracking, in-app chat, and instant notifications over Socket.IO.
-- **Safety & trust** — driver/vehicle verification, ride check-in codes, no-show protection, **SOS with emergency contacts + live trip sharing**, and reviews/ratings.
+- **Safety & trust** — driver/vehicle verification, ride check-in codes, no-show protection, **SOS with emergency contacts + live trip sharing**, and reviews/ratings. The driver is the sole authority to complete a ride.
 - **Privacy & moderation** — **contact numbers are masked** until a booking is confirmed, and chat automatically blocks shared phone numbers and abusive/violent language.
 - **Smart assistant** — an AI helper that answers questions and can search, book, and track rides through conversation (with content safeguards).
 - **Recommendations** — personalized ride suggestions based on your location, time, and travel habits, plus recent searches and favourite places.
@@ -71,7 +71,7 @@ People heading in the same direction rarely find each other. RideShare connects 
 
 ## Testing
 
-- **Backend** — `cd backend && npm test` (Vitest: unit + integration, incl. full money-path state verification)
+- **Backend** — `cd backend && npm test` (unit + integration, incl. full money-path state verification)
 - **End-to-end** — `cd e2e && npx playwright test` (auth, rides, payments/escrow, notifications, chat, safety, admin, security, rate-limiting)
 
 ## Learn more
@@ -83,10 +83,10 @@ People heading in the same direction rarely find each other. RideShare connects 
 
 ## FAQ
 
-**Who can use RideShare?** Verified members of the university community — everyone signs up with a university email.
+**Who can use RidexShare?** Verified members of the university community — everyone signs up with a university email.
 
 **How is it safe?** Verified drivers, boarding codes, live tracking, SOS with emergency contacts, masked contact numbers until a booking is confirmed, and moderated chat.
 
-**How are payments handled?** Securely online, with funds held in escrow until the ride is completed. Drivers withdraw their earnings to bank/UPI.
+**How are payments handled?** Pay online (funds held in escrow until the ride is completed) or in cash with the driver. Drivers withdraw their online earnings to bank/UPI.
 
 **Is it free?** Yes to use — riders simply split the travel cost with the driver.
