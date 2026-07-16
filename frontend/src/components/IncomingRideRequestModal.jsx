@@ -1,8 +1,18 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { toast } from "react-toastify";
 import { getSocket, joinChat } from "../utils/socket";
-import { acceptPersonalRide, declinePersonalRide } from "../services/personalRideService";
+import { acceptPersonalRide, declinePersonalRide, incomingPersonalRides } from "../services/personalRideService";
 import "../styles/incomingRequest.css";
+
+// Normalize a server request doc into the compact popup shape.
+const toCard = (r) => ({
+    id: String(r._id),
+    pickup: r.pickup?.address,
+    destination: r.destination?.address,
+    distanceKm: r.distanceKm,
+    fare: r.estimatedFare,
+    vehicleType: r.vehicleType,
+});
 
 // How long an incoming-request card stays on screen before it auto-dismisses
 // (the request also expires server-side). Uber shows a similar short window.
@@ -29,10 +39,33 @@ export default function IncomingRideRequestModal({ user, onNavigate, activeTab }
             if (!p?.id) return;
             setQueue((q) => (q.some((r) => r.id === p.id) ? q : [...q, p]));
         };
-        // If a request is claimed/cancelled elsewhere, prune anything that's no
-        // longer offerable on the next update ping (cheap client-side cleanup).
+        // Uber-style: once a request is accepted by another driver (or cancelled/
+        // expired), drop it from this driver's popup so they can't act on a dead
+        // request.
+        const onClosed = (p) => {
+            if (!p?.id) return;
+            setQueue((q) => q.filter((r) => r.id !== p.id));
+        };
         socket.on("ride_request_broadcast", onBroadcast);
-        return () => { socket.off("ride_request_broadcast", onBroadcast); };
+        socket.on("ride_request_closed", onClosed);
+
+        // Surface still-open requests that were broadcast while this driver was
+        // offline / had the app closed — they see them the moment they return.
+        incomingPersonalRides()
+            .then(({ data }) => {
+                const items = Array.isArray(data) ? data : [];
+                if (!items.length) return;
+                setQueue((q) => {
+                    const seen = new Set(q.map((r) => r.id));
+                    return [...q, ...items.map(toCard).filter((r) => r.id && !seen.has(r.id))];
+                });
+            })
+            .catch(() => { /* non-driver or none open */ });
+
+        return () => {
+            socket.off("ride_request_broadcast", onBroadcast);
+            socket.off("ride_request_closed", onClosed);
+        };
     }, [userId]);
 
     const current = queue[0] || null;

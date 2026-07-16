@@ -173,6 +173,20 @@ const PersonalRideInner = ({ onOpenSidebar, onNavigate }) => {
         } finally { setPaying(false); }
     };
 
+    // Settle the on-demand fare in cash (paid in person to the driver).
+    const payCash = async () => {
+        if (!activeId) return;
+        const amount = active?.finalFare;
+        setPaying(true);
+        try {
+            const { data } = await payPersonalRide(activeId, { method: "cash" });
+            setActive(data);
+            toast.success(`Please pay ₹${amount} to your driver in cash.`);
+        } catch (e) {
+            toast.error(e.response?.data?.message || "Couldn't mark cash payment.");
+        } finally { setPaying(false); }
+    };
+
     const reset = () => { setActive(null); setDriverLoc(null); setForm({ source: "", sourceCoords: null, destination: "", destinationCoords: null, vehicleType: "Car", notes: "" }); setEstimate(null); };
 
     // GPS-fallback completion: passenger confirms they've reached the destination.
@@ -388,13 +402,16 @@ const PersonalRideInner = ({ onOpenSidebar, onNavigate }) => {
                                 </>
                             )}
 
-                            {/* Pay on completion */}
+                            {/* Pay on completion — online (UPI) or cash in person */}
                             {status === "RIDE_COMPLETED" && (
                                 <div className="pr-pay">
                                     <div className="pr-pay-row"><span>Total fare</span><strong>₹{active.finalFare}</strong></div>
                                     <button className="rrq-broadcast" onClick={pay} disabled={paying}>
                                         <span className="rrq-broadcast-main">{paying ? "Processing…" : `Pay ₹${active.finalFare} via UPI`}</span>
                                         <span className="rrq-broadcast-sub">Paid securely to RidexShare</span>
+                                    </button>
+                                    <button className="rrq-cancel-link" onClick={payCash} disabled={paying} style={{ marginTop: "0.6rem" }}>
+                                        💵 Pay with cash instead
                                     </button>
                                 </div>
                             )}

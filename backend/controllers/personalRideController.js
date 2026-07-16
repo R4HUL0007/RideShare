@@ -248,6 +248,11 @@ exports.cancel = async (req, res) => {
             emitToUser(io, users, other, "ride_cancelled", { id: idStr(doc._id), by: doc.cancelledBy });
             await createNotification({ io, users, userId: other, type: "ride", title: "Ride cancelled", message: `The ${doc.cancelledBy} cancelled the ride to ${doc.destination?.address}.`, link: { tab: isPassenger ? "driveRequests" : "requestRide" } });
         }
+        // A cancelled request that was still broadcasting must vanish from every
+        // notified driver's popup/incoming list too.
+        for (const did of (doc.notifiedDriverIds || [])) {
+            emitToUser(io, users, did, "ride_request_closed", { id: idStr(doc._id) });
+        }
         if (io) io.emit("personal_ride:update", { at: Date.now() });
         res.status(200).json(await populated(doc._id));
     } catch (e) {
@@ -321,6 +326,12 @@ exports.accept = async (req, res) => {
         const io = io_(req); const users = users_(req);
         emitToUser(io, users, req.user._id, "driver_accepted_request", { id: idStr(claimed._id) });
         emitToUser(io, users, claimed.passenger_id, "driver_assigned", { id: idStr(claimed._id) });
+        // Uber-style: the moment one driver accepts, the request disappears from
+        // every OTHER notified driver's popup + incoming list.
+        for (const did of (claimed.notifiedDriverIds || [])) {
+            if (idStr(did) === idStr(req.user._id)) continue;
+            emitToUser(io, users, did, "ride_request_closed", { id: idStr(claimed._id) });
+        }
         await createNotification({ io, users, userId: claimed.passenger_id, type: "ride", title: "Driver on the way! 🚗", message: `${req.user.name} accepted your ride and is heading to your pickup.`, link: { tab: "requestRide" } });
         if (io) io.emit("personal_ride:update", { at: Date.now() });
 
@@ -537,7 +548,8 @@ exports.confirmArrival = async (req, res) => {
 exports.confirmPayment = async (req, res) => {
     try {
         const { id } = req.params;
-        const { razorpayPaymentId } = req.body || {};
+        const { razorpayPaymentId, method } = req.body || {};
+        const isCash = method === "cash";
         if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ message: "Invalid id" });
         const doc = await PersonalRideRequest.findById(id);
         if (!doc) return res.status(404).json({ message: "Not found" });
@@ -545,13 +557,13 @@ exports.confirmPayment = async (req, res) => {
         if (doc.status !== "RIDE_COMPLETED") return res.status(400).json({ message: "Ride isn't ready for payment yet." });
         if (doc.payment.status === "received") return res.status(200).json(await populated(doc._id));
 
-        // Server-side payment verification. When a real Razorpay gateway is
-        // configured, confirm the payment actually happened (captured + correct
-        // amount) BEFORE crediting the driver ledger — otherwise a passenger
-        // could mark a completed ride "paid" for free and trigger a real payout.
-        // With no gateway configured (manual/dev UPI), the existing flow is kept.
+        // Server-side payment verification for ONLINE (UPI/Razorpay) payments.
+        // Cash is settled in person with the driver, so it skips the gateway.
+        // When a real Razorpay gateway is configured, confirm the payment
+        // actually happened (captured + correct amount) BEFORE crediting the
+        // driver — otherwise a passenger could mark a ride "paid" for free.
         const { isRazorpayConfigured, getRazorpay } = require("../config/razorpay");
-        if (isRazorpayConfigured()) {
+        if (!isCash && isRazorpayConfigured()) {
             const pid = String(razorpayPaymentId || "");
             if (!/^pay_/.test(pid)) {
                 return res.status(400).json({ message: "A valid payment reference is required." });
@@ -569,11 +581,14 @@ exports.confirmPayment = async (req, res) => {
         }
 
         doc.payment.status = "received";
+        doc.payment.method = isCash ? "cash" : "upi";
         doc.payment.paidAt = new Date();
         if (razorpayPaymentId) doc.payment.razorpayPaymentId = String(razorpayPaymentId).slice(0, 120);
         doc.status = "PAYMENT_RECEIVED";
 
-        // Ledger entry (idempotent — one per ride).
+        // Ledger entry (idempotent — one per ride). CASH is collected in person,
+        // so it lands as "settled" (never re-paid via the weekly UPI settlement).
+        // Online payments stay "pending" and are paid out to the driver's UPI.
         let ledger = await DriverLedger.findOne({ ride_id: doc._id });
         if (!ledger) {
             ledger = await DriverLedger.create({
@@ -582,7 +597,7 @@ exports.confirmPayment = async (req, res) => {
                 grossAmount: doc.finalFare,
                 commission: doc.commission,
                 netEarnings: doc.driverEarnings,
-                status: "pending",
+                status: isCash ? "settled" : "pending",
             });
         }
         doc.ledger_id = ledger._id;
@@ -590,8 +605,20 @@ exports.confirmPayment = async (req, res) => {
 
         const io = io_(req); const users = users_(req);
         emitToUser(io, users, doc.driver_id, "payment_received", { id: idStr(doc._id), earnings: doc.driverEarnings });
-        await createNotification({ io, users, userId: doc.driver_id, type: "system", title: "Payment received 💰", message: `₹${doc.driverEarnings} added to your ledger for the trip to ${doc.destination?.address}. Paid out in the weekly settlement.`, link: { tab: "earnings" } });
-        await createNotification({ io, users, userId: doc.passenger_id, type: "system", title: "Payment successful", message: `₹${doc.finalFare} paid for your ride. Thanks for riding with RidexShare!`, link: { tab: "requestRide" } });
+        await createNotification({
+            io, users, userId: doc.driver_id, type: "system", title: "Payment received 💰",
+            message: isCash
+                ? `${doc.passengerName || "Your passenger"} is paying ₹${doc.finalFare} in cash for the trip to ${doc.destination?.address}. Please collect it directly.`
+                : `₹${doc.driverEarnings} added to your ledger for the trip to ${doc.destination?.address}. Paid out in the weekly settlement.`,
+            link: { tab: "earnings" },
+        });
+        await createNotification({
+            io, users, userId: doc.passenger_id, type: "system", title: isCash ? "Cash payment selected" : "Payment successful",
+            message: isCash
+                ? `Please hand ₹${doc.finalFare} in cash to your driver. Thanks for riding with RidexShare!`
+                : `₹${doc.finalFare} paid for your ride. Thanks for riding with RidexShare!`,
+            link: { tab: "requestRide" },
+        });
         if (io) io.emit("personal_ride:update", { at: Date.now() });
 
         res.status(200).json(await populated(doc._id));
