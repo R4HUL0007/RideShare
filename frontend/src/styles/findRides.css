@@ -124,6 +124,21 @@
 .fr-card-list { display: flex; flex-direction: column; gap: 0.8rem; overflow-y: auto; padding-right: 0.25rem; }
 .fr-body.view-split .fr-card-list { max-height: clamp(420px, 70vh, 760px); }
 
+/* ---------------- day-grouped results ---------------- */
+.fr-day-groups { display: flex; flex-direction: column; gap: 1.1rem; overflow-y: auto; padding-right: 0.25rem; }
+.fr-body.view-split .fr-day-groups { max-height: clamp(420px, 70vh, 760px); }
+.fr-day-group { display: flex; flex-direction: column; gap: 0.6rem; }
+.fr-day-head { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; padding: 0 0.1rem; }
+.fr-day-label { font-size: 0.92rem; font-weight: 800; color: #f4f4f5; }
+.fr-day-count { font-size: 0.72rem; font-weight: 600; color: var(--fr-muted); }
+/* Inner card lists don't scroll independently — the group container scrolls. */
+.fr-day-group .fr-card-list,
+.fr-body.view-split .fr-day-group .fr-card-list { overflow: visible; max-height: none; padding-right: 0; }
+
+/* ---------------- simplified search action ---------------- */
+.fr-search-actions { display: flex; }
+.fr-search-actions .fr-search-btn { width: 100%; height: 44px; }
+
 /* ---------------- ride card ---------------- */
 .fr-card {
   background: var(--fr-surface); border: 1px solid var(--fr-border); border-radius: 0.85rem;

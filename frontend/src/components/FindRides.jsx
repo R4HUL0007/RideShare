@@ -677,6 +677,30 @@ function BookingSuccess({ ride, seats, onViewBookings, onDone }) {
 /* =======================================================
    FindRides (main)
    ======================================================= */
+// ---- Day grouping: present results as "what's available on which day" ----
+const startOfDay = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; };
+const dayLabelFor = (iso) => {
+    if (!iso) return "Date not set";
+    const d = new Date(iso);
+    if (isNaN(d)) return "Date not set";
+    const diffDays = Math.round((startOfDay(d) - startOfDay(new Date())) / 86400000);
+    if (diffDays === 0) return "Today";
+    if (diffDays === 1) return "Tomorrow";
+    if (diffDays === -1) return "Yesterday";
+    return d.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
+};
+const groupRidesByDay = (list) => {
+    const map = new Map();
+    for (const r of list) {
+        const d = r.timing ? new Date(r.timing) : null;
+        const valid = d && !isNaN(d);
+        const key = valid ? d.toISOString().slice(0, 10) : "unknown";
+        if (!map.has(key)) map.set(key, { key, ts: valid ? startOfDay(d).getTime() : Infinity, rides: [] });
+        map.get(key).rides.push(r);
+    }
+    return [...map.values()].sort((a, b) => a.ts - b.ts);
+};
+
 const FindRidesInner = ({ onOpenSidebar, onNavigate, user }) => {
     const [filters, setFilters] = useState({
         source: "", sourceCoords: null,
@@ -980,23 +1004,6 @@ const FindRidesInner = ({ onOpenSidebar, onNavigate, user }) => {
         return new Date(a.timing) - new Date(b.timing);
     });
 
-    const vehicleTypeOptions = [
-        { value: "Any", label: "Any vehicle" },
-        { value: "Car", label: "Car" },
-        { value: "Motorcycle", label: "Motorcycle" },
-        { value: "Scooter", label: "Scooter" },
-        { value: "Auto-rickshaw", label: "Auto-rickshaw" },
-    ];
-    const seatOptions = [
-        { value: "", label: "Any seats" },
-        { value: "1", label: "1+" }, { value: "2", label: "2+" },
-        { value: "3", label: "3+" }, { value: "4", label: "4+" },
-    ];
-    const genderOptions = [
-        { value: "Any", label: "Any gender" },
-        { value: "Male", label: "Male only" },
-        { value: "Female", label: "Female only" },
-    ];
     const sortOptions = [
         { value: "match", label: "🎯 Best match" },
         { value: "earliest", label: "Earliest departure" },
@@ -1045,16 +1052,26 @@ const FindRidesInner = ({ onOpenSidebar, onNavigate, user }) => {
                     </div>
                 </div>
             ) : (
-                <div className="fr-card-list">
-                    {visible.map((r) => (
-                        <RideCard
-                            key={r._id}
-                            ride={r}
-                            nearbyKm={nearbyFor(r)}
-                            selected={selectedRide?._id === r._id}
-                            onSelect={setSelectedRide}
-                            onView={setDetailsRide}
-                        />
+                <div className="fr-day-groups">
+                    {groupRidesByDay(visible).map((g) => (
+                        <div className="fr-day-group" key={g.key}>
+                            <div className="fr-day-head">
+                                <span className="fr-day-label">{dayLabelFor(g.rides[0].timing)}</span>
+                                <span className="fr-day-count">{g.rides.length} ride{g.rides.length !== 1 ? "s" : ""}</span>
+                            </div>
+                            <div className="fr-card-list">
+                                {g.rides.map((r) => (
+                                    <RideCard
+                                        key={r._id}
+                                        ride={r}
+                                        nearbyKm={nearbyFor(r)}
+                                        selected={selectedRide?._id === r._id}
+                                        onSelect={setSelectedRide}
+                                        onView={setDetailsRide}
+                                    />
+                                ))}
+                            </div>
+                        </div>
                     ))}
                 </div>
             )}
@@ -1198,28 +1215,15 @@ const FindRidesInner = ({ onOpenSidebar, onNavigate, user }) => {
                     </div>
                 )}
 
-                <div className="fr-filter-row">
-                    <div className="fr-filter">
-                        <label className="fr-filter-label" htmlFor="fr-date">Travel Date</label>
-                        <input id="fr-date" type="date" className="fr-input" value={filters.date} onChange={(e) => setF("date", e.target.value)} />
-                    </div>
-                    <div className="fr-filter">
-                        <label className="fr-filter-label" htmlFor="fr-seats">Seats</label>
-                        <ThemedSelect id="fr-seats" theme="dark" value={filters.seats} onChange={(v) => setF("seats", v)} options={seatOptions} ariaLabel="Seats required" />
-                    </div>
-                    <div className="fr-filter">
-                        <label className="fr-filter-label" htmlFor="fr-vtype">Vehicle</label>
-                        <ThemedSelect id="fr-vtype" theme="dark" value={filters.vehicleType} onChange={(v) => setF("vehicleType", v)} options={vehicleTypeOptions} ariaLabel="Vehicle type" />
-                    </div>
-                    <div className="fr-filter">
-                        <label className="fr-filter-label" htmlFor="fr-gender">Gender</label>
-                        <ThemedSelect id="fr-gender" theme="dark" value={filters.gender} onChange={(v) => setF("gender", v)} options={genderOptions} ariaLabel="Gender preference" />
-                    </div>
+                {/* Just source + destination → search. Results are grouped by the
+                    day they're available, so no seat/vehicle/gender/date filters
+                    are needed to find a ride. */}
+                <div className="fr-search-actions">
                     <button type="submit" className="fr-search-btn" disabled={loading}>
                         {loading ? <span className="fr-spin" /> : (
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
                         )}
-                        Search
+                        Search rides
                     </button>
                 </div>
             </form>

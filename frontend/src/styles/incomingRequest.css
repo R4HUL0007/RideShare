@@ -1,0 +1,59 @@
+/* =======================================================
+   Incoming ride-request popup (driver, global) — scoped `.irq-`
+   Uber-style card that slides in top-center on any page.
+   ======================================================= */
+.irq-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 4000;
+  display: flex; justify-content: center;
+  padding: clamp(0.75rem, 2vw, 1.25rem);
+  pointer-events: none;
+}
+.irq-card {
+  pointer-events: auto;
+  width: min(400px, calc(100vw - 1.5rem));
+  background: radial-gradient(120% 90% at 100% 0%, #1a1a1d 0%, #111113 45%, #0c0c0e 100%);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 1.1rem;
+  box-shadow: 0 24px 60px rgba(0,0,0,0.6);
+  color: #f4f4f5;
+  padding: 1rem 1.1rem;
+  font-family: 'Inter', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  animation: irq-drop 0.28s cubic-bezier(0.16,1,0.3,1);
+}
+@keyframes irq-drop { from { transform: translateY(-16px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+.irq-head { display: flex; align-items: center; gap: 0.5rem; }
+.irq-title { font-size: 0.95rem; font-weight: 800; }
+.irq-more { margin-left: auto; font-size: 0.7rem; color: #9ca3af; background: rgba(255,255,255,0.06); border-radius: 999px; padding: 0.15rem 0.5rem; }
+.irq-pulse { width: 9px; height: 9px; border-radius: 50%; background: #34d399; box-shadow: 0 0 0 0 rgba(52,211,153,0.6); animation: irq-pulse 1.6s infinite; }
+@keyframes irq-pulse { 0% { box-shadow: 0 0 0 0 rgba(52,211,153,0.55); } 70% { box-shadow: 0 0 0 8px rgba(52,211,153,0); } 100% { box-shadow: 0 0 0 0 rgba(52,211,153,0); } }
+
+.irq-fare-row { display: flex; align-items: flex-end; justify-content: space-between; margin: 0.7rem 0; }
+.irq-fare-main, .irq-fare-earn { display: flex; flex-direction: column; font-size: 1.35rem; font-weight: 800; line-height: 1.1; }
+.irq-fare-main span, .irq-fare-earn span { font-size: 0.66rem; font-weight: 600; color: #8b8b93; margin-top: 0.15rem; }
+.irq-fare-earn { color: #6ee7b7; text-align: right; }
+
+.irq-route { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 0.7rem; padding: 0.7rem 0.8rem; }
+.irq-line { display: flex; align-items: center; gap: 0.55rem; font-size: 0.84rem; }
+.irq-addr { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.irq-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.irq-dot.pickup { background: #34d399; }
+.irq-dot.drop { background: #f87171; }
+.irq-conn { width: 1px; height: 12px; background: rgba(255,255,255,0.2); margin-left: 4px; }
+
+.irq-meta { display: flex; gap: 1rem; font-size: 0.76rem; color: #9ca3af; margin: 0.6rem 0 0.2rem; }
+
+.irq-actions { display: flex; gap: 0.6rem; margin-top: 0.85rem; }
+.irq-btn { flex: 1; padding: 0.75rem 1rem; border-radius: 0.7rem; font-size: 0.9rem; font-weight: 800; cursor: pointer; border: none; font-family: inherit; transition: transform 0.12s ease, opacity 0.15s ease; }
+.irq-btn:disabled { opacity: 0.55; cursor: default; }
+.irq-btn.ignore { background: transparent; border: 1px solid rgba(255,255,255,0.16); color: #c9c9cf; }
+.irq-btn.ignore:hover:not(:disabled) { background: rgba(255,255,255,0.06); }
+.irq-btn.accept { background: #34d399; color: #062018; }
+.irq-btn.accept:hover:not(:disabled) { transform: translateY(-1px); }
+
+@media (prefers-reduced-motion: reduce) {
+  .irq-card { animation: none; }
+  .irq-pulse { animation: none; }
+}

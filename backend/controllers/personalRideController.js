@@ -272,9 +272,15 @@ exports.incoming = async (req, res) => {
 
 exports.driverActive = async (req, res) => {
     try {
+        // Only rides that still need the driver's attention count as "active".
+        // A RIDE_COMPLETED ride is just awaiting the PASSENGER's payment — the
+        // driver is done and must be free to take new requests (Uber-style),
+        // otherwise the Drive & Earn page stays stuck on an old awaiting-payment
+        // card and never surfaces new incoming requests. Pending earnings still
+        // show in the ledger once the passenger pays.
         const doc = await PersonalRideRequest.findOne({
             driver_id: req.user._id,
-            status: { $in: ["DRIVER_ASSIGNED", "RIDE_STARTED", "RIDE_COMPLETED"] },
+            status: { $in: ["DRIVER_ASSIGNED", "RIDE_STARTED"] },
         }).sort({ createdAt: -1 });
         if (!doc) return res.status(200).json(null);
         res.status(200).json(driverView(await populated(doc._id)));

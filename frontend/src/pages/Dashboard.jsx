@@ -7,6 +7,9 @@ import Sidebar from "../components/Sidebar";
 // click with no separate chunk fetch that could fail on a stale deploy.
 import FeedbackPanel from "../components/FeedbackPanel";
 import NotificationBell from "../components/NotificationBell";
+// Eager (not lazy): the driver's incoming-request popup must listen on the
+// socket on every page, so it's always mounted.
+import IncomingRideRequestModal from "../components/IncomingRideRequestModal";
 import { API_BASE_URL } from "../utils/constants";
 import { fetchPendingReviews } from "../services/reviewService";
 import { AssistantProvider } from "../assistant/AssistantContext";
@@ -667,6 +670,15 @@ const Dashboard = () => {
                         onTrack={setTrackingRideId}
                     />
                 </div>
+            )}
+
+            {/* Global incoming ride-request popup (drivers) — appears on any page. */}
+            {user && (
+                <IncomingRideRequestModal
+                    user={user}
+                    onNavigate={setActiveTab}
+                    activeTab={activeTab}
+                />
             )}
 
             {/* Global AI assistant — floating bottom-right, present on every page. */}
