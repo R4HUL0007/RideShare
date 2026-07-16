@@ -526,22 +526,15 @@ exports.complete = async (req, res) => {
     }
 };
 
-/* ============== Passenger: confirm arrival (GPS fallback) ============== */
+/* ============== Passenger: confirm arrival (DEPRECATED) ==============
+ * The DRIVER is now the sole authority to complete a ride (Uber-style). This
+ * endpoint is kept for backward compatibility but never completes the ride —
+ * if something went wrong the passenger raises a dispute after the trip. */
 exports.confirmArrival = async (req, res) => {
-    try {
-        const { id } = req.params;
-        if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ message: "Invalid id" });
-        const doc = await PersonalRideRequest.findById(id);
-        if (!doc) return res.status(404).json({ message: "Not found" });
-        if (idStr(doc.passenger_id) !== idStr(req.user._id)) return res.status(403).json({ message: "Not your ride" });
-        if (doc.status !== "RIDE_STARTED") return res.status(400).json({ message: "The ride hasn't started yet." });
-
-        const io = io_(req); const users = users_(req);
-        await finalizePersonalCompletion(doc, "PASSENGER_CONFIRMATION", { io, users });
-        res.status(200).json(await populated(doc._id));
-    } catch (e) {
-        res.status(500).json({ message: "Server error", error: e.message });
-    }
+    return res.status(403).json({
+        code: "DRIVER_COMPLETES",
+        message: "Your driver ends the ride when you reach the destination. If something's wrong, you can raise a dispute after the trip.",
+    });
 };
 
 /* ============== Passenger: pay (UPI to RidexShare) → ledger ============== */

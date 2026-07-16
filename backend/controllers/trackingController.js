@@ -252,60 +252,16 @@ exports.endTracking = async (req, res) => {
 };
 
 /**
- * POST /api/rides/:rideId/tracking/arrived  (passenger)
- * GPS-fallback completion: the passenger confirms they've reached the
- * destination. Allowed only once the ride has started. Records the completion
- * as PASSENGER_CONFIRMATION (no driver-radius requirement — this is the
- * fallback for GPS inaccuracy).
+ * POST /api/rides/:rideId/tracking/arrived  (passenger) — DEPRECATED
+ * The DRIVER is now the sole authority to complete a ride (Uber-style). This
+ * endpoint is kept for backward compatibility but never completes the ride.
+ * If something went wrong, the passenger raises a dispute after the trip.
  */
 exports.confirmArrival = async (req, res) => {
-    const userId = req.user.id;
-    const { rideId } = req.params;
-    const io = req.app.get("io");
-    const users = req.app.get("users") || {};
-
-    if (!mongoose.Types.ObjectId.isValid(rideId)) {
-        return res.status(400).json({ message: "Invalid ride id" });
-    }
-    try {
-        const ride = await Ride.findById(rideId);
-        if (!ride) return res.status(404).json({ message: "Ride not found" });
-        if (!passengerIds(ride).includes(userId)) {
-            return res.status(403).json({ message: "Only a passenger on this ride can confirm arrival." });
-        }
-        if (ride.status === "Completed") {
-            return res.status(400).json({ message: "This ride is already completed." });
-        }
-        if (ride.tracking?.state !== "in_progress") {
-            return res.status(400).json({ message: "The ride hasn't started yet." });
-        }
-        // A passenger can only confirm arrival once the ride has ACTUALLY
-        // reached the destination area (the driver's GPS entered the dest
-        // radius). This blocks premature "I've arrived" completions while the
-        // vehicle is still en route. If GPS never registers arrival, the driver
-        // remains the authority and can complete via the tracking screen.
-        if (!ride.tracking?.atDestination) {
-            return res.status(400).json({
-                message: "You can confirm arrival once the ride reaches the destination.",
-                code: "NOT_AT_DESTINATION",
-            });
-        }
-
-        const { durationMin } = await finalizeCompletion(ride, {
-            method: "PASSENGER_CONFIRMATION", actorId: userId, io, users,
-        });
-
-        const pax = passengerIds(ride);
-        emitToUsers(io, users, [...pax, idStr(ride.user_id)], "ride:status", {
-            rideId: idStr(ride._id), state: "completed", endedAt: ride.tracking.endedAt,
-            durationMin, completionMethod: "PASSENGER_CONFIRMATION",
-        });
-
-        res.status(200).json({ message: "Arrival confirmed — ride completed", tracking: ride.tracking, durationMin });
-    } catch (error) {
-        console.error("Error in confirmArrival:", error);
-        res.status(500).json({ message: "Server error", error: error.message });
-    }
+    return res.status(403).json({
+        code: "DRIVER_COMPLETES",
+        message: "Your driver ends the ride when you reach the destination. If something's wrong, you can raise a dispute after the trip.",
+    });
 };
 
 /**

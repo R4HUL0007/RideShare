@@ -334,19 +334,6 @@ function RideTrackingInner({ rideId, user, onClose }) {
         if (window.confirm(msg)) endRide(true);
     };
 
-    // Passenger GPS-fallback completion: confirm arrival → completes the ride.
-    const confirmArrival = async () => {
-        setBusy(true);
-        try {
-            const res = await axiosInstance.post(`${API_BASE_URL}/rides/${rideId}/tracking/arrived`, {});
-            setState("completed");
-            setDurationMin(res.data?.durationMin ?? null);
-            toast.success("Arrival confirmed — ride completed.");
-        } catch (err) {
-            toast.error(err.response?.data?.message || "Couldn't confirm arrival.");
-        } finally { setBusy(false); }
-    };
-
     // Driver location sharing via geolocation watch.
     const beginSharing = () => {
         if (!("geolocation" in navigator) || watchIdRef.current != null) return;
@@ -575,18 +562,7 @@ function RideTrackingInner({ rideId, user, onClose }) {
                                 <p className="rt-hint" style={{ margin: 0, fontWeight: 700, color: atDestination ? "#34d399" : undefined }}>
                                     {atDestination ? "You've reached your destination." : "Your ride is on the way to the destination."}
                                 </p>
-                                {atDestination ? (
-                                    <>
-                                        <p className="rt-hint" style={{ margin: 0 }}>Confirm your drop-off to complete the ride.</p>
-                                        <div style={{ display: "flex", gap: "0.6rem" }}>
-                                            <button className="rt-btn success" onClick={confirmArrival} disabled={busy} style={{ flex: 1 }}>
-                                                {busy ? <span className="rt-spin" /> : "✓"} Yes, I've arrived
-                                            </button>
-                                        </div>
-                                    </>
-                                ) : (
-                                    <p className="rt-hint" style={{ margin: 0 }}>You'll be able to confirm arrival once you reach the destination. The driver ends the ride on their side.</p>
-                                )}
+                                <p className="rt-hint" style={{ margin: 0 }}>Your driver ends the ride when you arrive — then you'll pay and rate your trip.</p>
                             </div>
                         ) : (
                             <p className="rt-hint">
