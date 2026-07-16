@@ -52,3 +52,7 @@ docker-compose*.yml
 # OS / editor cruft
 .DS_Store
 Thumbs.db
+
+# Local Razorpay setup helpers (contain test creds — keep local, never commit)
+RAZORPAY_SETUP_GUIDE.md
+backend/scripts/createRazorpayTestUser.js
