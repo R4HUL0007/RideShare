@@ -354,7 +354,11 @@ const PersonalRideInner = ({ onOpenSidebar, onNavigate }) => {
                         <div className="rrq-assigned">
                             <div className="rrq-assigned-badge">✓</div>
                             <h3>Ride complete</h3>
-                            <p className="rrq-muted" style={{ textAlign: "center" }}>You paid ₹{active.finalFare} via UPI for your trip to {active.destination?.address}.</p>
+                            <p className="rrq-muted" style={{ textAlign: "center" }}>
+                                {active.payment?.method === "cash"
+                                    ? `Please pay ₹${active.finalFare} in cash to your driver for your trip to ${active.destination?.address}.`
+                                    : `You paid ₹${active.finalFare} via UPI for your trip to ${active.destination?.address}.`}
+                            </p>
                             <button className="rrq-broadcast" onClick={reset}><span className="rrq-broadcast-main">Book another ride</span></button>
                         </div>
                     ) : (
@@ -410,8 +414,8 @@ const PersonalRideInner = ({ onOpenSidebar, onNavigate }) => {
                                         <span className="rrq-broadcast-main">{paying ? "Processing…" : `Pay ₹${active.finalFare} via UPI`}</span>
                                         <span className="rrq-broadcast-sub">Paid securely to RidexShare</span>
                                     </button>
-                                    <button className="rrq-cancel-link" onClick={payCash} disabled={paying} style={{ marginTop: "0.6rem" }}>
-                                        💵 Pay with cash instead
+                                    <button className="pr-action" onClick={payCash} disabled={paying} style={{ width: "100%", justifyContent: "center", marginTop: "0.6rem" }}>
+                                        💵 Pay with cash
                                     </button>
                                 </div>
                             )}
