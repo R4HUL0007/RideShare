@@ -26,12 +26,43 @@ function emitToUser(io, users, userId, event, payload) {
     if (io && userId) io.to(idStr(userId)).emit(event, payload);
 }
 
+// Whether passenger/driver may still cancel a ride, and until when. Cancelling
+// is unrestricted before a driver is committed (SEARCHING), time-boxed for a
+// short grace window right after assignment (protects the driver's committed
+// travel time once they're on the way), and disallowed entirely once the trip
+// has actually started — mirrors the app's "driver is the sole authority to
+// complete a ride" design; use SOS / a post-trip dispute for anything wrong
+// mid-ride instead of an in-flight cancel.
+function cancelEligibility(doc) {
+    if (!doc) return { cancellable: false, reason: null, deadline: null };
+    if (doc.status === "SEARCHING") return { cancellable: true, reason: null, deadline: null };
+    if (doc.status === "DRIVER_ASSIGNED") {
+        // Once the driver has reached pickup (OTP generated) they're standing
+        // there waiting — no more grace period regardless of the time window.
+        if (doc.reachedPickupAt) {
+            return { cancellable: false, reason: "Your driver has already reached the pickup point. Please start the ride or contact support.", deadline: null };
+        }
+        const base = doc.assignedAt ? new Date(doc.assignedAt).getTime() : null;
+        if (!base) return { cancellable: true, reason: null, deadline: null };
+        const deadline = base + config.cancelWindowMin() * 60 * 1000;
+        const cancellable = Date.now() < deadline;
+        return {
+            cancellable,
+            reason: cancellable ? null : "The cancellation window has passed. Please wait for pickup or contact support.",
+            deadline: new Date(deadline).toISOString(),
+        };
+    }
+    return { cancellable: false, reason: "This ride is already in progress and can't be cancelled. Use SOS if something's wrong, or raise a dispute after the trip.", deadline: null };
+}
+
 // Public-safe shape for the passenger / driver app.
 async function populated(id) {
-    return PersonalRideRequest.findById(id)
+    const doc = await PersonalRideRequest.findById(id)
         .populate("driver_id", "name phoneNumber ratings profilePicture")
         .populate("vehicle_id", "make model vehicleType licensePlate color")
         .lean();
+    if (doc) doc.cancelInfo = cancelEligibility(doc);
+    return doc;
 }
 
 // Driver-facing view: never expose the boarding OTP code to the driver (the
@@ -234,8 +265,12 @@ exports.cancel = async (req, res) => {
         const isPassenger = idStr(doc.passenger_id) === uid;
         const isDriver = idStr(doc.driver_id) === uid;
         if (!isPassenger && !isDriver) return res.status(403).json({ message: "Not your ride" });
-        if (["RIDE_COMPLETED", "PAYMENT_RECEIVED", "CANCELLED", "EXPIRED"].includes(doc.status)) {
+        if (["RIDE_COMPLETED", "PAYMENT_RECEIVED", "CANCELLED", "EXPIRED", "NO_DRIVERS"].includes(doc.status)) {
             return res.status(400).json({ message: "This ride can no longer be cancelled." });
+        }
+        const { cancellable, reason } = cancelEligibility(doc);
+        if (!cancellable) {
+            return res.status(400).json({ message: reason || "This ride can no longer be cancelled." });
         }
         doc.status = "CANCELLED";
         doc.cancelledBy = isPassenger ? "passenger" : "driver";
@@ -898,6 +933,46 @@ exports.adminRunSettlement = async (req, res) => {
         const result = await runWeeklySettlement({ io: io_(req), users: users_(req) });
         await writeAudit(req, "settlement.run", { targetType: "settlement", details: result });
         res.status(200).json({ message: `Settlement run complete: ${result.settlements} driver(s), ₹${result.paidNet} net.`, ...result });
+    } catch (e) {
+        res.status(500).json({ message: "Server error", error: e.message });
+    }
+};
+
+/* ---------- Admin: force-cancel a personal ride ----------
+   Unconditional (bypasses the passenger/driver cancel window) — for stuck or
+   disputed on-demand rides an admin needs to close out regardless of status
+   (as long as it isn't already terminal). Used by the Admin Panel → Ride
+   Requests row action, and by support to unblock a driver/passenger stuck
+   behind an abandoned ride. */
+exports.adminCancel = async (req, res) => {
+    const { id } = req.params;
+    const { reason } = req.body || {};
+    if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ message: "Invalid id" });
+    if (!reason || reason.trim().length < 5) return res.status(400).json({ message: "Please add a reason for cancellation (at least 5 characters)." });
+    try {
+        const doc = await PersonalRideRequest.findById(id);
+        if (!doc) return res.status(404).json({ message: "Ride request not found" });
+        if (["RIDE_COMPLETED", "PAYMENT_RECEIVED", "CANCELLED", "EXPIRED", "NO_DRIVERS"].includes(doc.status)) {
+            return res.status(400).json({ message: "This ride is already finished and can't be cancelled." });
+        }
+        const notifiedDriverIds = doc.notifiedDriverIds || [];
+        doc.status = "CANCELLED";
+        doc.cancelledBy = "admin";
+        doc.cancelReason = reason.trim().slice(0, 200);
+        await doc.save();
+
+        const io = io_(req); const users = users_(req);
+        for (const uid of [doc.passenger_id, doc.driver_id].filter(Boolean)) {
+            emitToUser(io, users, uid, "ride_cancelled", { id: idStr(doc._id), by: "admin" });
+            await createNotification({ io, users, userId: uid, type: "ride", title: "Ride cancelled by admin", message: `Your ride to ${doc.destination?.address} was cancelled by the platform.`, link: { tab: "requestRide" } });
+        }
+        for (const did of notifiedDriverIds) {
+            emitToUser(io, users, did, "ride_request_closed", { id: idStr(doc._id) });
+        }
+        if (io) io.emit("personal_ride:update", { at: Date.now() });
+
+        await writeAudit(req, "personal_ride.cancel", { targetType: "personal_ride", target_id: doc._id, details: { reason } });
+        res.status(200).json({ message: "Ride cancelled", request: await populated(doc._id) });
     } catch (e) {
         res.status(500).json({ message: "Server error", error: e.message });
     }

@@ -31,3 +31,4 @@ export const adminPersonalLedger = (params) => axiosInstance.get(`${base}/admin/
 export const adminPersonalSettlements = (params) => axiosInstance.get(`${base}/admin/settlements`, { params });
 export const adminPersonalDashboard = () => axiosInstance.get(`${base}/admin/dashboard`);
 export const adminRunSettlement = () => axiosInstance.post(`${base}/admin/run-settlement`);
+export const adminCancelPersonalRide = (id, reason) => axiosInstance.post(`${base}/admin/${id}/cancel`, { reason });

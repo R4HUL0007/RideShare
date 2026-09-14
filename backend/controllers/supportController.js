@@ -336,7 +336,9 @@ exports.adminMessage = async (req, res) => {
 exports.adminClose = async (req, res) => {
     try {
         const { id } = req.params;
+        const { reason } = req.body || {};
         if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ message: "Invalid id" });
+        if (!reason || reason.trim().length < 5) return res.status(400).json({ message: "Please add a reason for closing this chat (at least 5 characters)." });
         const session = await SupportSession.findById(id);
         if (!session) return res.status(404).json({ message: "Session not found" });
         session.status = "closed";
@@ -344,7 +346,7 @@ exports.adminClose = async (req, res) => {
         session.messages.push({ from: "system", text: "Chat closed by support.", at: new Date() });
         session.unreadForUser += 1;
         await session.save();
-        await writeAudit(req, "support.close", { targetType: "support", target_id: session._id });
+        await writeAudit(req, "support.close", { targetType: "support", target_id: session._id, details: { reason } });
         ping(req, idStr(session.user_id));
         res.status(200).json(publicSession(session));
     } catch (e) {
@@ -469,30 +471,37 @@ exports.adminTicketUpdate = async (req, res) => {
 };
 
 // Clear a ticket's conversation (keeps the ticket, empties the messages).
+// Destructive (erases message history) — requires a reason, recorded in the
+// audit log, mirroring every other destructive admin action in the panel.
 exports.adminTicketClear = async (req, res) => {
     try {
         const { id } = req.params;
+        const { reason } = req.body || {};
         if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ message: "Invalid id" });
+        if (!reason || reason.trim().length < 5) return res.status(400).json({ message: "Please add a reason for clearing this conversation (at least 5 characters)." });
         const ticket = await SupportTicket.findById(id);
         if (!ticket) return res.status(404).json({ message: "Ticket not found" });
         ticket.messages = [{ from: "system", text: "Conversation cleared by support.", at: new Date() }];
         ticket.lastMessageAt = new Date();
         await ticket.save();
-        await writeAudit(req, "support.ticket.clear", { targetType: "support_ticket", target_id: ticket._id });
+        await writeAudit(req, "support.ticket.clear", { targetType: "support_ticket", target_id: ticket._id, details: { reason } });
         res.status(200).json(ticket);
     } catch (e) {
         res.status(500).json({ message: "Server error", error: e.message });
     }
 };
 
-// Delete a ticket entirely.
+// Delete a ticket entirely. Irreversible — requires a reason, recorded in the
+// audit log, mirroring every other destructive admin action in the panel.
 exports.adminTicketDelete = async (req, res) => {
     try {
         const { id } = req.params;
+        const { reason } = req.body || {};
         if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ message: "Invalid id" });
+        if (!reason || reason.trim().length < 5) return res.status(400).json({ message: "Please add a reason for deleting this ticket (at least 5 characters)." });
         const ticket = await SupportTicket.findByIdAndDelete(id);
         if (!ticket) return res.status(404).json({ message: "Ticket not found" });
-        await writeAudit(req, "support.ticket.delete", { targetType: "support_ticket", target_id: id });
+        await writeAudit(req, "support.ticket.delete", { targetType: "support_ticket", target_id: id, details: { reason } });
         res.status(200).json({ message: "Ticket deleted", _id: id });
     } catch (e) {
         res.status(500).json({ message: "Server error", error: e.message });

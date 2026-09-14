@@ -155,10 +155,14 @@ const PersonalRideInner = ({ onOpenSidebar, onNavigate }) => {
 
     const cancel = async () => {
         if (!activeId) return;
-        try { await cancelPersonalRide(activeId, ""); } catch { /* ignore */ }
-        setActive(null);
-        setDriverLoc(null);
-        setForm((f) => ({ ...f, notes: "" }));
+        try {
+            await cancelPersonalRide(activeId, "");
+            setActive(null);
+            setDriverLoc(null);
+            setForm((f) => ({ ...f, notes: "" }));
+        } catch (e) {
+            toast.error(e.response?.data?.message || "This ride can no longer be cancelled.");
+        }
     };
 
     const pay = async () => {
@@ -402,7 +406,13 @@ const PersonalRideInner = ({ onOpenSidebar, onNavigate }) => {
                             )}
 
                             {status === "DRIVER_ASSIGNED" && (
-                                <button className="rrq-cancel-link" onClick={cancel}>Cancel ride</button>
+                                active.cancelInfo?.cancellable ? (
+                                    <button className="rrq-cancel-link" onClick={cancel}>Cancel ride</button>
+                                ) : (
+                                    <p className="rrq-note" style={{ textAlign: "center" }}>
+                                        {active.cancelInfo?.reason || "This ride can no longer be cancelled."}
+                                    </p>
+                                )
                             )}
                         </div>
                     )}

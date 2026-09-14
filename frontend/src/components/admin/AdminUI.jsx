@@ -67,6 +67,41 @@ export const Pager = ({ meta, onPage }) => {
     );
 };
 
+/* ---------------- Row actions (⋮ dropdown) ---------------- */
+// Generic three-dot row menu shared across admin list pages. `items`:
+// [{ label, onClick, danger, disabled }]. Renders nothing but the button
+// when the list is empty except a "No actions" placeholder passed by the caller.
+export const RowActions = ({ items = [] }) => {
+    const [menu, setMenu] = useState(null);
+    return (
+        <>
+            <button
+                className="adm-icon-btn adm-dots"
+                aria-label="More actions"
+                title="More actions"
+                onClick={(e) => { e.stopPropagation(); const r = e.currentTarget.getBoundingClientRect(); setMenu({ x: r.right, y: r.bottom }); }}
+            >⋮</button>
+            {menu && (
+                <>
+                    <div className="adm-menu-backdrop" onClick={() => setMenu(null)} />
+                    <div className="adm-menu" style={{ top: menu.y + 4, left: Math.max(8, menu.x - 200) }}>
+                        {items.length === 0 ? (
+                            <button disabled style={{ opacity: 0.55, cursor: "default" }}>No actions available</button>
+                        ) : items.map((it, i) => (
+                            <button
+                                key={i}
+                                className={it.danger ? "danger" : undefined}
+                                disabled={it.disabled}
+                                onClick={() => { setMenu(null); it.onClick?.(); }}
+                            >{it.label}</button>
+                        ))}
+                    </div>
+                </>
+            )}
+        </>
+    );
+};
+
 /* ---------------- Modal ---------------- */
 export const Modal = ({ title, children, onClose, actions, size }) => (
     <div className="adm-overlay" onMouseDown={(e) => e.target === e.currentTarget && onClose?.()}>

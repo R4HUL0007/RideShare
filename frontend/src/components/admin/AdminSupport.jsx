@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { adminSupportList, adminSupportGet, adminSupportClaim, adminSupportMessage, adminSupportClose } from "../../services/supportService";
-import { StatCard, Badge } from "./AdminUI";
+import { StatCard, Badge, Modal } from "./AdminUI";
 import { toast } from "react-toastify";
 
 const initialsOf = (name) =>
@@ -36,6 +36,8 @@ const AdminSupport = () => {
     const [session, setSession] = useState(null);
     const [text, setText] = useState("");
     const [loading, setLoading] = useState(true);
+    const [closeModal, setCloseModal] = useState(false);
+    const [closeReason, setCloseReason] = useState("");
     const bodyRef = useRef(null);
     const activeIdRef = useRef(null);
 
@@ -95,8 +97,12 @@ const AdminSupport = () => {
     };
 
     const close = async () => {
-        try { const { data } = await adminSupportClose(activeId); setSession(data); fetchList(); toast.success("Chat closed"); }
-        catch (e) { toast.error(e.response?.data?.message || "Failed to close"); }
+        if (closeReason.trim().length < 5) { toast.info("Please add a reason for closing this chat (at least 5 characters)."); return; }
+        try {
+            const { data } = await adminSupportClose(activeId, closeReason);
+            setSession(data); fetchList(); toast.success("Chat closed");
+            setCloseModal(false); setCloseReason("");
+        } catch (e) { toast.error(e.response?.data?.message || "Failed to close"); }
     };
 
     const filtered = statusFilter === "All" ? list : list.filter((s) => s.status === statusFilter);
@@ -157,7 +163,7 @@ const AdminSupport = () => {
                                 </div>
                                 <Badge value={session.status} tone={STATUS_TONE[session.status]} />
                                 {session.status === "waiting" && <button className="adm-btn primary" onClick={claim}>Join chat</button>}
-                                {session.status === "active" && <button className="adm-btn danger" onClick={close}>End chat</button>}
+                                {session.status === "active" && <button className="adm-btn danger" onClick={() => setCloseModal(true)}>End chat</button>}
                             </div>
 
                             <div className="adm-sup-thread" ref={bodyRef}>
@@ -197,6 +203,29 @@ const AdminSupport = () => {
                     )}
                 </div>
             </div>
+
+            {closeModal && (
+                <Modal
+                    title="End this chat?"
+                    onClose={() => { setCloseModal(false); setCloseReason(""); }}
+                    actions={
+                        <>
+                            <button className="adm-btn" onClick={() => { setCloseModal(false); setCloseReason(""); }}>Back</button>
+                            <button className="adm-btn danger" onClick={close}>Confirm End Chat</button>
+                        </>
+                    }
+                >
+                    <p style={{ fontSize: "0.82rem", color: "#9ca3af", marginBottom: "0.7rem" }}>
+                        This closes the conversation for {session?.userName || "the user"}. They'll need to start a new chat to reach support again.
+                    </p>
+                    <textarea
+                        className="adm-textarea"
+                        placeholder="Reason for closing this chat (required, at least 5 characters)…"
+                        value={closeReason}
+                        onChange={(e) => setCloseReason(e.target.value)}
+                    />
+                </Modal>
+            )}
         </div>
     );
 };

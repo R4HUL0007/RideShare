@@ -43,6 +43,15 @@ const config = {
     radiusKm: () => Number(process.env.PERSONAL_RIDE_RADIUS_KM) || 10,
     requestExpiryMin: () => Number(process.env.PERSONAL_RIDE_EXPIRY_MIN) || 5,
     otpExpiryMin: () => Number(process.env.PERSONAL_RIDE_OTP_EXPIRY_MIN) || 10,
+    // How long a passenger/driver may still cancel an already-assigned or
+    // already-started ride before it's considered "too far along" to bail on
+    // (protects the other side's committed time once things are underway).
+    cancelWindowMin: () => Number(process.env.PERSONAL_RIDE_CANCEL_WINDOW_MIN) || 10,
+    // Safety-net cleanup thresholds — closes rides abandoned mid-flow (e.g. a
+    // driver's app crashed) so they don't sit as "active" forever. See
+    // jobs/personalRideJobs.js:runStaleActiveSweep.
+    maxAssignedMin: () => Number(process.env.PERSONAL_RIDE_MAX_ASSIGNED_MIN) || 60,
+    maxTripHours: () => Number(process.env.PERSONAL_RIDE_MAX_TRIP_HOURS) || 6,
 };
 
 module.exports = { VEHICLE_PRICING, VEHICLE_TYPES, computeFare, computeDurationMin, getCommissionPercent, splitFare, config };

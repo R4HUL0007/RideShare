@@ -40,6 +40,10 @@ const AdminTickets = () => {
     const [active, setActive] = useState(null);
     const [text, setText] = useState("");
     const [busy, setBusy] = useState(false);
+    const [clearModal, setClearModal] = useState(false);
+    const [clearReason, setClearReason] = useState("");
+    const [deleteModal, setDeleteModal] = useState(false);
+    const [deleteReason, setDeleteReason] = useState("");
     const bodyRef = useRef(null);
     const activeIdRef = useRef(null);
     activeIdRef.current = activeId;
@@ -116,12 +120,13 @@ const AdminTickets = () => {
 
     const clearChat = async () => {
         if (!activeId) return;
-        if (!window.confirm("Clear this conversation? The messages will be removed but the ticket stays.")) return;
+        if (clearReason.trim().length < 5) { toast.info("Please add a reason for clearing this conversation (at least 5 characters)."); return; }
         setBusy(true);
         try {
-            const { data } = await adminTicketClear(activeId);
+            const { data } = await adminTicketClear(activeId, clearReason);
             setActive(data); fetchList();
             toast.success("Conversation cleared");
+            setClearModal(false); setClearReason("");
         } catch (e) {
             toast.error(e.response?.data?.message || "Couldn't clear chat");
         } finally { setBusy(false); }
@@ -129,11 +134,12 @@ const AdminTickets = () => {
 
     const deleteTicket = async () => {
         if (!activeId) return;
-        if (!window.confirm("Delete this ticket permanently? This can't be undone.")) return;
+        if (deleteReason.trim().length < 5) { toast.info("Please add a reason for deleting this ticket (at least 5 characters)."); return; }
         setBusy(true);
         try {
-            await adminTicketDelete(activeId);
+            await adminTicketDelete(activeId, deleteReason);
             toast.success("Ticket deleted");
+            setDeleteModal(false); setDeleteReason("");
             closeThread();
         } catch (e) {
             toast.error(e.response?.data?.message || "Couldn't delete ticket");
@@ -260,8 +266,8 @@ const AdminTickets = () => {
                             {active.status === "closed" && <button className="adm-btn" disabled={busy} onClick={() => setStatus("open")}>Reopen</button>}
                             <a className="adm-btn" href={mailtoHref(active)}>{Ico.reply} Email instead</a>
                             <div className="adm-toolbar-spacer" />
-                            <button className="adm-btn" disabled={busy} onClick={clearChat}>Clear chat</button>
-                            <button className="adm-btn danger" disabled={busy} onClick={deleteTicket}>Delete</button>
+                            <button className="adm-btn" disabled={busy} onClick={() => setClearModal(true)}>Clear chat</button>
+                            <button className="adm-btn danger" disabled={busy} onClick={() => setDeleteModal(true)}>Delete</button>
                         </div>
                     </div>
                 </Modal>
@@ -284,6 +290,52 @@ const AdminTickets = () => {
                     </div>
                 </div>
             </div>
+
+            {clearModal && (
+                <Modal
+                    title="Clear this conversation?"
+                    onClose={() => { setClearModal(false); setClearReason(""); }}
+                    actions={
+                        <>
+                            <button className="adm-btn" disabled={busy} onClick={() => { setClearModal(false); setClearReason(""); }}>Back</button>
+                            <button className="adm-btn danger" disabled={busy} onClick={clearChat}>Confirm Clear</button>
+                        </>
+                    }
+                >
+                    <p style={{ fontSize: "0.82rem", color: "#9ca3af", marginBottom: "0.7rem" }}>
+                        The messages will be removed but the ticket stays open.
+                    </p>
+                    <textarea
+                        className="adm-textarea"
+                        placeholder="Reason for clearing this conversation (required, at least 5 characters)…"
+                        value={clearReason}
+                        onChange={(e) => setClearReason(e.target.value)}
+                    />
+                </Modal>
+            )}
+
+            {deleteModal && (
+                <Modal
+                    title="Delete this ticket permanently?"
+                    onClose={() => { setDeleteModal(false); setDeleteReason(""); }}
+                    actions={
+                        <>
+                            <button className="adm-btn" disabled={busy} onClick={() => { setDeleteModal(false); setDeleteReason(""); }}>Back</button>
+                            <button className="adm-btn danger" disabled={busy} onClick={deleteTicket}>Confirm Delete</button>
+                        </>
+                    }
+                >
+                    <p style={{ fontSize: "0.82rem", color: "#fca5a5", marginBottom: "0.7rem" }}>
+                        This action is irreversible. The ticket and its conversation will be permanently deleted.
+                    </p>
+                    <textarea
+                        className="adm-textarea"
+                        placeholder="Reason for deletion (required, at least 5 characters)…"
+                        value={deleteReason}
+                        onChange={(e) => setDeleteReason(e.target.value)}
+                    />
+                </Modal>
+            )}
         </div>
     );
 };

@@ -1,12 +1,16 @@
 const PersonalRideRequest = require("../models/PersonalRideRequest");
 const { createNotification } = require("../utils/notify");
+const { config } = require("../utils/personalFare");
 
 // =======================================================
 // Background jobs for the Personalized Ride feature:
 //   1. Request expiry  — SEARCHING requests no driver accepted in time.
 //   2. OTP expiry      — clears stale boarding OTPs (regenerable).
-//   3. Weekly settlement — Fridays: aggregate ledger → payout (Uber-style).
-//   4. Failed payout retry — re-attempts failed settlements.
+//   3. Stale active sweep — force-closes rides abandoned mid-flow (driver
+//      app crashed, connectivity lost, etc.) so they don't sit as "active"
+//      forever on the passenger/driver screens (see myActive/driverActive).
+//   4. Weekly settlement — Fridays: aggregate ledger → payout (Uber-style).
+//   5. Failed payout retry — re-attempts failed settlements.
 // =======================================================
 
 // ---- 1. Request expiry sweep ----
@@ -50,7 +54,55 @@ async function runOtpExpiry() {
     return res.modifiedCount || 0;
 }
 
-let reqTimer = null, otpTimer = null, settleTimer = null, retryTimer = null;
+// ---- 3. Stale active-ride sweep ----
+// A ride can get stuck in DRIVER_ASSIGNED or RIDE_STARTED forever if the
+// driver's app/connection dies before they call complete()/cancel() — neither
+// runRequestExpiry (SEARCHING only) nor runOtpExpiry (clears the OTP code,
+// doesn't change status) ever close it out. myActive/driverActive filter
+// purely by status with no time bound, so a week-old abandoned ride would
+// otherwise show as "active" indefinitely. This sweep force-cancels anything
+// that's sat in an in-flight status well past a generous age threshold.
+async function runStaleActiveSweep({ io, users } = {}) {
+    const now = Date.now();
+    const assignedCutoff = new Date(now - config.maxAssignedMin() * 60 * 1000);
+    const tripCutoff = new Date(now - config.maxTripHours() * 60 * 60 * 1000);
+
+    const stale = await PersonalRideRequest.find({
+        $or: [
+            { status: "DRIVER_ASSIGNED", assignedAt: { $ne: null, $lte: assignedCutoff } },
+            { status: "DRIVER_ASSIGNED", assignedAt: null, createdAt: { $lte: assignedCutoff } },
+            { status: "RIDE_STARTED", startedAt: { $ne: null, $lte: tripCutoff } },
+        ],
+    });
+
+    let closed = 0;
+    for (const r of stale) {
+        // Atomic, conditional transition — same pattern as runRequestExpiry —
+        // so a driver's concurrent complete()/cancel() call always wins the race.
+        const claimed = await PersonalRideRequest.findOneAndUpdate(
+            { _id: r._id, status: r.status },
+            { $set: { status: "CANCELLED", cancelledBy: "system", cancelReason: "Auto-cancelled: ride was inactive for too long." } },
+            { new: true }
+        );
+        if (!claimed) continue;
+        closed += 1;
+        try {
+            for (const uid of [claimed.passenger_id, claimed.driver_id].filter(Boolean)) {
+                await createNotification({
+                    io, users, userId: uid, type: "ride", title: "Ride auto-cancelled",
+                    message: `Your ride to ${claimed.destination?.address} was automatically cancelled after being inactive for too long.`,
+                    link: { tab: "requestRide" },
+                });
+                if (io) io.to(String(uid)).emit("ride_cancelled", { id: String(claimed._id), by: "system" });
+            }
+            if (io) io.emit("personal_ride:update", { at: Date.now() });
+        } catch { /* non-fatal */ }
+    }
+    if (closed > 0) console.log(`[personalRide] auto-cancelled ${closed} stale active ride(s).`);
+    return closed;
+}
+
+let reqTimer = null, otpTimer = null, staleTimer = null, settleTimer = null, retryTimer = null;
 
 function ctxOf(app) { return app ? { io: app.get("io"), users: app.get("users") } : {}; }
 
@@ -68,6 +120,15 @@ function startPersonalRideJobs(app) {
         const tick = () => runOtpExpiry().catch((e) => console.error("[personalRide] otp expiry error:", e.message));
         otpTimer = setInterval(tick, 2 * 60 * 1000);
         if (otpTimer.unref) otpTimer.unref();
+    }
+
+    // Stale active-ride sweep: infrequent (age thresholds are in tens of
+    // minutes/hours, so there's no need to check every minute).
+    if (!staleTimer) {
+        const tick = () => runStaleActiveSweep(ctx).catch((e) => console.error("[personalRide] stale sweep error:", e.message));
+        setTimeout(tick, 45 * 1000);
+        staleTimer = setInterval(tick, 10 * 60 * 1000);
+        if (staleTimer.unref) staleTimer.unref();
     }
 
     // Weekly settlement: check hourly, run on Fridays once per day.
@@ -99,4 +160,4 @@ function startPersonalRideJobs(app) {
     }
 }
 
-module.exports = { runRequestExpiry, runOtpExpiry, startPersonalRideJobs };
+module.exports = { runRequestExpiry, runOtpExpiry, runStaleActiveSweep, startPersonalRideJobs };

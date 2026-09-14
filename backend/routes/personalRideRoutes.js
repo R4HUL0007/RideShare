@@ -15,6 +15,7 @@ router.get("/admin/ledger", protect, requireAdmin, pr.adminLedger);
 router.get("/admin/settlements", protect, requireAdmin, pr.adminSettlements);
 router.get("/admin/dashboard", protect, requireAdmin, pr.adminDashboard);
 router.post("/admin/run-settlement", protect, requireAdmin, pr.adminRunSettlement);
+router.post("/admin/:id/cancel", protect, requireAdmin, pr.adminCancel);
 
 // ---- Passenger ----
 router.post("/estimate", protect, pr.estimate);

@@ -1,6 +1,9 @@
-import React from "react";
-import { adminPersonalRides } from "../../services/personalRideService";
-import { StatCard, Badge, useAdminList, fmtDateTime } from "./AdminUI";
+import React, { useState } from "react";
+import { adminPersonalRides, adminCancelPersonalRide } from "../../services/personalRideService";
+import { StatCard, Badge, Modal, RowActions, useAdminList, fmtDateTime } from "./AdminUI";
+import { toast } from "react-toastify";
+
+const TERMINAL = ["RIDE_COMPLETED", "PAYMENT_RECEIVED", "CANCELLED", "EXPIRED", "NO_DRIVERS"];
 
 const inr = (n) => `₹${(n ?? 0).toLocaleString("en-IN")}`;
 const STATUS_TONE = {
@@ -19,8 +22,28 @@ const Ico = {
 };
 
 const AdminPersonalRides = () => {
-    const { items, meta, stats, loading, params, setParam, setPage } = useAdminList(adminPersonalRides, {});
+    const { items, meta, stats, loading, params, setParam, setPage, reload } = useAdminList(adminPersonalRides, {});
+    const [cancelModal, setCancelModal] = useState(null);
+    const [reason, setReason] = useState("");
     const st = stats || {};
+
+    const handleCancel = async () => {
+        if (!cancelModal) return;
+        if (reason.trim().length < 5) { toast.info("Please add a reason for cancellation (at least 5 characters)."); return; }
+        try {
+            await adminCancelPersonalRide(cancelModal._id, reason);
+            toast.success("Ride request cancelled");
+            setCancelModal(null); setReason("");
+            reload();
+        } catch (e) {
+            toast.error(e.response?.data?.message || "Failed to cancel ride request");
+        }
+    };
+
+    const copyId = (r) => {
+        try { navigator.clipboard.writeText(String(r._id)); toast.success("Ride ID copied"); }
+        catch { toast.info(String(r._id)); }
+    };
 
     return (
         <div>
@@ -53,7 +76,7 @@ const AdminPersonalRides = () => {
                     <>
                         <div className="adm-table-wrap">
                             <table className="adm-table">
-                                <thead><tr><th>Passenger</th><th>Driver</th><th>Route</th><th>Type</th><th>Fare</th><th>Status</th><th>Created</th></tr></thead>
+                                <thead><tr><th>Passenger</th><th>Driver</th><th>Route</th><th>Type</th><th>Fare</th><th>Status</th><th>Created</th><th>Actions</th></tr></thead>
                                 <tbody>
                                     {items.map((r) => (
                                         <tr key={r._id}>
@@ -64,6 +87,12 @@ const AdminPersonalRides = () => {
                                             <td>{inr(r.finalFare || r.estimatedFare)}</td>
                                             <td><Badge value={label(r.status)} tone={STATUS_TONE[r.status]} /></td>
                                             <td>{fmtDateTime(r.createdAt)}</td>
+                                            <td>
+                                                <RowActions items={[
+                                                    ...(!TERMINAL.includes(r.status) ? [{ label: "✖ Cancel Ride…", danger: true, onClick: () => { setCancelModal(r); setReason(""); } }] : []),
+                                                    { label: "⧉ Copy Ride ID", onClick: () => copyId(r) },
+                                                ]} />
+                                            </td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -79,6 +108,29 @@ const AdminPersonalRides = () => {
                     </>
                 )}
             </div>
+
+            {cancelModal && (
+                <Modal
+                    title={`Cancel ride request: ${cancelModal.pickup?.address || "—"} → ${cancelModal.destination?.address || "—"}?`}
+                    onClose={() => { setCancelModal(null); setReason(""); }}
+                    actions={
+                        <>
+                            <button className="adm-btn" onClick={() => { setCancelModal(null); setReason(""); }}>Back</button>
+                            <button className="adm-btn danger" onClick={handleCancel}>Confirm Cancel</button>
+                        </>
+                    }
+                >
+                    <p style={{ fontSize: "0.82rem", color: "#9ca3af", marginBottom: "0.7rem" }}>
+                        This force-cancels the ride regardless of its current state and notifies the passenger and driver.
+                    </p>
+                    <textarea
+                        className="adm-textarea"
+                        placeholder="Reason for cancellation (required, at least 5 characters)…"
+                        value={reason}
+                        onChange={(e) => setReason(e.target.value)}
+                    />
+                </Modal>
+            )}
         </div>
     );
 };

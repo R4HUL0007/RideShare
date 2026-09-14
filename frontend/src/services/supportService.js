@@ -21,12 +21,12 @@ export const adminSupportList = (params) => axiosInstance.get(`${base}/admin/lis
 export const adminSupportGet = (id) => axiosInstance.get(`${base}/admin/${id}`);
 export const adminSupportClaim = (id) => axiosInstance.post(`${base}/admin/${id}/claim`);
 export const adminSupportMessage = (id, text) => axiosInstance.post(`${base}/admin/${id}/message`, { text });
-export const adminSupportClose = (id) => axiosInstance.post(`${base}/admin/${id}/close`);
+export const adminSupportClose = (id, reason) => axiosInstance.post(`${base}/admin/${id}/close`, { reason });
 
 // Admin tickets ("Email us")
 export const adminTicketList = (params) => axiosInstance.get(`${base}/admin/tickets`, { params });
 export const adminTicketGet = (id) => axiosInstance.get(`${base}/admin/tickets/${id}`);
 export const adminTicketReply = (id, text) => axiosInstance.post(`${base}/admin/tickets/${id}/reply`, { text });
 export const adminTicketUpdate = (id, body) => axiosInstance.patch(`${base}/admin/tickets/${id}`, body);
-export const adminTicketClear = (id) => axiosInstance.post(`${base}/admin/tickets/${id}/clear`);
-export const adminTicketDelete = (id) => axiosInstance.delete(`${base}/admin/tickets/${id}`);
+export const adminTicketClear = (id, reason) => axiosInstance.post(`${base}/admin/tickets/${id}/clear`, { reason });
+export const adminTicketDelete = (id, reason) => axiosInstance.delete(`${base}/admin/tickets/${id}`, { data: { reason } });

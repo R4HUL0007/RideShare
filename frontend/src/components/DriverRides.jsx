@@ -67,6 +67,16 @@ const DriverRidesInner = ({ onOpenSidebar, onNavigate }) => {
         finally { setBusy(false); }
     };
 
+    const cancelRide = async () => {
+        try {
+            await cancelPersonalRide(active._id, "driver");
+            toast.success("Ride cancelled");
+            await refresh();
+        } catch (e) {
+            toast.error(e.response?.data?.message || "This ride can no longer be cancelled.");
+        }
+    };
+
     const accept = (id) => act(() => acceptPersonalRide(id), "Ride accepted — head to the pickup!");
     const decline = async (id) => { try { await declinePersonalRide(id); setIncoming((l) => l.filter((r) => r._id !== id)); } catch { /* ignore */ } };
     const reached = () => act(() => reachedPickupPersonalRide(activeId), "OTP sent to the passenger.");
@@ -199,7 +209,13 @@ const DriverRidesInner = ({ onOpenSidebar, onNavigate }) => {
                             <div className="rrq-assigned"><div className="rrq-assigned-badge">✓</div><h3>Earnings added</h3><p className="rrq-muted" style={{ textAlign: "center" }}>{inr(active.driverEarnings)} added to your ledger. Settled weekly.</p></div>
                         )}
                         {status === "DRIVER_ASSIGNED" && (
-                            <button className="rrq-cancel-link" onClick={() => act(() => cancelPersonalRide(active._id, "driver"), "Ride cancelled")}>Cancel</button>
+                            active.cancelInfo?.cancellable ? (
+                                <button className="rrq-cancel-link" onClick={cancelRide} disabled={busy}>Cancel</button>
+                            ) : (
+                                <p className="rrq-note" style={{ textAlign: "center" }}>
+                                    {active.cancelInfo?.reason || "This ride can no longer be cancelled."}
+                                </p>
+                            )
                         )}
                     </div>
                 </div>
